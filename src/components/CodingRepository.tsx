@@ -653,7 +653,7 @@ export function CodingRepository() {
                   </div>
 
                   {/* Right: Difficulty Badge, External Link, Delete Button */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pl-8 sm:pl-0">
+                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                     {/* Difficulty Badge */}
                     <span
                       id={`difficulty-badge-${prob.id}`}

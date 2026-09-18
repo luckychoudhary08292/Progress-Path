@@ -1,46 +1,30 @@
 import { Router, Request, Response } from 'express';
-import mongoose from 'mongoose';
 import { authenticateToken } from './auth.ts';
-import { ProblemModel, ProgressModel, ProblemDifficulty } from '../models/index.ts';
+import {
+  ProblemRepository,
+  ProgressRepository,
+} from '../repositories.ts';
+import { ProblemDifficulty } from '../models/index.ts';
+import { sanitizeHtml } from '../middleware/security.ts';
 
 const router = Router();
 
-const STATUS_CYCLE: Record<string, string> = {
+const STATUS_CYCLE: Record<string, 'todo' | 'in_progress' | 'completed' | 'revision'> = {
   todo: 'in_progress',
   in_progress: 'completed',
   completed: 'revision',
   revision: 'todo',
 };
 
-// GET /api/problems - Fetch all problems (global + user's own) sorted by createdAt ascending
+// GET /api/problems - Fetch all problems sorted by createdAt ascending
 router.get('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const userId = user.id;
-    const userObjectId = mongoose.isValidObjectId(userId)
-      ? new mongoose.Types.ObjectId(userId)
-      : userId;
 
-    // CRITICAL: Always fetch problems sorted by createdAt ascending (oldest first)
-    const problems = await ProblemModel.find({
-      $or: [{ createdBy: userObjectId }, { createdBy: userId }, { isGlobal: true }],
-    })
-      .sort({ createdAt: 1 })
-      .lean();
-
-    const problemIds = problems.map((p) => p._id);
-
-    // Fetch this user's progress records for all these problems
-    const progressRecords = await ProgressModel.find({
-      $or: [{ userId: userObjectId }, { userId: userId }],
-      itemType: 'problem',
-      itemId: { $in: problemIds },
-    }).lean();
-
-    const progressMap = new Map<string, string>();
-    for (const prog of progressRecords) {
-      progressMap.set(prog.itemId.toString(), prog.status || 'todo');
-    }
+    const problems = await ProblemRepository.listForUser(userId);
+    const problemIds = problems.map((p) => p.id);
+    const progressMap = await ProgressRepository.getStatusMap(userId, 'problem', problemIds);
 
     const categorySet = new Set<string>();
 
@@ -49,20 +33,17 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
         categorySet.add(prob.category.trim());
       }
 
-      const status = progressMap.get(prob._id.toString()) || 'todo';
-      const isOwner =
-        !prob.isGlobal &&
-        prob.createdBy &&
-        prob.createdBy.toString() === userId.toString();
+      const prog = progressMap.get(prob.id);
+      const status = (prog?.status as 'todo' | 'in_progress' | 'completed' | 'revision') || 'todo';
 
       return {
-        id: prob._id.toString(),
+        id: prob.id,
         name: prob.name,
         difficulty: prob.difficulty,
         category: prob.category,
         link: prob.link || '',
         isGlobal: !!prob.isGlobal,
-        isOwner: !!isOwner,
+        isOwner: !!prob.isOwner,
         status,
         createdAt: prob.createdAt,
       };
@@ -80,12 +61,12 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/problems - Add custom problem (name, difficulty, category, optional link)
+// POST /api/problems - Add custom problem
 router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const userId = user.id;
-    const { name, difficulty, category, link } = req.body;
+    const { name, difficulty, category, link } = req.body || {};
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       res.status(400).json({ message: 'Problem name is required' });
@@ -103,22 +84,20 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       return;
     }
 
-    const userObjectId = mongoose.isValidObjectId(userId)
-      ? new mongoose.Types.ObjectId(userId)
-      : userId;
+    const cleanName = sanitizeHtml(name.trim());
+    const cleanCategory = sanitizeHtml(category.trim());
+    const cleanLink = typeof link === 'string' ? link.trim() : '';
 
-    const newProblem = await ProblemModel.create({
-      name: name.trim(),
+    const newProblem = await ProblemRepository.create({
+      name: cleanName,
       difficulty,
-      category: category.trim(),
-      link: typeof link === 'string' ? link.trim() : '',
-      isGlobal: false,
-      createdBy: userObjectId,
-      createdAt: new Date(),
+      category: cleanCategory,
+      link: cleanLink,
+      createdBy: userId,
     });
 
     res.status(201).json({
-      id: newProblem._id.toString(),
+      id: newProblem.id,
       name: newProblem.name,
       difficulty: newProblem.difficulty,
       category: newProblem.category,
@@ -139,7 +118,7 @@ router.post('/bulk', authenticateToken, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const userId = user.id;
-    const { items } = req.body;
+    const { items } = req.body || {};
 
     if (!Array.isArray(items) || items.length === 0) {
       res.status(400).json({ message: 'Items array is required' });
@@ -150,10 +129,6 @@ router.post('/bulk', authenticateToken, async (req: Request, res: Response) => {
       res.status(400).json({ message: 'Bulk import is capped at 500 items per batch' });
       return;
     }
-
-    const userObjectId = mongoose.isValidObjectId(userId)
-      ? new mongoose.Types.ObjectId(userId)
-      : userId;
 
     const validDifficulties: ProblemDifficulty[] = ['Easy', 'Medium', 'Hard'];
     const insertedItems: Array<{ id: string; name: string; difficulty: string; category: string }> = [];
@@ -183,23 +158,24 @@ router.post('/bulk', authenticateToken, async (req: Request, res: Response) => {
       }
 
       const cat = typeof category === 'string' && category.trim() ? category.trim() : 'General';
+      const cleanName = sanitizeHtml(name.trim());
+      const cleanCat = sanitizeHtml(cat);
+      const cleanLink = typeof link === 'string' ? link.trim() : '';
 
       try {
-        const newProblem = await ProblemModel.create({
-          name: name.trim(),
+        const newProb = await ProblemRepository.create({
+          name: cleanName,
           difficulty,
-          category: cat,
-          link: typeof link === 'string' ? link.trim() : '',
-          isGlobal: false,
-          createdBy: userObjectId,
-          createdAt: new Date(),
+          category: cleanCat,
+          link: cleanLink,
+          createdBy: userId,
         });
 
         insertedItems.push({
-          id: newProblem._id.toString(),
-          name: newProblem.name,
-          difficulty: newProblem.difficulty,
-          category: newProblem.category,
+          id: newProb.id,
+          name: newProb.name,
+          difficulty: newProb.difficulty,
+          category: newProb.category,
         });
       } catch (itemErr) {
         failedItems.push({
@@ -235,36 +211,18 @@ router.patch('/:id/status', authenticateToken, async (req: Request, res: Respons
     const user = (req as any).user;
     const userId = user.id;
     const problemId = req.params.id;
-    const { status: requestedStatus } = req.body;
+    const { status: requestedStatus } = req.body || {};
 
-    if (!mongoose.isValidObjectId(problemId)) {
-      res.status(404).json({ message: 'Problem not found' });
-      return;
-    }
-
-    const userObjectId = mongoose.isValidObjectId(userId)
-      ? new mongoose.Types.ObjectId(userId)
-      : userId;
-    const problemObjectId = new mongoose.Types.ObjectId(problemId);
-
-    // Verify problem exists
-    const problem = await ProblemModel.findById(problemObjectId).select('_id');
-    if (!problem) {
-      res.status(404).json({ message: 'Problem not found' });
+    if (!problemId) {
+      res.status(400).json({ message: 'Problem ID is required' });
       return;
     }
 
     let nextStatus = requestedStatus;
 
-    // If no specific status is requested, cycle through: todo -> in_progress -> completed -> revision -> todo
     if (!nextStatus) {
-      const existingProg = await ProgressModel.findOne({
-        userId: userObjectId,
-        itemType: 'problem',
-        itemId: problemObjectId,
-      });
-
-      const currentStatus = existingProg?.status || 'todo';
+      const progMap = await ProgressRepository.getStatusMap(userId, 'problem', [problemId]);
+      const currentStatus = progMap.get(problemId)?.status || 'todo';
       nextStatus = STATUS_CYCLE[currentStatus] || 'todo';
     }
 
@@ -274,29 +232,13 @@ router.patch('/:id/status', authenticateToken, async (req: Request, res: Respons
       return;
     }
 
-    // Upsert into Progress collection - strictly for this user, never modifying the shared problem document
-    const updatedProgress = await ProgressModel.findOneAndUpdate(
-      {
-        userId: userObjectId,
-        itemType: 'problem',
-        itemId: problemObjectId,
-      },
-      {
-        $set: {
-          status: nextStatus,
-          completedAt: nextStatus === 'completed' ? new Date() : null,
-        },
-      },
-      {
-        new: true,
-        upsert: true,
-        setDefaultsOnInsert: true,
-      }
-    );
+    const updated = await ProgressRepository.updateProgress(userId, 'problem', problemId, {
+      status: nextStatus as any,
+    });
 
     res.json({
       problemId,
-      status: updatedProgress.status,
+      status: updated.status,
     });
   } catch (err) {
     console.log('[Problems PATCH Status Error]:', err instanceof Error ? err.message : err);
@@ -311,26 +253,20 @@ router.delete('/:id', authenticateToken, async (req: Request, res: Response) => 
     const userId = user.id;
     const problemId = req.params.id;
 
-    if (!mongoose.isValidObjectId(problemId)) {
-      res.status(404).json({ message: 'Problem not found' });
+    if (!problemId) {
+      res.status(400).json({ message: 'Problem ID is required' });
       return;
     }
 
-    const problemObjectId = new mongoose.Types.ObjectId(problemId);
-    const problem = await ProblemModel.findById(problemObjectId);
-
-    if (!problem) {
-      res.status(404).json({ message: 'Problem not found' });
-      return;
-    }
-
-    if (!problem.createdBy || problem.createdBy.toString() !== userId.toString()) {
+    const deleted = await ProblemRepository.delete(problemId, userId);
+    if (deleted === null) {
       res.status(403).json({ message: 'You can only delete problems you created' });
       return;
     }
-
-    await ProblemModel.findByIdAndDelete(problemObjectId);
-    await ProgressModel.deleteMany({ itemId: problemObjectId });
+    if (!deleted) {
+      res.status(404).json({ message: 'Problem not found' });
+      return;
+    }
 
     res.json({ message: 'Problem deleted successfully', deletedId: problemId });
   } catch (err) {

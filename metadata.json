@@ -1,5 +1,5 @@
 {
-  "name": "Auth App",
+  "name": "Progress Path",
   "description": "Full-stack LMS platform with Subjects & Lectures, LeetCode-style Coding Repository, Academic Calendar, Import Console, User Profile, and Admin Performance Monitor.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

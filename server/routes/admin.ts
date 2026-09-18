@@ -1,8 +1,11 @@
 import { Router, Request, Response } from 'express';
-import mongoose from 'mongoose';
 import { authenticateToken, authenticateAdmin } from './auth.ts';
 import { UserRepository } from '../models/User.ts';
-import { LectureModel, ProblemModel, ProgressModel } from '../models/index.ts';
+import {
+  LectureRepository,
+  ProblemRepository,
+  ProgressRepository,
+} from '../repositories.ts';
 
 const router = Router();
 
@@ -12,28 +15,19 @@ router.get('/users', authenticateToken, authenticateAdmin, async (req: Request, 
     const users = await UserRepository.listAllUsers();
 
     // 1. Get total system benchmarks
-    const totalLecturesInSystem = await LectureModel.countDocuments();
-    const totalProblemsInSystem = await ProblemModel.countDocuments();
+    const totalLecturesInSystem = await LectureRepository.countTotal();
+    const totalProblemsInSystem = await ProblemRepository.countTotal();
     const totalAcademicItems = totalLecturesInSystem + totalProblemsInSystem;
 
     // 2. Fetch progress stats for each user
     const userStatsPromises = users.map(async (u) => {
       const uId = u.id;
-      const userObjectId = mongoose.isValidObjectId(uId) ? new mongoose.Types.ObjectId(uId) : uId;
 
       // Count completed lectures for this user
-      const lecturesDone = await ProgressModel.countDocuments({
-        $or: [{ userId: userObjectId }, { userId: uId }],
-        itemType: 'lecture',
-        status: 'completed',
-      });
+      const lecturesDone = await ProgressRepository.countCompleted(uId, 'lecture');
 
       // Count solved problems for this user
-      const problemsSolved = await ProgressModel.countDocuments({
-        $or: [{ userId: userObjectId }, { userId: uId }],
-        itemType: 'problem',
-        status: 'completed',
-      });
+      const problemsSolved = await ProgressRepository.countCompleted(uId, 'problem');
 
       // Calculate percentages formatted with single decimal precision
       const lecturesCompletedPercent =

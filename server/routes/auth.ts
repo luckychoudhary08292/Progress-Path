@@ -5,12 +5,12 @@ import mongoose from 'mongoose';
 import { UserRepository } from '../models/User.ts';
 import { isDbConnected, getConnectedDbName } from '../db.ts';
 import {
-  SubjectModel,
-  LectureModel,
-  ProblemModel,
-  EventModel,
-  ProgressModel,
-} from '../models/index.ts';
+  SubjectRepository,
+  LectureRepository,
+  ProblemRepository,
+  EventRepository,
+  ProgressRepository,
+} from '../repositories.ts';
 
 const router = Router();
 
@@ -232,34 +232,18 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
   try {
     const user = (req as any).user;
     const userId = user.id;
-    const userObjectId = mongoose.isValidObjectId(userId) ? new mongoose.Types.ObjectId(userId) : userId;
 
-    // Fetch user-centric analytics
-    const subjectsCount = await SubjectModel.countDocuments({
-      $or: [{ createdBy: userObjectId }, { createdBy: userId }, { isGlobal: true }],
-    });
+    // Fetch user-centric analytics safely using repositories
+    const subjectsCount = await SubjectRepository.countForUser(userId);
+    const userSubjectsCreated = await SubjectRepository.countCreatedByUser(userId);
 
-    const userSubjectsCreated = await SubjectModel.countDocuments({
-      $or: [{ createdBy: userObjectId }, { createdBy: userId }],
-    });
+    const totalLectures = await LectureRepository.countTotal();
+    const lecturesCompleted = await ProgressRepository.countCompleted(userId, 'lecture');
 
-    const totalLectures = await LectureModel.countDocuments({});
-    const lecturesCompleted = await ProgressModel.countDocuments({
-      $or: [{ userId: userObjectId }, { userId: userId }],
-      itemType: 'lecture',
-      status: 'completed',
-    });
+    const totalProblems = await ProblemRepository.countTotal();
+    const problemsSolved = await ProgressRepository.countCompleted(userId, 'problem');
 
-    const totalProblems = await ProblemModel.countDocuments({});
-    const problemsSolved = await ProgressModel.countDocuments({
-      $or: [{ userId: userObjectId }, { userId: userId }],
-      itemType: 'problem',
-      status: 'completed',
-    });
-
-    const eventsCount = await EventModel.countDocuments({
-      $or: [{ userId: userObjectId }, { userId: userId }],
-    });
+    const eventsCount = await EventRepository.countForUser(userId);
 
     // Compute readiness score
     const lectureRate = totalLectures > 0 ? (lecturesCompleted / totalLectures) * 50 : 0;

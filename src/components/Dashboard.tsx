@@ -23,9 +23,12 @@ export function Dashboard({
   const [isLoading, setIsLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  // Format today's date for display and API query
+  // Format today's date for display and API query using local date
   const today = new Date();
-  const dateStr = today.toISOString().split('T')[0];
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, '0');
+  const d = String(today.getDate()).padStart(2, '0');
+  const dateStr = `${y}-${m}-${d}`;
   const formattedDisplayDate = today.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'short',
@@ -300,14 +303,14 @@ export function Dashboard({
       {/* Today's Calendar Events Section */}
       <section
         id="today-events-section"
-        className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6"
+        className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6"
       >
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-500" />
+            <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
             <h2 className="text-sm sm:text-base font-semibold text-slate-900">Today's Schedule & Tasks</h2>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <span className="text-xs font-medium text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">
               {formattedDisplayDate}
             </span>

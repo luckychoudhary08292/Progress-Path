@@ -233,44 +233,44 @@ export function UserProfile({
   return (
     <div id="user-profile-page" className="w-full space-y-6 pb-12">
       {/* Top Identity Header Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
         {/* Avatar and User Info */}
-        <div className="flex items-center gap-4 sm:gap-5">
+        <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
           <div className="relative shrink-0">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
+            <div className="w-13 h-13 sm:w-16 sm:h-16 rounded-xl bg-slate-900 flex items-center justify-center text-white text-lg sm:text-2xl font-bold">
               {getInitials(user.name)}
             </div>
             <span
-              className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"
+              className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-500 border-2 border-white"
               title="Online"
             />
           </div>
 
-          <div className="space-y-1">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-900 truncate">
                 {user.name}
               </h1>
               {user.role === 'admin' ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200 shrink-0">
                   <Shield className="w-3 h-3 text-slate-600" />
                   Administrator
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                   <GraduationCap className="w-3 h-3 text-slate-600" />
                   Student
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-              <span className="inline-flex items-center gap-1">
-                <Mail className="w-3.5 h-3.5 text-slate-400" />
-                {user.email}
+            <div className="flex items-center gap-2.5 text-xs text-slate-500 flex-wrap">
+              <span className="inline-flex items-center gap-1 truncate max-w-full">
+                <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="truncate">{user.email}</span>
               </span>
               <span className="text-slate-300 hidden sm:inline">•</span>
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-1 shrink-0">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 {formatDate(user.createdAt)}
               </span>
@@ -292,7 +292,7 @@ export function UserProfile({
                 ) : (
                   <>
                     <Copy className="w-3 h-3 text-slate-400" />
-                    <span>UID: {user.id.substring(0, 12)}...</span>
+                    <span>UID: {user.id.substring(0, 10)}...</span>
                   </>
                 )}
               </button>
@@ -301,7 +301,7 @@ export function UserProfile({
         </div>
 
         {/* Header Action Buttons */}
-        <div className="flex items-center justify-end gap-2.5 shrink-0">
+        <div className="flex items-center justify-start sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
           <button
             id="profile-sign-out-btn"
             type="button"
@@ -315,7 +315,7 @@ export function UserProfile({
       </div>
 
       {/* Metric Bento-Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Readiness Metric */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -438,12 +438,12 @@ export function UserProfile({
       </div>
 
       {/* Sub-Navigation Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-3">
+      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-3 overflow-x-auto scrollbar-none">
         <button
           id="profile-subtab-overview"
           type="button"
           onClick={() => setActiveSubTab('overview')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
             activeSubTab === 'overview'
               ? 'bg-slate-900 text-white font-semibold'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -457,7 +457,7 @@ export function UserProfile({
           id="profile-subtab-security"
           type="button"
           onClick={() => setActiveSubTab('security')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
             activeSubTab === 'security'
               ? 'bg-slate-900 text-white font-semibold'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -471,7 +471,7 @@ export function UserProfile({
           id="profile-subtab-permissions"
           type="button"
           onClick={() => setActiveSubTab('permissions')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
             activeSubTab === 'permissions'
               ? 'bg-slate-900 text-white font-semibold'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -597,9 +597,9 @@ export function UserProfile({
 
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-slate-500">Email Address</span>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-900">{user.email}</p>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-slate-900 break-all">{user.email}</p>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                       <Check className="w-2.5 h-2.5" /> Verified
                     </span>
                   </div>
@@ -624,7 +624,7 @@ export function UserProfile({
 
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-slate-500">Account ID</span>
-                  <p className="text-xs font-mono text-slate-600">{user.id}</p>
+                  <p className="text-xs font-mono text-slate-600 break-all">{user.id}</p>
                 </div>
               </div>
             )}

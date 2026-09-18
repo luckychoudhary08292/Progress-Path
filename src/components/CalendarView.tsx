@@ -327,7 +327,7 @@ export function CalendarView() {
   return (
     <div id="calendar-page-container" className="w-full space-y-6">
       {/* Header & Month Navigator */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
             <CalendarIcon className="w-4 h-4" />
@@ -343,7 +343,7 @@ export function CalendarView() {
         </div>
 
         {/* Month Switching Controls */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 w-full justify-between sm:w-auto sm:justify-start flex-wrap">
           <button
             id="calendar-jump-today-btn"
             type="button"
@@ -364,7 +364,7 @@ export function CalendarView() {
             </button>
             <span
               id="calendar-current-month-label"
-              className="px-2.5 py-0.5 text-xs sm:text-sm font-semibold text-slate-800 select-none min-w-[120px] text-center"
+              className="px-2.5 py-0.5 text-xs sm:text-sm font-semibold text-slate-800 select-none min-w-[110px] sm:min-w-[120px] text-center"
             >
               {MONTH_NAMES[currentMonth]} {currentYear}
             </span>
@@ -386,7 +386,7 @@ export function CalendarView() {
         {/* Left Column: Month Grid */}
         <section
           id="calendar-grid-card"
-          className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl border border-slate-200 p-4 sm:p-5"
+          className="lg:col-span-7 xl:col-span-8 bg-white rounded-xl border border-slate-200 p-3 sm:p-5"
         >
           {/* Calendar Header Row: Days of Week */}
           <div className="grid grid-cols-7 gap-1 sm:gap-1.5 mb-2">
@@ -544,7 +544,7 @@ export function CalendarView() {
             </div>
 
             {/* Type selector: Academic vs Task */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
               <div className="flex items-center bg-slate-100 p-0.5 rounded-lg gap-0.5">
                 <button
                   id="calendar-type-task-btn"

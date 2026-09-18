@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, FileCode, User as UserIcon } from 'lucide-react';
+import { Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, FileCode, User as UserIcon, ShieldCheck } from 'lucide-react';
 import { User } from './types.ts';
 import { SignupForm } from './components/SignupForm.tsx';
 import { LoginForm } from './components/LoginForm.tsx';
@@ -11,6 +11,7 @@ import { CalendarView } from './components/CalendarView.tsx';
 import { AdminMonitor } from './components/AdminMonitor.tsx';
 import { ImportConsole } from './components/ImportConsole.tsx';
 import { UserProfile } from './components/UserProfile.tsx';
+import { SystemSecurityModal } from './components/SystemSecurityModal.tsx';
 
 type AuthView = 'login' | 'signup';
 type AppView = 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'admin' | 'import' | 'profile';
@@ -23,6 +24,7 @@ export default function App() {
   // In-app navigation states
   const [activeTab, setActiveTab] = useState<AppView>('dashboard');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
 
   // Profile menu dropdown state
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -243,6 +245,18 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Security Shield Diagnostics Trigger Button */}
+                <button
+                  id="system-security-status-trigger-btn"
+                  type="button"
+                  onClick={() => setIsSecurityModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition-colors cursor-pointer"
+                  title="View Live System Security & Database Status"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="hidden sm:inline">System Security</span>
+                </button>
+
                 {/* Profile Navigation: Circular Avatar Button at Right Side */}
                 <div className="relative shrink-0" ref={profileMenuRef}>
                   <button
@@ -341,6 +355,19 @@ export default function App() {
                         >
                           <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
                           <span>Dashboard</span>
+                        </button>
+
+                        <button
+                          id="dropdown-nav-security-link"
+                          type="button"
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            setIsSecurityModalOpen(true);
+                          }}
+                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors cursor-pointer"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>System & Security Status</span>
                         </button>
                       </div>
 
@@ -565,6 +592,12 @@ export default function App() {
           onNavigateToSignup={() => setCurrentView('signup')}
         />
       )}
+
+      {/* Live System Security & Database Diagnostic Modal */}
+      <SystemSecurityModal
+        isOpen={isSecurityModalOpen}
+        onClose={() => setIsSecurityModalOpen(false)}
+      />
     </div>
   );
 }

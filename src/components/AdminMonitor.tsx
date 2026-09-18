@@ -182,7 +182,7 @@ export function AdminMonitor({ onNavigateToDashboard }: AdminMonitorProps) {
   return (
     <div id="admin-monitor-container" className="w-full max-w-6xl mx-auto space-y-6">
       {/* Header Bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
             <TrendingUp className="w-5 h-5" />
@@ -203,7 +203,7 @@ export function AdminMonitor({ onNavigateToDashboard }: AdminMonitorProps) {
         </div>
 
         {/* Refresh & Quick Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             id="admin-refresh-data-btn"
             type="button"
@@ -291,7 +291,7 @@ export function AdminMonitor({ onNavigateToDashboard }: AdminMonitorProps) {
             />
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-500 self-end sm:self-auto">
+          <div className="flex items-center gap-2 text-xs text-slate-500 self-start sm:self-auto">
             <span>Sort:</span>
             <span id="admin-active-sort-badge" className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
               {sortColumn === 'name' && 'Name'}

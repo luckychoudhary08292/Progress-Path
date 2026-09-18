@@ -482,7 +482,7 @@ export function ImportConsole({ onNavigateToSubject, onNavigateToCoding }: Impor
       </div>
 
       {/* Main Configuration Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 space-y-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 space-y-6">
         {/* Step 1: Type Selector */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
@@ -1025,7 +1025,7 @@ export function ImportConsole({ onNavigateToSubject, onNavigateToCoding }: Impor
             {importType === 'lectures' && previewLectures && (
               <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <div className="max-h-96 overflow-y-auto overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full min-w-[460px] text-left text-xs border-collapse">
                     <thead className="bg-slate-50 text-slate-600 font-semibold sticky top-0 z-10 border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-3.5 w-14 text-center">#</th>
@@ -1070,7 +1070,7 @@ export function ImportConsole({ onNavigateToSubject, onNavigateToCoding }: Impor
             {importType === 'problems' && previewProblems && (
               <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <div className="max-h-96 overflow-y-auto overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                  <table className="w-full min-w-[500px] text-left text-xs border-collapse">
                     <thead className="bg-slate-50 text-slate-600 font-semibold sticky top-0 z-10 border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-3.5 w-14 text-center">#</th>
