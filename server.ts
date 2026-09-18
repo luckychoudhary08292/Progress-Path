@@ -24,7 +24,8 @@ if (fs.existsSync(path.resolve(process.cwd(), '.env.example'))) {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  // On Render, respect assigned port if RENDER environment is present; otherwise stay on container standard port 3000
+  const PORT = process.env.RENDER && process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // 1. Security Headers & Hardening
   app.use(securityHeaders);
