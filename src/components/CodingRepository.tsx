@@ -11,6 +11,9 @@ import {
   Trash2,
   Loader2,
   X,
+  Filter,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { ProblemItem, ProblemDifficulty, ProblemStatus } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
@@ -86,11 +89,21 @@ export function CodingRepository() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters state
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [selectedDifficulty, setSelectedDifficulty] = useState<'All' | ProblemDifficulty>('All');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedStatusTab, setSelectedStatusTab] = useState<'all' | ProblemStatus>('all');
   const [sortBy, setSortBy] = useState<'default' | 'difficulty-asc' | 'difficulty-desc'>('default');
+
+  // Debounce search input (250ms) to eliminate keystroke lag
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchInput);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
   // Add problem form state
   const [isAdding, setIsAdding] = useState(false);
@@ -161,6 +174,13 @@ export function CodingRepository() {
       if (!res.ok) {
         // Revert on error
         fetchProblems();
+      } else {
+        const data = await res.json();
+        if (data.status) {
+          setProblems((prev) =>
+            prev.map((p) => (p.id === problem.id ? { ...p, status: data.status } : p))
+          );
+        }
       }
     } catch {
       fetchProblems();
@@ -254,7 +274,7 @@ export function CodingRepository() {
 
   // Combined instant client-side filtering without reloading
   const filteredProblems = useMemo(() => {
-    const query = searchQuery.toLowerCase().trim();
+    const query = debouncedSearchQuery.toLowerCase().trim();
 
     let result = problems.filter((p) => {
       // Search filter: matches name or category
@@ -292,9 +312,9 @@ export function CodingRepository() {
     }
 
     return result;
-  }, [problems, searchQuery, selectedDifficulty, selectedCategory, selectedStatusTab, sortBy]);
+  }, [problems, debouncedSearchQuery, selectedDifficulty, selectedCategory, selectedStatusTab, sortBy]);
 
-  // Status counts for tabs
+  // Status counts for tabs and panel badges
   const statusCounts = useMemo(() => {
     const counts = { all: problems.length, todo: 0, in_progress: 0, completed: 0, revision: 0 };
     for (const p of problems) {
@@ -305,15 +325,26 @@ export function CodingRepository() {
     return counts;
   }, [problems]);
 
+  // Active panel filters count (shows on Filter button badge)
+  const activePanelFilterCount =
+    (selectedStatusTab !== 'all' ? 1 : 0) +
+    (selectedDifficulty !== 'All' ? 1 : 0) +
+    (selectedCategory !== 'All' ? 1 : 0) +
+    (sortBy !== 'default' ? 1 : 0);
+
   const hasActiveFilters =
-    searchQuery.trim() !== '' ||
-    selectedDifficulty !== 'All' ||
-    selectedCategory !== 'All' ||
-    selectedStatusTab !== 'all' ||
-    sortBy !== 'default';
+    searchInput.trim() !== '' || activePanelFilterCount > 0;
 
   const clearFilters = () => {
-    setSearchQuery('');
+    setSearchInput('');
+    setDebouncedSearchQuery('');
+    setSelectedDifficulty('All');
+    setSelectedCategory('All');
+    setSelectedStatusTab('all');
+    setSortBy('default');
+  };
+
+  const resetPanelFilters = () => {
     setSelectedDifficulty('All');
     setSelectedCategory('All');
     setSelectedStatusTab('all');
@@ -322,7 +353,7 @@ export function CodingRepository() {
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-5xl mx-auto py-12 flex flex-col items-center justify-center gap-3">
+      <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         <p className="text-sm font-medium text-slate-500">Loading Coding Repository...</p>
       </div>
@@ -465,120 +496,208 @@ export function CodingRepository() {
         </form>
       )}
 
-      {/* Controls Bar: Status Tabs, Search, Difficulty, Category Filter & Sorting */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 space-y-3.5">
-        {/* Status Tabs: All / To Do / In Progress / Revision / Completed */}
-        <div id="status-tabs-bar" className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {(
-            [
-              { id: 'all', label: 'All', count: statusCounts.all },
-              { id: 'todo', label: 'To Do', count: statusCounts.todo },
-              { id: 'in_progress', label: 'In Progress', count: statusCounts.in_progress },
-              { id: 'revision', label: 'Revision', count: statusCounts.revision },
-              { id: 'completed', label: 'Completed', count: statusCounts.completed },
-            ] as const
-          ).map((tab) => {
-            const isSelected = selectedStatusTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={`status-tab-${tab.id}`}
-                type="button"
-                onClick={() => setSelectedStatusTab(tab.id)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer ${
-                  isSelected
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                <span>{tab.label}</span>
-                <span
-                  className={`text-[11px] px-1.5 py-0.2 rounded font-mono ${
-                    isSelected ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search & Filter Dropdowns */}
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-          {/* Search Box: by name or category */}
-          <div className="sm:col-span-5 relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* Search & Filter Toolbar for Problems */}
+      <div id="problems-filter-toolbar" className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 space-y-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Always-Visible Search input with debouncing and clear icon */}
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="problem-search-input"
               type="text"
               placeholder="Search by problem name or category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-8 pr-7 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-colors text-slate-900 placeholder:text-slate-400"
             />
-            {searchQuery && (
+            {searchInput && (
               <button
+                id="clear-problem-search-btn"
                 type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                onClick={() => {
+                  setSearchInput('');
+                  setDebouncedSearchQuery('');
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                title="Clear search text"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Difficulty Filter Dropdown */}
-          <div className="sm:col-span-2">
-            <select
-              id="filter-difficulty-select"
-              value={selectedDifficulty}
-              onChange={(e) => setSelectedDifficulty(e.target.value as any)}
-              className="w-full px-2.5 py-1.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors cursor-pointer text-slate-700"
-            >
-              <option value="All">All Difficulties</option>
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
-            </select>
-          </div>
-
-          {/* Category Filter Dropdown */}
-          <div className="sm:col-span-3">
-            <select
-              id="filter-category-select"
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-2.5 py-1.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors cursor-pointer text-slate-700"
-            >
-              <option value="All">All Categories</option>
-              {availableCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Explicit Sort Option: Default is strictly createdAt ascending */}
-          <div className="sm:col-span-2">
-            <select
-              id="sort-problems-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full px-2 py-1.5 text-xs sm:text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors cursor-pointer text-slate-700"
-              title="Change sort order"
-            >
-              <option value="default">Sort: Default</option>
-              <option value="difficulty-asc">Diff: Easy → Hard</option>
-              <option value="difficulty-desc">Diff: Hard → Easy</option>
-            </select>
-          </div>
+          {/* Filter button with active count badge */}
+          <button
+            id="problems-filter-btn"
+            type="button"
+            onClick={() => setIsFilterPanelOpen((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs font-medium rounded-lg border transition-colors cursor-pointer shrink-0 ${
+              isFilterPanelOpen || activePanelFilterCount > 0
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            }`}
+            aria-expanded={isFilterPanelOpen}
+            aria-label="Filter problems"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filter</span>
+            {activePanelFilterCount > 0 && (
+              <span
+                id="active-problem-filter-count-badge"
+                className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-600 text-white leading-none"
+              >
+                {activePanelFilterCount}
+              </span>
+            )}
+            {isFilterPanelOpen ? (
+              <ChevronUp className="w-3 h-3 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            )}
+          </button>
         </div>
 
-        {/* Active Filter Indicators / Clear All button */}
+        {/* Expandable Filter Panel: Status, Difficulty, Category, Sort */}
+        {isFilterPanelOpen && (
+          <div
+            id="problems-filter-panel"
+            className="pt-3 border-t border-slate-100 space-y-4 animate-in fade-in duration-150"
+          >
+            {/* Status Filter */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Problem Status
+              </label>
+              <div id="filter-status-options" className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                {(
+                  [
+                    { id: 'all', label: 'All', count: statusCounts.all },
+                    { id: 'todo', label: 'To Do', count: statusCounts.todo },
+                    { id: 'in_progress', label: 'In Progress', count: statusCounts.in_progress },
+                    { id: 'revision', label: 'Revision', count: statusCounts.revision },
+                    { id: 'completed', label: 'Completed', count: statusCounts.completed },
+                  ] as const
+                ).map((tab) => {
+                  const isSelected = selectedStatusTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      id={`panel-status-${tab.id}-btn`}
+                      type="button"
+                      onClick={() => setSelectedStatusTab(tab.id)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 cursor-pointer border ${
+                        isSelected
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                          isSelected ? 'bg-slate-800 text-slate-200' : 'bg-slate-200/70 text-slate-600'
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Difficulty, Category, and Sort Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {/* Difficulty */}
+              <div>
+                <label htmlFor="filter-difficulty-select" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Difficulty
+                </label>
+                <select
+                  id="filter-difficulty-select"
+                  value={selectedDifficulty}
+                  onChange={(e) => setSelectedDifficulty(e.target.value as any)}
+                  className="w-full px-2.5 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-colors cursor-pointer text-slate-800"
+                >
+                  <option value="All">All Difficulties</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label htmlFor="filter-category-select" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Category
+                </label>
+                <select
+                  id="filter-category-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full px-2.5 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-colors cursor-pointer text-slate-800"
+                >
+                  <option value="All">All Categories</option>
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sort By */}
+              <div>
+                <label htmlFor="sort-problems-select" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Sort Order
+                </label>
+                <select
+                  id="sort-problems-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full px-2.5 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-colors cursor-pointer text-slate-800"
+                >
+                  <option value="default">Default Order</option>
+                  <option value="difficulty-asc">Difficulty: Easy → Hard</option>
+                  <option value="difficulty-desc">Difficulty: Hard → Easy</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Filter Panel Footer */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+              <span className="text-slate-500">
+                {activePanelFilterCount > 0 ? `${activePanelFilterCount} panel filter${activePanelFilterCount > 1 ? 's' : ''} applied` : 'No panel filters applied'}
+              </span>
+              <div className="flex items-center gap-2">
+                {activePanelFilterCount > 0 && (
+                  <button
+                    id="reset-panel-filters-btn"
+                    type="button"
+                    onClick={resetPanelFilters}
+                    className="px-2.5 py-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  id="close-filter-panel-btn"
+                  type="button"
+                  onClick={() => setIsFilterPanelOpen(false)}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded-md transition-colors cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Live Result Count & Visible Clear Filters Action (when any search or filter is active) */}
         {hasActiveFilters && (
-          <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
+          <div
+            id="problems-results-status-bar"
+            className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100"
+          >
             <span>
               Showing <strong>{filteredProblems.length}</strong> of{' '}
               <strong>{problems.length}</strong> problems

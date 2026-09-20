@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -9,6 +9,11 @@ import {
   Loader2,
   FileText,
   Video,
+  Search,
+  Filter,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { SubjectDetail as ISubjectDetail, LectureItem } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
@@ -37,6 +42,21 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   const [lectureToDelete, setLectureToDelete] = useState<{ id: string; title: string; session: number } | null>(null);
   const [isConfirmingDeleteSubject, setIsConfirmingDeleteSubject] = useState(false);
   const [isDeletingSubject, setIsDeletingSubject] = useState(false);
+
+  // Search & Filter states for lectures list
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
+  const [hasVideoOnly, setHasVideoOnly] = useState(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // Debounce search input (250ms) to ensure smooth, stutter-free filtering
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
 
   const fetchSubjectDetail = async () => {
     const token = localStorage.getItem('auth_token');
@@ -109,6 +129,20 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
       if (!res.ok) {
         // Revert on error
         fetchSubjectDetail();
+      } else {
+        const result = await res.json();
+        setData((prev) => {
+          if (!prev) return prev;
+          const updatedLectures = prev.lectures.map((l) =>
+            l.id === lecture.id ? { ...l, completed: !!result.completed } : l
+          );
+          const newCompletedCount = updatedLectures.filter((l) => l.completed).length;
+          return {
+            ...prev,
+            lectures: updatedLectures,
+            completedTopics: newCompletedCount,
+          };
+        });
       }
     } catch {
       fetchSubjectDetail();
@@ -254,9 +288,47 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
     }
   };
 
+  // Filtered lectures based on search query (matches title or notes), status, and video attachment
+  const filteredLectures = useMemo(() => {
+    if (!data?.lectures) return [];
+    const query = debouncedSearch.toLowerCase().trim();
+
+    return data.lectures.filter((lec) => {
+      // Search matches title or notes text
+      if (query) {
+        const titleMatch = lec.title.toLowerCase().includes(query);
+        const currentNotes = (notesState[lec.id] ?? lec.notes ?? '').toLowerCase();
+        const notesMatch = currentNotes.includes(query);
+        if (!titleMatch && !notesMatch) return false;
+      }
+
+      // Status filter
+      if (statusFilter === 'completed' && !lec.completed) return false;
+      if (statusFilter === 'pending' && lec.completed) return false;
+
+      // Has video only toggle
+      if (hasVideoOnly && (!lec.videoUrl || !lec.videoUrl.trim())) return false;
+
+      return true;
+    });
+  }, [data?.lectures, debouncedSearch, statusFilter, hasVideoOnly, notesState]);
+
+  const activePanelFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) + (hasVideoOnly ? 1 : 0);
+
+  const hasAnyFilterActive =
+    searchInput.trim() !== '' || statusFilter !== 'all' || hasVideoOnly;
+
+  const clearFilters = () => {
+    setSearchInput('');
+    setDebouncedSearch('');
+    setStatusFilter('all');
+    setHasVideoOnly(false);
+  };
+
   if (isLoading) {
     return (
-      <div className="w-full max-w-5xl mx-auto py-12 flex flex-col items-center justify-center gap-3">
+      <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         <p className="text-sm font-medium text-slate-500">Loading topic checklist...</p>
       </div>
@@ -265,7 +337,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
 
   if (!data) {
     return (
-      <div className="w-full max-w-5xl mx-auto py-12 text-center">
+      <div className="w-full py-16 text-center">
         <p className="text-slate-500 text-sm">Subject not found.</p>
         <button
           onClick={onBack}
@@ -390,11 +462,195 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
         )}
       </form>
 
+      {/* Search & Filter Toolbar for Lectures */}
+      <div id="lectures-filter-toolbar" className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 space-y-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Search input with live debouncing and clear icon */}
+          <div className="relative flex-1">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              id="lecture-search-input"
+              type="text"
+              placeholder="Search topics by title or notes..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-8 pr-7 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white transition-colors text-slate-900 placeholder:text-slate-400"
+            />
+            {searchInput && (
+              <button
+                id="clear-lecture-search-btn"
+                type="button"
+                onClick={() => {
+                  setSearchInput('');
+                  setDebouncedSearch('');
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                title="Clear search text"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter button with active count badge */}
+          <button
+            id="lectures-filter-btn"
+            type="button"
+            onClick={() => setIsFilterPanelOpen((prev) => !prev)}
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 text-xs font-medium rounded-lg border transition-colors cursor-pointer shrink-0 ${
+              isFilterPanelOpen || activePanelFilterCount > 0
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+            }`}
+            aria-expanded={isFilterPanelOpen}
+            aria-label="Filter topics"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            <span>Filter</span>
+            {activePanelFilterCount > 0 && (
+              <span
+                id="active-lecture-filter-count-badge"
+                className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-600 text-white leading-none"
+              >
+                {activePanelFilterCount}
+              </span>
+            )}
+            {isFilterPanelOpen ? (
+              <ChevronUp className="w-3 h-3 text-slate-400" />
+            ) : (
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            )}
+          </button>
+        </div>
+
+        {/* Expandable Filter Panel (works on desktop and mobile) */}
+        {isFilterPanelOpen && (
+          <div
+            id="lectures-filter-panel"
+            className="pt-3 border-t border-slate-100 space-y-3.5 animate-in fade-in duration-150"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* Status Filter */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Topic Status
+                </label>
+                <div className="flex items-center gap-1.5">
+                  {(
+                    [
+                      { id: 'all', label: 'All' },
+                      { id: 'completed', label: 'Completed' },
+                      { id: 'pending', label: 'Pending' },
+                    ] as const
+                  ).map((opt) => {
+                    const isSelected = statusFilter === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        id={`filter-status-${opt.id}-btn`}
+                        type="button"
+                        onClick={() => setStatusFilter(opt.id)}
+                        className={`flex-1 sm:flex-initial px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors cursor-pointer text-center ${
+                          isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Video Content Filter Toggle */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Media / Video
+                </label>
+                <label
+                  id="filter-video-toggle-label"
+                  className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors ${
+                    hasVideoOnly
+                      ? 'bg-blue-50/80 border-blue-200 text-blue-900'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span className="flex items-center gap-2 text-xs font-medium">
+                    <Video className={`w-3.5 h-3.5 ${hasVideoOnly ? 'text-blue-600' : 'text-slate-400'}`} />
+                    <span>Has video lecture only</span>
+                  </span>
+                  <input
+                    id="filter-video-checkbox"
+                    type="checkbox"
+                    checked={hasVideoOnly}
+                    onChange={(e) => setHasVideoOnly(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Filter Panel Footer */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+              <span className="text-slate-500">
+                {activePanelFilterCount > 0 ? `${activePanelFilterCount} filter${activePanelFilterCount > 1 ? 's' : ''} applied` : 'No panel filters applied'}
+              </span>
+              <div className="flex items-center gap-2">
+                {activePanelFilterCount > 0 && (
+                  <button
+                    id="reset-panel-filters-btn"
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter('all');
+                      setHasVideoOnly(false);
+                    }}
+                    className="px-2.5 py-1 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  id="close-filter-panel-btn"
+                  type="button"
+                  onClick={() => setIsFilterPanelOpen(false)}
+                  className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium rounded-md transition-colors cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Live Result Count & Visible Clear Filters Bar (when any search or filter is active) */}
+        {hasAnyFilterActive && (
+          <div
+            id="lecture-results-status-bar"
+            className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100"
+          >
+            <span>
+              Showing <strong>{filteredLectures.length}</strong> of{' '}
+              <strong>{lectures.length}</strong> topics
+            </span>
+            <button
+              id="clear-all-lecture-filters-btn"
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+              <span>Clear filters</span>
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Topics Checklist Table / Rows */}
       <div id="topics-list-container" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        {lectures.length > 0 ? (
+        {filteredLectures.length > 0 ? (
           <ul id="lectures-checklist" className="divide-y divide-slate-100">
-            {lectures.map((lec) => {
+            {filteredLectures.map((lec) => {
               const isNotesOpen = openNotesId === lec.id;
               const currentNotes = notesState[lec.id] || '';
 
@@ -528,6 +784,26 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
               );
             })}
           </ul>
+        ) : lectures.length > 0 && hasAnyFilterActive ? (
+          /* Zero results matching search/filter */
+          <div id="no-lectures-match-filters" className="py-12 px-4 text-center max-w-sm mx-auto">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3 text-slate-400">
+              <Search className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-900">No matching topics found</h3>
+            <p className="text-xs text-slate-500 mt-1 mb-4">
+              No topics match your current search "{debouncedSearch || searchInput}" or active filter criteria.
+            </p>
+            <button
+              id="zero-state-clear-lecture-filters-btn"
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Clear all filters</span>
+            </button>
+          </div>
         ) : (
           <div id="no-topics-placeholder" className="py-12 text-center text-slate-400">
             <p className="text-sm font-medium text-slate-600">No topics added to this subject yet</p>

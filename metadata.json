@@ -1,6 +1,6 @@
 {
   "name": "Progress Path",
-  "description": "Full-stack LMS platform with Subjects & Lectures, LeetCode-style Coding Repository, Academic Calendar, Import Console, User Profile, and Admin Performance Monitor.",
+  "description": "Full-stack LMS platform with secure Admin Roles & Access Control, Audit Logs, Subjects & Lectures, Coding Repository, Academic Calendar, User Profile, and System Performance Benchmarks.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

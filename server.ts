@@ -9,8 +9,10 @@ import problemsRoutes from './server/routes/problems.ts';
 import calendarRoutes from './server/routes/calendar.ts';
 import adminRoutes from './server/routes/admin.ts';
 import { initDatabase, isDbConnected, getDbError, getConnectedDbName } from './server/db.ts';
+import { bootstrapInitialAdmin } from './server/bootstrap.ts';
 import {
   securityHeaders,
+  corsHandler,
   noSqlInjectionSanitizer,
   apiRateLimiter,
   authRateLimiter,
@@ -30,24 +32,31 @@ async function startServer() {
   // 1. Security Headers & Hardening
   app.use(securityHeaders);
 
-  // 2. Request parsing & limits (protect against large body payload DoS)
+  // 2. CORS Handling
+  app.use(corsHandler);
+
+  // 3. Request parsing & limits (protect against large body payload DoS)
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-  // 3. Anti-NoSQL Injection Sanitizer
+  // 4. Anti-NoSQL Injection Sanitizer
   app.use(noSqlInjectionSanitizer);
 
-  // 4. Connect Database (MongoDB Mongoose or resilient fallback)
+  // 5. Connect Database (MongoDB Mongoose or resilient fallback)
   await initDatabase();
+  await bootstrapInitialAdmin();
 
-  // 5. System Health and Security Status Check
-  app.get('/api/health', (_req, res) => {
-    res.json({
+  // 6. System Health and Security Status Check (Render health-check support on /health, /healthz, /api/health)
+  const healthCheckHandler = (_req: express.Request, res: express.Response) => {
+    res.status(200).json({
       status: 'ok',
       database: isDbConnected() ? 'connected' : 'fallback-store',
       timestamp: new Date().toISOString(),
     });
-  });
+  };
+  app.get('/health', healthCheckHandler);
+  app.get('/healthz', healthCheckHandler);
+  app.get('/api/health', healthCheckHandler);
 
   app.get('/api/system/status', (_req, res) => {
     const dbConnected = isDbConnected();
@@ -73,6 +82,7 @@ async function startServer() {
         passwordCryptography: 'Active (bcryptjs multi-round salting)',
         sessionAuthorization: 'Active (JWT HMAC-SHA256 signature verification)',
         roleBasedAccessControl: 'Active (Strict separation of user vs admin privileges)',
+        cors: 'Active (Restricted origin validation, credentials support, no wildcards)',
       },
       performance: {
         uptimeSeconds: Math.floor(process.uptime()),
@@ -83,18 +93,34 @@ async function startServer() {
     });
   });
 
-  // 6. Rate Limiters
+  // 7. Rate Limiters
   app.use('/api', apiRateLimiter);
   app.use('/api/auth', authRateLimiter, authRoutes);
 
-  // 7. API Routes
+  // 8. API Routes
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/subjects', subjectsRoutes);
   app.use('/api/problems', problemsRoutes);
   app.use('/api/calendar', calendarRoutes);
   app.use('/api/admin', adminRoutes);
 
-  // 8. Vite middleware for development vs static build for production
+  // 9. Unknown API routes 404 handler (Prevents fallthrough to SPA index.html)
+  app.all('/api/*', (_req, res) => {
+    res.status(404).json({ message: 'API endpoint not found' });
+  });
+
+  // 10. Global Error Handler (Hides verbose stack traces in production)
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error('[Unhandled Server Error]:', err);
+    const status = typeof err.status === 'number' ? err.status : 500;
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.status(status).json({
+      message: isProduction ? 'Internal Server Error' : err.message || 'Internal Server Error',
+      ...(isProduction ? {} : { stack: err.stack }),
+    });
+  });
+
+  // 11. Vite middleware for development vs static build for production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -113,6 +139,7 @@ async function startServer() {
     console.log(`Server running at http://0.0.0.0:${PORT}`);
   });
 }
+
 
 startServer().catch((err) => {
   console.error('Failed to start server:', err);

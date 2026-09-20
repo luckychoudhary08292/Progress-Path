@@ -2,7 +2,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role?: 'admin' | 'student';
+  role?: 'admin' | 'user' | 'student';
+  mustChangePassword?: boolean;
   createdAt?: string;
 }
 
@@ -127,7 +128,8 @@ export interface AdminUserComparison {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'student';
+  role: 'admin' | 'user' | 'student';
+  mustChangePassword?: boolean;
   lecturesDone: number;
   totalLectures: number;
   lecturesCompletedPercent: number;
@@ -138,12 +140,79 @@ export interface AdminUserComparison {
   createdAt: string;
 }
 
+export interface AuditLogEntry {
+  id: string;
+  actorId: string;
+  actorName: string;
+  actorEmail?: string;
+  action: string;
+  targetUserId?: string;
+  targetEmail?: string;
+  details: string;
+  timestamp: string;
+}
+
 export type AdminSortColumn =
   | 'name'
   | 'email'
   | 'lecturesCompletedPercent'
   | 'problemsSolvedPercent'
   | 'overallReadinessPercent';
+
+export type AdminSection = 'overview' | 'users' | 'content' | 'activity';
+
+export interface AdminOverviewMetrics {
+  totalUsers: number;
+  totalAdmins: number;
+  totalStandardUsers: number;
+  totalContentItems: number;
+  globalSubjectsCount: number;
+  globalLecturesCount: number;
+  globalProblemsCount: number;
+  totalProgressCompleted: number;
+}
+
+export interface MostActiveUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  completedLectures: number;
+  solvedProblems: number;
+  totalCompletedThisWeek: number;
+  totalCompleted: number;
+  lastActivityDate: string | null;
+}
+
+export interface GlobalSubjectItem {
+  id: string;
+  name: string;
+  isGlobal: boolean;
+  nextSessionNumber: number;
+  lecturesCount?: number;
+  createdAt: string;
+}
+
+export interface GlobalLectureItem {
+  id: string;
+  subjectId: string;
+  subjectName: string;
+  session: number;
+  title: string;
+  videoUrl: string;
+  createdAt: string;
+}
+
+export interface GlobalProblemItem {
+  id: string;
+  name: string;
+  difficulty: ProblemDifficulty;
+  category: string;
+  link: string;
+  isGlobal: boolean;
+  createdAt: string;
+}
+
 
 export type SortDirection = 'asc' | 'desc';
 

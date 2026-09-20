@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { UserRepository } from '../models/User.ts';
+import { AuditLogRepository } from '../models/AuditLog.ts';
 import { isDbConnected, getConnectedDbName } from '../db.ts';
 import {
   SubjectRepository,
@@ -15,6 +16,9 @@ import {
 const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-jwt-key-2026';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.warn('[Security Warning]: JWT_SECRET is not defined in environment variables! Please set JWT_SECRET in your Render dashboard.');
+}
 
 interface JwtPayload {
   userId: string;
@@ -92,8 +96,8 @@ router.post('/signup', async (req: Request, res: Response) => {
     // Validate Password
     if (!password || typeof password !== 'string') {
       fieldErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      fieldErrors.password = 'Password must be at least 6 characters long';
+    } else if (password.length < 8) {
+      fieldErrors.password = 'Password must be at least 8 characters long';
     }
 
     if (Object.keys(fieldErrors).length > 0) {
@@ -115,11 +119,13 @@ router.post('/signup', async (req: Request, res: Response) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user (Public signup ALWAYS creates role 'user', never admin)
     const newUser = await UserRepository.create({
       name: name.trim(),
       email: email.trim(),
       password: hashedPassword,
+      role: 'user',
+      mustChangePassword: false,
     });
 
     // Sign JWT
@@ -136,6 +142,7 @@ router.post('/signup', async (req: Request, res: Response) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
+        mustChangePassword: Boolean(newUser.mustChangePassword),
         createdAt: newUser.createdAt,
       },
     });
@@ -201,6 +208,7 @@ router.post('/login', async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        mustChangePassword: Boolean(user.mustChangePassword),
         createdAt: user.createdAt,
       },
     });
@@ -219,6 +227,7 @@ router.get('/me', authenticateToken, (req: Request, res: Response) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      mustChangePassword: Boolean(user.mustChangePassword),
       createdAt: user.createdAt,
     },
     databaseStatus: isDbConnected() ? 'connected_mongodb' : 'memory_fallback',
@@ -256,6 +265,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
         name: user.name,
         email: user.email,
         role: user.role,
+        mustChangePassword: Boolean(user.mustChangePassword),
         createdAt: user.createdAt,
       },
       stats: {
@@ -338,12 +348,89 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
         name: updated.name,
         email: updated.email,
         role: updated.role,
+        mustChangePassword: Boolean(updated.mustChangePassword),
         createdAt: updated.createdAt,
       },
     });
   } catch (error) {
     console.error('[Profile update error]:', error);
     res.status(500).json({ message: 'Server error updating profile' });
+  }
+});
+
+// POST /api/auth/change-first-password
+// Enforces that new admins provisioned with a temporary password set their own secure password
+router.post('/change-first-password', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const { currentPassword, newPassword } = req.body || {};
+    const fieldErrors: Record<string, string> = {};
+
+    if (!currentPassword || typeof currentPassword !== 'string') {
+      fieldErrors.currentPassword = 'Temporary or current password is required';
+    } else {
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        fieldErrors.currentPassword = 'The temporary password provided is incorrect';
+      }
+    }
+
+    if (!newPassword || typeof newPassword !== 'string') {
+      fieldErrors.newPassword = 'New password is required';
+    } else if (newPassword.length < 6) {
+      fieldErrors.newPassword = 'New password must be at least 6 characters';
+    } else if (currentPassword && newPassword === currentPassword) {
+      fieldErrors.newPassword = 'New password cannot be identical to the temporary password';
+    }
+
+    if (Object.keys(fieldErrors).length > 0) {
+      res.status(400).json({ fieldErrors });
+      return;
+    }
+
+    const newHashed = await bcrypt.hash(newPassword, 10);
+    const updated = await UserRepository.update(user.id, {
+      password: newHashed,
+      mustChangePassword: false,
+    });
+
+    if (!updated) {
+      res.status(404).json({ message: 'User account not found' });
+      return;
+    }
+
+    await AuditLogRepository.log({
+      actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
+      action: 'first_login_password_changed',
+      targetUserId: user.id,
+      targetEmail: user.email,
+      details: `User ${user.name} (${user.email}) changed their initial temporary password.`,
+    });
+
+    // Sign a fresh token with updated claims
+    const token = jwt.sign(
+      { userId: updated.id, email: updated.email },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.status(200).json({
+      message: 'Password successfully updated. Temporary password requirement resolved.',
+      token,
+      user: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+        mustChangePassword: false,
+        createdAt: updated.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('[Change first password error]:', error);
+    res.status(500).json({ message: 'Server error updating password' });
   }
 });
 

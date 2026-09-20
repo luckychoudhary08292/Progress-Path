@@ -12,13 +12,15 @@ import { AdminMonitor } from './components/AdminMonitor.tsx';
 import { ImportConsole } from './components/ImportConsole.tsx';
 import { UserProfile } from './components/UserProfile.tsx';
 import { SystemSecurityModal } from './components/SystemSecurityModal.tsx';
+import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal.tsx';
+import { LandingPage } from './components/LandingPage.tsx';
 
-type AuthView = 'login' | 'signup';
+type AuthView = 'landing' | 'login' | 'signup';
 type AppView = 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'admin' | 'import' | 'profile';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState<AuthView>('signup');
+  const [currentView, setCurrentView] = useState<AuthView>('landing');
   const [isInitializing, setIsInitializing] = useState(true);
 
   // In-app navigation states
@@ -98,7 +100,7 @@ export default function App() {
     setUser(null);
     setSelectedSubjectId(null);
     setActiveTab('dashboard');
-    setCurrentView('login');
+    setCurrentView('landing');
   };
 
   if (isInitializing) {
@@ -112,13 +114,23 @@ export default function App() {
     );
   }
 
+  const isAuthFormView = !user && (currentView === 'login' || currentView === 'signup');
+
   return (
-    <div className={`min-h-screen bg-slate-50 flex flex-col overflow-x-hidden w-full ${user ? 'pb-12' : 'justify-center py-8 sm:py-16 px-4 sm:px-6 lg:px-8'}`}>
+    <div
+      className={`min-h-screen bg-slate-50 flex flex-col overflow-x-hidden w-full ${
+        user
+          ? 'pb-12'
+          : isAuthFormView
+          ? 'justify-center py-8 sm:py-16 px-4 sm:px-6 lg:px-8'
+          : ''
+      }`}
+    >
       {user ? (
         <>
           {/* Top Global Navigation Bar */}
-          <nav id="app-top-nav" className="sticky top-0 z-30 bg-white border-b border-slate-200 mb-6 w-full">
-            <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 w-full">
+          <nav id="app-top-nav" className="sticky top-0 z-30 bg-white border-b border-slate-200 mb-6 w-full shadow-xs">
+            <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
               {/* Main Nav Header */}
               <div className="flex items-center justify-between h-14 md:h-15">
                 <div className="flex items-center gap-6">
@@ -518,7 +530,7 @@ export default function App() {
           </nav>
 
           {/* Main Body View */}
-          <main className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 w-full min-w-0">
+          <main className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 min-w-0 flex-1">
             {selectedSubjectId ? (
               <SubjectDetail
                 subjectId={selectedSubjectId}
@@ -556,7 +568,10 @@ export default function App() {
                 }}
               />
             ) : activeTab === 'admin' ? (
-              <AdminMonitor onNavigateToDashboard={() => setActiveTab('dashboard')} />
+              <AdminMonitor
+                currentUser={user}
+                onNavigateToDashboard={() => setActiveTab('dashboard')}
+              />
             ) : (
               <Dashboard
                 user={user}
@@ -581,15 +596,22 @@ export default function App() {
             )}
           </main>
         </>
+      ) : currentView === 'landing' ? (
+        <LandingPage
+          onNavigateToLogin={() => setCurrentView('login')}
+          onNavigateToSignup={() => setCurrentView('signup')}
+        />
       ) : currentView === 'signup' ? (
         <SignupForm
           onSuccess={handleAuthSuccess}
           onNavigateToLogin={() => setCurrentView('login')}
+          onNavigateToHome={() => setCurrentView('landing')}
         />
       ) : (
         <LoginForm
           onSuccess={handleAuthSuccess}
           onNavigateToSignup={() => setCurrentView('signup')}
+          onNavigateToHome={() => setCurrentView('landing')}
         />
       )}
 
@@ -598,6 +620,17 @@ export default function App() {
         isOpen={isSecurityModalOpen}
         onClose={() => setIsSecurityModalOpen(false)}
       />
+
+      {/* Mandatory First-Login Password Change Modal for newly created Admins */}
+      {user && user.mustChangePassword && (
+        <ForcePasswordChangeModal
+          user={user}
+          onSuccess={(updatedUser) => {
+            setUser(updatedUser);
+          }}
+          onLogout={handleLogout}
+        />
+      )}
     </div>
   );
 }

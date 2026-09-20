@@ -460,6 +460,113 @@ export const SubjectRepository = {
     }
     return inMemorySubjects.filter((s) => s.createdBy === userId).length;
   },
+
+  async listGlobal() {
+    if (isDbConnected()) {
+      const docs = await SubjectModel.find({ isGlobal: true }).sort({ createdAt: 1 }).lean();
+      return docs.map((s) => ({
+        id: s._id.toString(),
+        name: s.name,
+        isGlobal: true,
+        nextSessionNumber: s.nextSessionNumber || 1,
+        createdAt: s.createdAt,
+      }));
+    }
+    return inMemorySubjects
+      .filter((s) => s.isGlobal)
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        isGlobal: true,
+        nextSessionNumber: s.nextSessionNumber,
+        createdAt: s.createdAt,
+      }));
+  },
+
+  async createGlobal(name: string) {
+    const trimmed = name.trim();
+    if (isDbConnected()) {
+      const newSubject = await SubjectModel.create({
+        name: trimmed,
+        createdBy: null,
+        isGlobal: true,
+        nextSessionNumber: 1,
+      });
+      return {
+        id: newSubject._id.toString(),
+        name: newSubject.name,
+        isGlobal: true,
+        nextSessionNumber: 1,
+        createdAt: newSubject.createdAt,
+      };
+    }
+    const newSub: InMemorySubject = {
+      id: 'subj_' + Math.random().toString(36).substring(2, 9),
+      name: trimmed,
+      createdBy: null,
+      isGlobal: true,
+      nextSessionNumber: 1,
+      createdAt: new Date(),
+    };
+    inMemorySubjects.push(newSub);
+    return newSub;
+  },
+
+  async updateGlobal(subjectId: string, name: string) {
+    const trimmed = name.trim();
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(subjectId)) return null;
+      const updated = await SubjectModel.findOneAndUpdate(
+        { _id: toMongoId(subjectId), isGlobal: true },
+        { name: trimmed },
+        { new: true }
+      ).lean();
+      if (!updated) return null;
+      return {
+        id: updated._id.toString(),
+        name: updated.name,
+        isGlobal: true,
+        nextSessionNumber: updated.nextSessionNumber || 1,
+        createdAt: updated.createdAt,
+      };
+    }
+    const sub = inMemorySubjects.find((s) => s.id === subjectId && s.isGlobal);
+    if (!sub) return null;
+    sub.name = trimmed;
+    return sub;
+  },
+
+  async deleteGlobal(subjectId: string) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(subjectId)) return false;
+      const sub = await SubjectModel.findOne({ _id: subjectId, isGlobal: true });
+      if (!sub) return false;
+      const lectures = await LectureModel.find({ subjectId: sub._id }).select('_id');
+      const lecIds = lectures.map((l) => l._id);
+      if (lecIds.length > 0) {
+        await ProgressModel.deleteMany({ itemId: { $in: lecIds } });
+      }
+      await LectureModel.deleteMany({ subjectId: sub._id });
+      await SubjectModel.findByIdAndDelete(sub._id);
+      return true;
+    }
+    const idx = inMemorySubjects.findIndex((s) => s.id === subjectId && s.isGlobal);
+    if (idx === -1) return false;
+    inMemorySubjects.splice(idx, 1);
+    const removedLecIds: string[] = [];
+    for (let i = inMemoryLectures.length - 1; i >= 0; i--) {
+      if (inMemoryLectures[i].subjectId === subjectId) {
+        removedLecIds.push(inMemoryLectures[i].id);
+        inMemoryLectures.splice(i, 1);
+      }
+    }
+    for (let i = inMemoryProgress.length - 1; i >= 0; i--) {
+      if (removedLecIds.includes(inMemoryProgress[i].itemId)) {
+        inMemoryProgress.splice(i, 1);
+      }
+    }
+    return true;
+  },
 };
 
 // ----------------------------------------------------------------------
@@ -572,6 +679,127 @@ export const LectureRepository = {
       return await LectureModel.countDocuments();
     }
     return inMemoryLectures.length;
+  },
+
+  async listGlobal() {
+    if (isDbConnected()) {
+      const globalSubs = await SubjectModel.find({ isGlobal: true }).select('_id name').lean();
+      const subMap = new Map(globalSubs.map((s) => [s._id.toString(), s.name]));
+      const subIds = globalSubs.map((s) => s._id);
+      const docs = await LectureModel.find({ subjectId: { $in: subIds } })
+        .sort({ subjectId: 1, session: 1 })
+        .lean();
+      return docs.map((l) => ({
+        id: l._id.toString(),
+        subjectId: l.subjectId.toString(),
+        subjectName: subMap.get(l.subjectId.toString()) || 'Global Subject',
+        session: l.session,
+        title: l.title,
+        videoUrl: l.videoUrl || '',
+        createdAt: l.createdAt,
+      }));
+    }
+    const globalSubIds = inMemorySubjects.filter((s) => s.isGlobal).map((s) => s.id);
+    const subMap = new Map(inMemorySubjects.filter((s) => s.isGlobal).map((s) => [s.id, s.name]));
+    return inMemoryLectures
+      .filter((l) => globalSubIds.includes(l.subjectId))
+      .sort((a, b) => a.session - b.session)
+      .map((l) => ({
+        id: l.id,
+        subjectId: l.subjectId,
+        subjectName: subMap.get(l.subjectId) || 'Global Subject',
+        session: l.session,
+        title: l.title,
+        videoUrl: l.videoUrl,
+        createdAt: l.createdAt,
+      }));
+  },
+
+  async createGlobal(data: { subjectId: string; title: string; session?: number; videoUrl?: string }) {
+    if (isDbConnected()) {
+      const sub = await SubjectModel.findOne({ _id: toMongoId(data.subjectId), isGlobal: true });
+      if (!sub) throw new Error('Global parent subject not found');
+      const sessionNum = data.session || sub.nextSessionNumber || 1;
+      if (sessionNum >= (sub.nextSessionNumber || 1)) {
+        sub.nextSessionNumber = sessionNum + 1;
+        await sub.save();
+      }
+      const lec = await LectureModel.create({
+        subjectId: sub._id,
+        session: sessionNum,
+        title: data.title.trim(),
+        videoUrl: (data.videoUrl || '').trim(),
+        createdBy: null,
+      });
+      return {
+        id: lec._id.toString(),
+        subjectId: lec.subjectId.toString(),
+        session: lec.session,
+        title: lec.title,
+        videoUrl: lec.videoUrl,
+        createdAt: lec.createdAt,
+      };
+    }
+    const sub = inMemorySubjects.find((s) => s.id === data.subjectId && s.isGlobal);
+    if (!sub) throw new Error('Global parent subject not found');
+    const sessionNum = data.session || sub.nextSessionNumber || 1;
+    sub.nextSessionNumber = Math.max(sub.nextSessionNumber, sessionNum + 1);
+    const newLec: InMemoryLecture = {
+      id: 'lec_' + Math.random().toString(36).substring(2, 9),
+      subjectId: data.subjectId,
+      session: sessionNum,
+      title: data.title.trim(),
+      videoUrl: (data.videoUrl || '').trim(),
+      createdBy: 'admin',
+      createdAt: new Date(),
+    };
+    inMemoryLectures.push(newLec);
+    return newLec;
+  },
+
+  async updateGlobal(lectureId: string, data: { title?: string; session?: number; videoUrl?: string }) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(lectureId)) return null;
+      const updateData: any = {};
+      if (data.title !== undefined) updateData.title = data.title.trim();
+      if (data.session !== undefined) updateData.session = data.session;
+      if (data.videoUrl !== undefined) updateData.videoUrl = data.videoUrl.trim();
+      const updated = await LectureModel.findByIdAndUpdate(lectureId, updateData, { new: true }).lean();
+      if (!updated) return null;
+      return {
+        id: updated._id.toString(),
+        subjectId: updated.subjectId.toString(),
+        session: updated.session,
+        title: updated.title,
+        videoUrl: updated.videoUrl,
+        createdAt: updated.createdAt,
+      };
+    }
+    const lec = inMemoryLectures.find((l) => l.id === lectureId);
+    if (!lec) return null;
+    if (data.title !== undefined) lec.title = data.title.trim();
+    if (data.session !== undefined) lec.session = data.session;
+    if (data.videoUrl !== undefined) lec.videoUrl = data.videoUrl.trim();
+    return lec;
+  },
+
+  async deleteGlobal(lectureId: string) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(lectureId)) return false;
+      const deleted = await LectureModel.findByIdAndDelete(lectureId);
+      if (!deleted) return false;
+      await ProgressModel.deleteMany({ itemId: deleted._id });
+      return true;
+    }
+    const idx = inMemoryLectures.findIndex((l) => l.id === lectureId);
+    if (idx === -1) return false;
+    inMemoryLectures.splice(idx, 1);
+    for (let i = inMemoryProgress.length - 1; i >= 0; i--) {
+      if (inMemoryProgress[i].itemId === lectureId) {
+        inMemoryProgress.splice(i, 1);
+      }
+    }
+    return true;
   },
 };
 
@@ -701,6 +929,126 @@ export const ProblemRepository = {
       return await ProblemModel.countDocuments();
     }
     return inMemoryProblems.length;
+  },
+
+  async listGlobal() {
+    if (isDbConnected()) {
+      const docs = await ProblemModel.find({ isGlobal: true }).sort({ createdAt: 1 }).lean();
+      return docs.map((p) => ({
+        id: p._id.toString(),
+        name: p.name,
+        difficulty: p.difficulty,
+        category: p.category,
+        link: p.link || '',
+        isGlobal: true,
+        createdAt: p.createdAt,
+      }));
+    }
+    return inMemoryProblems
+      .filter((p) => p.isGlobal)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        difficulty: p.difficulty,
+        category: p.category,
+        link: p.link,
+        isGlobal: true,
+        createdAt: p.createdAt,
+      }));
+  },
+
+  async createGlobal(data: {
+    name: string;
+    difficulty: ProblemDifficulty;
+    category: string;
+    link?: string;
+  }) {
+    if (isDbConnected()) {
+      const doc = await ProblemModel.create({
+        name: data.name.trim(),
+        difficulty: data.difficulty,
+        category: data.category.trim(),
+        link: (data.link || '').trim(),
+        isGlobal: true,
+        createdBy: null,
+      });
+      return {
+        id: doc._id.toString(),
+        name: doc.name,
+        difficulty: doc.difficulty,
+        category: doc.category,
+        link: doc.link,
+        isGlobal: true,
+        createdAt: doc.createdAt,
+      };
+    }
+    const newProb: InMemoryProblem = {
+      id: 'prob_' + Math.random().toString(36).substring(2, 9),
+      name: data.name.trim(),
+      difficulty: data.difficulty,
+      category: data.category.trim(),
+      link: (data.link || '').trim(),
+      isGlobal: true,
+      createdBy: null,
+      createdAt: new Date(),
+    };
+    inMemoryProblems.push(newProb);
+    return newProb;
+  },
+
+  async updateGlobal(
+    problemId: string,
+    data: { name?: string; difficulty?: ProblemDifficulty; category?: string; link?: string }
+  ) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(problemId)) return null;
+      const updateData: any = {};
+      if (data.name !== undefined) updateData.name = data.name.trim();
+      if (data.difficulty !== undefined) updateData.difficulty = data.difficulty;
+      if (data.category !== undefined) updateData.category = data.category.trim();
+      if (data.link !== undefined) updateData.link = (data.link || '').trim();
+      const updated = await ProblemModel.findOneAndUpdate(
+        { _id: toMongoId(problemId), isGlobal: true },
+        updateData,
+        { new: true }
+      ).lean();
+      if (!updated) return null;
+      return {
+        id: updated._id.toString(),
+        name: updated.name,
+        difficulty: updated.difficulty,
+        category: updated.category,
+        link: updated.link,
+        isGlobal: true,
+        createdAt: updated.createdAt,
+      };
+    }
+    const prob = inMemoryProblems.find((p) => p.id === problemId && p.isGlobal);
+    if (!prob) return null;
+    if (data.name !== undefined) prob.name = data.name.trim();
+    if (data.difficulty !== undefined) prob.difficulty = data.difficulty;
+    if (data.category !== undefined) prob.category = data.category.trim();
+    if (data.link !== undefined) prob.link = (data.link || '').trim();
+    return prob;
+  },
+
+  async deleteGlobal(problemId: string) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(problemId)) return false;
+      const deleted = await ProblemModel.findOneAndDelete({ _id: toMongoId(problemId), isGlobal: true });
+      if (!deleted) return false;
+      await ProgressModel.deleteMany({ itemId: deleted._id });
+      return true;
+    }
+    const idx = inMemoryProblems.findIndex((p) => p.id === problemId && p.isGlobal);
+    if (idx === -1) return false;
+    inMemoryProblems.splice(idx, 1);
+    for (let i = inMemoryProgress.length - 1; i >= 0; i--) {
+      if (inMemoryProgress[i].itemId === problemId) {
+        inMemoryProgress.splice(i, 1);
+      }
+    }
+    return true;
   },
 };
 
@@ -926,22 +1274,51 @@ export const ProgressRepository = {
     if (isDbConnected()) {
       const uId = toMongoId(userId);
       const itId = toMongoId(itemId);
-      const updateDoc: any = {};
 
+      // Find existing document
+      const existing = await ProgressModel.findOne({
+        $or: [{ userId: uId }, { userId }],
+        itemType,
+        itemId: itId,
+      });
+
+      let nextStatus: 'todo' | 'in_progress' | 'completed' | 'revision' = existing?.status || 'todo';
       if (update.status) {
-        updateDoc.status = update.status;
-        updateDoc.completedAt = update.status === 'completed' ? new Date() : null;
+        nextStatus = update.status;
       } else if (typeof update.completed === 'boolean') {
-        updateDoc.status = update.completed ? 'completed' : 'todo';
-        updateDoc.completedAt = update.completed ? new Date() : null;
+        nextStatus = update.completed ? 'completed' : 'todo';
       }
 
+      let nextNotes: string = existing?.notes || '';
       if (typeof update.notes === 'string') {
-        updateDoc.notes = update.notes;
+        nextNotes = update.notes;
       }
+
+      // CRITICAL FIX: If status is 'todo' (incomplete) and there are no notes,
+      // DELETE the progress document completely from the database!
+      // This prevents uncompleted items from remaining in the database and filling up storage.
+      if (nextStatus === 'todo' && (!nextNotes || nextNotes.trim() === '')) {
+        if (existing) {
+          await ProgressModel.deleteOne({ _id: existing._id });
+        }
+        return {
+          status: 'todo',
+          notes: '',
+          completed: false,
+        };
+      }
+
+      const updateDoc: any = {
+        userId: uId,
+        itemType,
+        itemId: itId,
+        status: nextStatus,
+        notes: nextNotes,
+        completedAt: nextStatus === 'completed' ? (existing?.completedAt || new Date()) : null,
+      };
 
       const prog = await ProgressModel.findOneAndUpdate(
-        { userId: uId, itemType, itemId: itId },
+        { $or: [{ userId: uId }, { userId }], itemType, itemId: itId },
         { $set: updateDoc },
         { new: true, upsert: true, setDefaultsOnInsert: true }
       );
@@ -953,43 +1330,80 @@ export const ProgressRepository = {
       };
     }
 
-    let rec = inMemoryProgress.find(
+    const existingIdx = inMemoryProgress.findIndex(
       (p) => p.userId === userId && p.itemType === itemType && p.itemId === itemId
     );
+    const existing = existingIdx !== -1 ? inMemoryProgress[existingIdx] : null;
 
-    let status = rec?.status || 'todo';
+    let nextStatus: 'todo' | 'in_progress' | 'completed' | 'revision' = existing?.status || 'todo';
     if (update.status) {
-      status = update.status;
+      nextStatus = update.status;
     } else if (typeof update.completed === 'boolean') {
-      status = update.completed ? 'completed' : 'todo';
+      nextStatus = update.completed ? 'completed' : 'todo';
     }
 
-    const notes = typeof update.notes === 'string' ? update.notes : rec?.notes || '';
-    const completedAt = status === 'completed' ? new Date() : null;
+    const nextNotes = typeof update.notes === 'string' ? update.notes : existing?.notes || '';
 
-    if (!rec) {
-      rec = {
+    // If status is 'todo' and has no notes, delete from in-memory collection
+    if (nextStatus === 'todo' && (!nextNotes || nextNotes.trim() === '')) {
+      if (existingIdx !== -1) {
+        inMemoryProgress.splice(existingIdx, 1);
+      }
+      return {
+        status: 'todo',
+        notes: '',
+        completed: false,
+      };
+    }
+
+    const completedAt = nextStatus === 'completed' ? new Date() : null;
+
+    if (!existing) {
+      const rec: InMemoryProgress = {
         userId,
         itemType,
         itemId,
-        status,
-        notes,
+        status: nextStatus,
+        notes: nextNotes,
         completedAt,
         updatedAt: new Date(),
       };
       inMemoryProgress.push(rec);
     } else {
-      rec.status = status;
-      rec.notes = notes;
-      rec.completedAt = completedAt;
-      rec.updatedAt = new Date();
+      existing.status = nextStatus;
+      existing.notes = nextNotes;
+      existing.completedAt = completedAt;
+      existing.updatedAt = new Date();
     }
 
     return {
-      status: rec.status,
-      notes: rec.notes,
-      completed: rec.status === 'completed',
+      status: nextStatus,
+      notes: nextNotes,
+      completed: nextStatus === 'completed',
     };
+  },
+
+  async cleanupOrphanedProgress() {
+    if (isDbConnected()) {
+      try {
+        const res = await ProgressModel.deleteMany({
+          status: 'todo',
+          $or: [
+            { notes: '' },
+            { notes: null },
+            { notes: { $exists: false } },
+          ],
+        });
+        if (res.deletedCount > 0) {
+          console.log(`[Progress Cleanup] Successfully purged ${res.deletedCount} empty todo progress records from MongoDB.`);
+        }
+        return res.deletedCount;
+      } catch (err) {
+        console.warn('[Progress Cleanup Error]:', err);
+        return 0;
+      }
+    }
+    return 0;
   },
 
   async countCompleted(userId: string, itemType: 'lecture' | 'problem', itemIds?: string[]) {
@@ -1015,5 +1429,97 @@ export const ProgressRepository = {
       }
       return true;
     }).length;
+  },
+
+  async countTotalCompleted() {
+    if (isDbConnected()) {
+      return await ProgressModel.countDocuments({ status: 'completed' });
+    }
+    return inMemoryProgress.filter((p) => p.status === 'completed').length;
+  },
+
+  async getWeeklyActiveUsers(
+    users: { id: string; name: string; email: string; role: string }[],
+    days = 7
+  ) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
+    const result = await Promise.all(
+      users.map(async (u) => {
+        let completedLectures = 0;
+        let solvedProblems = 0;
+        let recentCompletedThisWeek = 0;
+        let lastActivityDate: Date | null = null;
+
+        if (isDbConnected()) {
+          const uId = toMongoId(u.id);
+          const filter: any = {
+            $or: [{ userId: uId }, { userId: u.id }],
+            status: 'completed',
+          };
+          const allCompleted = await ProgressModel.find(filter).lean();
+          completedLectures = allCompleted.filter((r) => r.itemType === 'lecture').length;
+          solvedProblems = allCompleted.filter((r) => r.itemType === 'problem').length;
+
+          const recent = allCompleted.filter((r) => {
+            const date = r.completedAt || (r as any).updatedAt || (r as any).createdAt;
+            return date && new Date(date) >= cutoff;
+          });
+          recentCompletedThisWeek = recent.length > 0 ? recent.length : allCompleted.length;
+
+          allCompleted.forEach((r) => {
+            const date = r.completedAt || (r as any).updatedAt;
+            if (date) {
+              const d = new Date(date);
+              if (!lastActivityDate || d > lastActivityDate) {
+                lastActivityDate = d;
+              }
+            }
+          });
+        } else {
+          const allCompleted = inMemoryProgress.filter(
+            (p) => p.userId === u.id && p.status === 'completed'
+          );
+          completedLectures = allCompleted.filter((r) => r.itemType === 'lecture').length;
+          solvedProblems = allCompleted.filter((r) => r.itemType === 'problem').length;
+          const recent = allCompleted.filter((r) => {
+            const date = r.completedAt || r.updatedAt;
+            return date && new Date(date) >= cutoff;
+          });
+          recentCompletedThisWeek = recent.length > 0 ? recent.length : allCompleted.length;
+
+          allCompleted.forEach((r) => {
+            const date = r.completedAt || r.updatedAt;
+            if (date) {
+              const d = new Date(date);
+              if (!lastActivityDate || d > lastActivityDate) {
+                lastActivityDate = d;
+              }
+            }
+          });
+        }
+
+        const totalCompleted = completedLectures + solvedProblems;
+        return {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          completedLectures,
+          solvedProblems,
+          totalCompletedThisWeek: recentCompletedThisWeek,
+          totalCompleted,
+          lastActivityDate: lastActivityDate ? (lastActivityDate as Date).toISOString() : null,
+        };
+      })
+    );
+
+    return result.sort((a, b) => {
+      if (b.totalCompletedThisWeek !== a.totalCompletedThisWeek) {
+        return b.totalCompletedThisWeek - a.totalCompletedThisWeek;
+      }
+      return b.totalCompleted - a.totalCompleted;
+    });
   },
 };

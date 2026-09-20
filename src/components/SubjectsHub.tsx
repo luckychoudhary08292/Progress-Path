@@ -112,7 +112,7 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-5xl mx-auto py-12 flex flex-col items-center justify-center gap-3">
+      <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         <p className="text-sm font-medium text-slate-500">Loading subjects...</p>
       </div>
@@ -202,7 +202,7 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
       {subjects.length > 0 ? (
         <div
           id="subjects-grid"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5"
         >
           {subjects.map((subj) => (
             <div

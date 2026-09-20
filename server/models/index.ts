@@ -6,6 +6,7 @@ import { ProblemModel } from './Problem.ts';
 import type { ProblemDifficulty, IProblemDocument } from './Problem.ts';
 import { EventModel } from './Event.ts';
 import { ProgressModel } from './Progress.ts';
+import { AuditLogModel } from './AuditLog.ts';
 
 export {
   UserModel,
@@ -15,6 +16,7 @@ export {
   ProblemModel,
   EventModel,
   ProgressModel,
+  AuditLogModel,
 };
 export type { ProblemDifficulty, IProblemDocument };
 
@@ -30,7 +32,7 @@ export async function initializeCollections(): Promise<string[]> {
   const existingCollections = await mongoose.connection.db.listCollections().toArray();
   const existingNames = new Set(existingCollections.map((c) => c.name));
 
-  const targetCollections = ['subjects', 'lectures', 'problems', 'events', 'progress'];
+  const targetCollections = ['subjects', 'lectures', 'problems', 'events', 'progress', 'audit_logs'];
   const created: string[] = [];
 
   for (const name of targetCollections) {
@@ -49,6 +51,19 @@ export async function initializeCollections(): Promise<string[]> {
     EventModel.createIndexes(),
     ProgressModel.createIndexes(),
   ]);
+
+  // Purge any legacy orphaned todo progress records that have no notes
+  try {
+    const purgeResult = await ProgressModel.deleteMany({
+      status: 'todo',
+      $or: [{ notes: '' }, { notes: null }, { notes: { $exists: false } }],
+    });
+    if (purgeResult.deletedCount > 0) {
+      console.log(`[Database] Purged ${purgeResult.deletedCount} empty todo records from "progress" collection.`);
+    }
+  } catch (cleanErr) {
+    console.warn('[Database] Startup progress cleanup notice:', cleanErr);
+  }
 
   return created;
 }

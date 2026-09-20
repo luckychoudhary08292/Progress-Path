@@ -6,7 +6,7 @@ export interface ILectureDocument extends Document {
   session: number;
   title: string;
   videoUrl: string;
-  createdBy: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId | null;
   createdAt: Date;
 }
 
@@ -35,7 +35,7 @@ export const lectureSchema = new Schema<ILectureDocument>(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
       index: true,
     },
     createdAt: {

@@ -415,7 +415,7 @@ export function CalendarView() {
                 const hasEvents = datesWithEvents.includes(cell.dateStr);
 
                 let cellClasses =
-                  'relative flex flex-col items-center justify-between p-1 sm:p-1.5 rounded-lg transition-colors cursor-pointer aspect-square min-h-[40px] sm:min-h-[52px] select-none ';
+                  'relative flex flex-col items-center justify-between p-1 sm:p-1.5 rounded-lg transition-colors cursor-pointer aspect-square min-h-[40px] sm:min-h-[52px] xl:min-h-[64px] select-none ';
 
                 if (isSelected && isToday) {
                   cellClasses += 'bg-slate-900 text-white font-semibold ring-2 ring-blue-500';

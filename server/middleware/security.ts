@@ -102,6 +102,35 @@ export function securityHeaders(_req: Request, res: Response, next: NextFunction
 }
 
 /**
+ * CORS Configuration Middleware
+ * Safely manages allowed origins without exposing open wildcards for authenticated routes
+ */
+export function corsHandler(req: Request, res: Response, next: NextFunction): void {
+  const allowedOrigin = process.env.CORS_ORIGIN;
+  const origin = req.headers.origin;
+
+  if (allowedOrigin) {
+    if (origin === allowedOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+  } else if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+
+  next();
+}
+
+/**
  * Recursively sanitizes objects to prevent NoSQL Injection attacks.
  * Rejects or strips any keys that start with '$' or contain '.'
  */
