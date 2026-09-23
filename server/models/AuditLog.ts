@@ -76,7 +76,7 @@ export const AuditLogRepository = {
         });
 
         return {
-          id: doc._id.toString(),
+          id: doc._id ? doc._id.toString() : '',
           actorId: doc.actorId,
           actorName: doc.actorName,
           actorEmail: doc.actorEmail,
@@ -116,7 +116,7 @@ export const AuditLogRepository = {
           .exec();
 
         return docs.map((doc) => ({
-          id: doc._id.toString(),
+          id: doc._id ? doc._id.toString() : '',
           actorId: doc.actorId,
           actorName: doc.actorName,
           actorEmail: doc.actorEmail,

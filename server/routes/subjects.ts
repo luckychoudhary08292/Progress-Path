@@ -19,7 +19,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 
     const subjectStats = await Promise.all(
       subjects.map(async (subj) => {
-        const lectures = await LectureRepository.listForSubject(subj.id);
+        const lectures = await LectureRepository.listForSubject(subj.id, userId);
         const totalTopics = lectures.length;
         const lectureIds = lectures.map((l) => l.id);
 
@@ -91,7 +91,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
       return;
     }
 
-    const lectures = await LectureRepository.listForSubject(subject.id);
+    const lectures = await LectureRepository.listForSubject(subject.id, userId);
     const lectureIds = lectures.map((l) => l.id);
     const progressMap = await ProgressRepository.getStatusMap(userId, 'lecture', lectureIds);
 
@@ -103,7 +103,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
         completedCount++;
       }
 
-      const isOwner = lec.createdBy === userId;
+      const isOwner = Boolean(userId) && (lec.createdBy ? lec.createdBy === String(userId) : false);
 
       return {
         id: lec.id,
@@ -118,13 +118,16 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
       };
     });
 
+    const maxSession = lectures.reduce((max, l) => Math.max(max, l.session), 0);
+    const userNextSessionNumber = Math.max(subject.nextSessionNumber || 1, maxSession + 1);
+
     res.json({
       subject: {
         id: subject.id,
         name: subject.name,
         isGlobal: !!subject.isGlobal,
         isOwner: !!subject.isOwner,
-        nextSessionNumber: subject.nextSessionNumber,
+        nextSessionNumber: subject.isGlobal ? userNextSessionNumber : subject.nextSessionNumber,
       },
       lectures: lectureRows,
       totalTopics: lectureRows.length,

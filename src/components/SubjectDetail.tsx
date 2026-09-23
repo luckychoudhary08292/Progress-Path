@@ -421,44 +421,52 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
       <form
         id="add-topic-form"
         onSubmit={handleAddTopic}
-        className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+        className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2.5"
       >
-        <div className="flex-1 flex flex-col sm:flex-row items-center gap-2.5">
-          <input
-            id="topic-title-input"
-            type="text"
-            placeholder="New topic title (e.g. Memory Management, CPU Scheduling)"
-            value={topicTitle}
-            onChange={(e) => setTopicTitle(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
-          />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex-1 flex flex-col sm:flex-row items-center gap-2.5">
+            <input
+              id="topic-title-input"
+              type="text"
+              placeholder="New topic title (e.g. Memory Management, CPU Scheduling)"
+              value={topicTitle}
+              onChange={(e) => setTopicTitle(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
+            />
 
-          <input
-            id="topic-video-url-input"
-            type="url"
-            placeholder="Optional video link (YouTube, drive...)"
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-            className="w-full sm:w-64 px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
-          />
+            <input
+              id="topic-video-url-input"
+              type="url"
+              placeholder="Optional video link (YouTube, drive...)"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              className="w-full sm:w-64 px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
+            />
+          </div>
+
+          <button
+            id="submit-add-topic-btn"
+            type="submit"
+            disabled={isSubmittingTopic || !topicTitle.trim()}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors shrink-0 cursor-pointer"
+          >
+            {isSubmittingTopic ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            <span>Add Topic</span>
+          </button>
         </div>
 
-        <button
-          id="submit-add-topic-btn"
-          type="submit"
-          disabled={isSubmittingTopic || !topicTitle.trim()}
-          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors shrink-0 cursor-pointer"
-        >
-          {isSubmittingTopic ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Plus className="w-3.5 h-3.5" />
-          )}
-          <span>Add Topic</span>
-        </button>
+        {data?.subject.isGlobal && (
+          <p className="text-[11px] text-slate-500">
+            Topics you add to this global subject are private to your account and will not affect other users.
+          </p>
+        )}
 
         {topicError && (
-          <p className="text-xs text-rose-600 font-medium sm:col-span-2">{topicError}</p>
+          <p className="text-xs text-rose-600 font-medium">{topicError}</p>
         )}
       </form>
 
@@ -694,8 +702,8 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
                         #{lec.session}
                       </span>
 
-                      {/* Topic Title */}
-                      <div className="min-w-0 flex-1">
+                      {/* Topic Title & Ownership Indicator */}
+                      <div className="min-w-0 flex-1 flex items-center gap-2">
                         <span
                           className={`text-sm font-medium block transition-colors truncate ${
                             lec.completed
@@ -705,6 +713,17 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
                         >
                           {lec.title}
                         </span>
+                        {data?.subject.isGlobal && (
+                          lec.isOwner ? (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
+                              Your Topic
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 shrink-0">
+                              Global
+                            </span>
+                          )
+                        )}
                       </div>
                     </div>
 

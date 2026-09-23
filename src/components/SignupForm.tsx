@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AlertCircle, Loader2, ArrowLeft, Eye, EyeOff, Check, ArrowRight } from 'lucide-react';
 import { User, FieldErrors } from '../types.ts';
 import { AuthFeatureShowcase } from './AuthFeatureShowcase.tsx';
+import { SystemLogo } from './SystemLogo.tsx';
 
 interface SignupFormProps {
   onSuccess: (user: User, token: string) => void;
@@ -112,11 +113,9 @@ export function SignupForm({ onSuccess, onNavigateToLogin, onNavigateToHome }: S
         <div className="flex-1 p-6 sm:p-8 lg:p-10 flex flex-col justify-between">
           <div>
             <div className="mb-6">
-              <div className="md:hidden flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-md bg-slate-900 flex items-center justify-center font-bold text-xs text-white">
-                  P
-                </div>
-                <span className="font-bold text-slate-900 text-sm">Progress Path</span>
+              <div className="md:hidden flex items-center gap-2.5 mb-3">
+                <SystemLogo size="sm" />
+                <span className="font-bold text-slate-900 text-sm">ProgressPath</span>
               </div>
               <h1 id="signup-heading" className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
                 Create your account

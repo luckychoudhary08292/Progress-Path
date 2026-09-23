@@ -29,7 +29,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     let totalLectures = 0;
     const allLectureIds: string[] = [];
     for (const subj of subjects) {
-      const lecs = await LectureRepository.listForSubject(subj.id);
+      const lecs = await LectureRepository.listForSubject(subj.id, userId);
       totalLectures += lecs.length;
       allLectureIds.push(...lecs.map((l) => l.id));
     }

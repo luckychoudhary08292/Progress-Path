@@ -14,6 +14,7 @@ import { UserProfile } from './components/UserProfile.tsx';
 import { SystemSecurityModal } from './components/SystemSecurityModal.tsx';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal.tsx';
 import { LandingPage } from './components/LandingPage.tsx';
+import { SystemLogo } from './components/SystemLogo.tsx';
 
 type AuthView = 'landing' | 'login' | 'signup';
 type AppView = 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'admin' | 'import' | 'profile';
@@ -142,10 +143,8 @@ export default function App() {
                     className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
                     title="Go to Dashboard"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center text-white font-bold text-xs">
-                      L
-                    </div>
-                    <span className="font-semibold text-slate-900 tracking-tight text-sm sm:text-base">LMS Portal</span>
+                    <SystemLogo size="sm" />
+                    <span className="font-semibold text-slate-900 tracking-tight text-sm sm:text-base">ProgressPath</span>
                   </div>
 
                   {/* Desktop Navigation Tabs */}
@@ -257,18 +256,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Security Shield Diagnostics Trigger Button */}
-                <button
-                  id="system-security-status-trigger-btn"
-                  type="button"
-                  onClick={() => setIsSecurityModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition-colors cursor-pointer"
-                  title="View Live System Security & Database Status"
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="hidden sm:inline">System Security</span>
-                </button>
-
                 {/* Profile Navigation: Circular Avatar Button at Right Side */}
                 <div className="relative shrink-0" ref={profileMenuRef}>
                   <button
@@ -367,19 +354,6 @@ export default function App() {
                         >
                           <LayoutDashboard className="w-3.5 h-3.5 text-slate-400" />
                           <span>Dashboard</span>
-                        </button>
-
-                        <button
-                          id="dropdown-nav-security-link"
-                          type="button"
-                          onClick={() => {
-                            setIsProfileMenuOpen(false);
-                            setIsSecurityModalOpen(true);
-                          }}
-                          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors cursor-pointer"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>System & Security Status</span>
                         </button>
                       </div>
 

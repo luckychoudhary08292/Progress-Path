@@ -66,7 +66,7 @@ export const UserRepository = {
         const doc = await UserModel.findOne({ email: normalized }).exec();
         if (doc) {
           return {
-            id: doc._id.toString(),
+            id: doc._id ? doc._id.toString() : '',
             name: doc.name,
             email: doc.email,
             password: doc.password,
@@ -94,7 +94,7 @@ export const UserRepository = {
           const doc = await UserModel.findById(id).exec();
           if (doc) {
             return {
-              id: doc._id.toString(),
+              id: doc._id ? doc._id.toString() : '',
               name: doc.name,
               email: doc.email,
               password: doc.password,
@@ -135,7 +135,7 @@ export const UserRepository = {
           mustChangePassword,
         });
         return {
-          id: doc._id.toString(),
+          id: doc._id ? doc._id.toString() : '',
           name: doc.name,
           email: doc.email,
           password: doc.password,
@@ -176,7 +176,7 @@ export const UserRepository = {
           const doc = await UserModel.findByIdAndUpdate(id, { $set: updateObj }, { new: true }).exec();
           if (doc) {
             return {
-              id: doc._id.toString(),
+              id: doc._id ? doc._id.toString() : '',
               name: doc.name,
               email: doc.email,
               password: doc.password,
@@ -218,7 +218,7 @@ export const UserRepository = {
 
           if (doc) {
             return {
-              id: doc._id.toString(),
+              id: doc._id ? doc._id.toString() : '',
               name: doc.name,
               email: doc.email,
               password: doc.password,
@@ -246,7 +246,7 @@ export const UserRepository = {
       try {
         const docs = await UserModel.find({}).sort({ createdAt: 1 }).exec();
         return docs.map((doc) => ({
-          id: doc._id.toString(),
+          id: doc._id ? doc._id.toString() : '',
           name: doc.name,
           email: doc.email,
           password: doc.password,

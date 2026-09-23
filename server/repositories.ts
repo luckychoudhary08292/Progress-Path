@@ -296,12 +296,12 @@ export const SubjectRepository = {
         .lean();
 
       return docs.map((s) => ({
-        id: s._id.toString(),
+        id: s._id ? s._id.toString() : '',
         name: s.name,
         isGlobal: !!s.isGlobal,
-        isOwner: !s.isGlobal && s.createdBy?.toString() === userId.toString(),
+        isOwner: !s.isGlobal && Boolean(userId) && (s.createdBy ? s.createdBy.toString() === String(userId) : false),
         nextSessionNumber: s.nextSessionNumber || 1,
-        createdBy: s.createdBy?.toString() || null,
+        createdBy: s.createdBy ? s.createdBy.toString() : null,
         createdAt: s.createdAt,
       }));
     }
@@ -330,12 +330,12 @@ export const SubjectRepository = {
 
       if (!s) return null;
       return {
-        id: s._id.toString(),
+        id: s._id ? s._id.toString() : '',
         name: s.name,
         isGlobal: !!s.isGlobal,
-        isOwner: !s.isGlobal && s.createdBy?.toString() === userId.toString(),
+        isOwner: !s.isGlobal && Boolean(userId) && (s.createdBy ? s.createdBy.toString() === String(userId) : false),
         nextSessionNumber: s.nextSessionNumber || 1,
-        createdBy: s.createdBy?.toString() || null,
+        createdBy: s.createdBy ? s.createdBy.toString() : null,
         createdAt: s.createdAt,
       };
     }
@@ -366,7 +366,7 @@ export const SubjectRepository = {
         nextSessionNumber: 1,
       });
       return {
-        id: newSubject._id.toString(),
+        id: newSubject._id ? newSubject._id.toString() : '',
         name: newSubject.name,
         isGlobal: false,
         isOwner: true,
@@ -403,7 +403,7 @@ export const SubjectRepository = {
       if (!mongoose.isValidObjectId(subjectId)) return false;
       const sub = await SubjectModel.findById(subjectId);
       if (!sub) return false;
-      const isOwner = sub.createdBy?.toString() === userId.toString();
+      const isOwner = Boolean(userId) && (sub.createdBy ? sub.createdBy.toString() === String(userId) : false);
       if (!isOwner && !isAdmin) return null; // unauthorized
 
       // Cascade delete lectures and progress
@@ -465,7 +465,7 @@ export const SubjectRepository = {
     if (isDbConnected()) {
       const docs = await SubjectModel.find({ isGlobal: true }).sort({ createdAt: 1 }).lean();
       return docs.map((s) => ({
-        id: s._id.toString(),
+        id: s._id ? s._id.toString() : '',
         name: s.name,
         isGlobal: true,
         nextSessionNumber: s.nextSessionNumber || 1,
@@ -493,7 +493,7 @@ export const SubjectRepository = {
         nextSessionNumber: 1,
       });
       return {
-        id: newSubject._id.toString(),
+        id: newSubject._id ? newSubject._id.toString() : '',
         name: newSubject.name,
         isGlobal: true,
         nextSessionNumber: 1,
@@ -523,7 +523,7 @@ export const SubjectRepository = {
       ).lean();
       if (!updated) return null;
       return {
-        id: updated._id.toString(),
+        id: updated._id ? updated._id.toString() : '',
         name: updated.name,
         isGlobal: true,
         nextSessionNumber: updated.nextSessionNumber || 1,
@@ -574,23 +574,41 @@ export const SubjectRepository = {
 // ----------------------------------------------------------------------
 
 export const LectureRepository = {
-  async listForSubject(subjectId: string) {
+  async listForSubject(subjectId: string, userId?: string) {
     if (isDbConnected()) {
       if (!mongoose.isValidObjectId(subjectId)) return [];
-      const lecs = await LectureModel.find({ subjectId }).sort({ session: 1 }).lean();
+
+      const query: any = { subjectId: toMongoId(subjectId) };
+      if (userId) {
+        const uId = toMongoId(userId);
+        query.$or = [
+          { createdBy: null },
+          { createdBy: { $exists: false } },
+          { createdBy: uId },
+          { createdBy: userId },
+        ];
+      } else {
+        query.$or = [{ createdBy: null }, { createdBy: { $exists: false } }];
+      }
+
+      const lecs = await LectureModel.find(query).sort({ session: 1 }).lean();
       return lecs.map((l) => ({
-        id: l._id.toString(),
-        subjectId: l.subjectId.toString(),
+        id: l._id ? l._id.toString() : '',
+        subjectId: l.subjectId ? l.subjectId.toString() : '',
         session: l.session,
         title: l.title,
         videoUrl: l.videoUrl || '',
-        createdBy: l.createdBy.toString(),
+        createdBy: l.createdBy ? l.createdBy.toString() : null,
         createdAt: l.createdAt,
       }));
     }
 
     return inMemoryLectures
-      .filter((l) => l.subjectId === subjectId)
+      .filter((l) => {
+        if (l.subjectId !== subjectId) return false;
+        if (!userId) return !l.createdBy || l.createdBy === 'admin';
+        return !l.createdBy || l.createdBy === 'admin' || l.createdBy === userId;
+      })
       .sort((a, b) => a.session - b.session);
   },
 
@@ -601,14 +619,24 @@ export const LectureRepository = {
     createdBy: string;
   }) {
     if (isDbConnected()) {
-      const subject = await SubjectModel.findByIdAndUpdate(
-        data.subjectId,
-        { $inc: { nextSessionNumber: 1 } },
-        { returnDocument: 'before' }
-      ).exec();
-
+      const subject = await SubjectModel.findById(data.subjectId);
       if (!subject) throw new Error('Parent subject not found');
-      const sessionNumber = subject.nextSessionNumber || 1;
+
+      let sessionNumber = 1;
+      if (subject.isGlobal) {
+        // For a global subject, compute this specific user's sequential session number
+        // so we never mutate or alter session numbering for other users
+        const userLectures = await LectureRepository.listForSubject(data.subjectId, data.createdBy);
+        const maxSession = userLectures.reduce((max, l) => Math.max(max, l.session), 0);
+        sessionNumber = maxSession + 1;
+      } else {
+        const updated = await SubjectModel.findByIdAndUpdate(
+          data.subjectId,
+          { $inc: { nextSessionNumber: 1 } },
+          { returnDocument: 'before' }
+        ).exec();
+        sessionNumber = updated?.nextSessionNumber || 1;
+      }
 
       const lecture = await LectureModel.create({
         subjectId: toMongoId(data.subjectId),
@@ -619,8 +647,8 @@ export const LectureRepository = {
       });
 
       return {
-        id: lecture._id.toString(),
-        subjectId: lecture.subjectId.toString(),
+        id: lecture._id ? lecture._id.toString() : '',
+        subjectId: lecture.subjectId ? lecture.subjectId.toString() : '',
         session: lecture.session,
         title: lecture.title,
         videoUrl: lecture.videoUrl,
@@ -632,8 +660,19 @@ export const LectureRepository = {
     const sub = inMemorySubjects.find((s) => s.id === data.subjectId);
     if (!sub) throw new Error('Parent subject not found');
 
-    const sessionNum = sub.nextSessionNumber;
-    sub.nextSessionNumber += 1;
+    let sessionNum = 1;
+    if (sub.isGlobal) {
+      const userLecs = inMemoryLectures.filter(
+        (l) =>
+          l.subjectId === data.subjectId &&
+          (!l.createdBy || l.createdBy === 'admin' || l.createdBy === data.createdBy)
+      );
+      const maxSession = userLecs.reduce((max, l) => Math.max(max, l.session), 0);
+      sessionNum = maxSession + 1;
+    } else {
+      sessionNum = sub.nextSessionNumber;
+      sub.nextSessionNumber += 1;
+    }
 
     const newLec: InMemoryLecture = {
       id: 'lec_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36),
@@ -653,7 +692,7 @@ export const LectureRepository = {
       if (!mongoose.isValidObjectId(lectureId)) return false;
       const lec = await LectureModel.findById(lectureId);
       if (!lec) return false;
-      if (lec.createdBy.toString() !== userId.toString()) return null; // unauthorized
+      if (!lec.createdBy || lec.createdBy.toString() !== String(userId)) return null; // unauthorized
 
       await LectureModel.findByIdAndDelete(lec._id);
       await ProgressModel.deleteMany({ itemId: lec._id });
@@ -684,15 +723,18 @@ export const LectureRepository = {
   async listGlobal() {
     if (isDbConnected()) {
       const globalSubs = await SubjectModel.find({ isGlobal: true }).select('_id name').lean();
-      const subMap = new Map(globalSubs.map((s) => [s._id.toString(), s.name]));
+      const subMap = new Map(globalSubs.map((s) => [s._id ? s._id.toString() : '', s.name]));
       const subIds = globalSubs.map((s) => s._id);
-      const docs = await LectureModel.find({ subjectId: { $in: subIds } })
+      const docs = await LectureModel.find({
+        subjectId: { $in: subIds },
+        $or: [{ createdBy: null }, { createdBy: { $exists: false } }],
+      })
         .sort({ subjectId: 1, session: 1 })
         .lean();
       return docs.map((l) => ({
-        id: l._id.toString(),
-        subjectId: l.subjectId.toString(),
-        subjectName: subMap.get(l.subjectId.toString()) || 'Global Subject',
+        id: l._id ? l._id.toString() : '',
+        subjectId: l.subjectId ? l.subjectId.toString() : '',
+        subjectName: subMap.get(l.subjectId ? l.subjectId.toString() : '') || 'Global Subject',
         session: l.session,
         title: l.title,
         videoUrl: l.videoUrl || '',
@@ -702,7 +744,7 @@ export const LectureRepository = {
     const globalSubIds = inMemorySubjects.filter((s) => s.isGlobal).map((s) => s.id);
     const subMap = new Map(inMemorySubjects.filter((s) => s.isGlobal).map((s) => [s.id, s.name]));
     return inMemoryLectures
-      .filter((l) => globalSubIds.includes(l.subjectId))
+      .filter((l) => globalSubIds.includes(l.subjectId) && (!l.createdBy || l.createdBy === 'admin'))
       .sort((a, b) => a.session - b.session)
       .map((l) => ({
         id: l.id,
@@ -732,8 +774,8 @@ export const LectureRepository = {
         createdBy: null,
       });
       return {
-        id: lec._id.toString(),
-        subjectId: lec.subjectId.toString(),
+        id: lec._id ? lec._id.toString() : '',
+        subjectId: lec.subjectId ? lec.subjectId.toString() : '',
         session: lec.session,
         title: lec.title,
         videoUrl: lec.videoUrl,
@@ -767,8 +809,8 @@ export const LectureRepository = {
       const updated = await LectureModel.findByIdAndUpdate(lectureId, updateData, { new: true }).lean();
       if (!updated) return null;
       return {
-        id: updated._id.toString(),
-        subjectId: updated.subjectId.toString(),
+        id: updated._id ? updated._id.toString() : '',
+        subjectId: updated.subjectId ? updated.subjectId.toString() : '',
         session: updated.session,
         title: updated.title,
         videoUrl: updated.videoUrl,
@@ -818,13 +860,13 @@ export const ProblemRepository = {
         .lean();
 
       return docs.map((p) => ({
-        id: p._id.toString(),
+        id: p._id ? p._id.toString() : '',
         name: p.name,
         difficulty: p.difficulty,
         category: p.category,
         link: p.link || '',
         isGlobal: !!p.isGlobal,
-        isOwner: !p.isGlobal && p.createdBy?.toString() === userId.toString(),
+        isOwner: !p.isGlobal && Boolean(userId) && (p.createdBy ? p.createdBy.toString() === String(userId) : false),
         createdAt: p.createdAt,
       }));
     }
@@ -864,7 +906,7 @@ export const ProblemRepository = {
       });
 
       return {
-        id: newProb._id.toString(),
+        id: newProb._id ? newProb._id.toString() : '',
         name: newProb.name,
         difficulty: newProb.difficulty,
         category: newProb.category,
@@ -903,7 +945,7 @@ export const ProblemRepository = {
       if (!mongoose.isValidObjectId(problemId)) return false;
       const prob = await ProblemModel.findById(problemId);
       if (!prob) return false;
-      if (prob.createdBy?.toString() !== userId.toString()) return null; // unauthorized
+      if (!prob.createdBy || prob.createdBy.toString() !== String(userId)) return null; // unauthorized
 
       await ProblemModel.findByIdAndDelete(prob._id);
       await ProgressModel.deleteMany({ itemId: prob._id });
@@ -935,7 +977,7 @@ export const ProblemRepository = {
     if (isDbConnected()) {
       const docs = await ProblemModel.find({ isGlobal: true }).sort({ createdAt: 1 }).lean();
       return docs.map((p) => ({
-        id: p._id.toString(),
+        id: p._id ? p._id.toString() : '',
         name: p.name,
         difficulty: p.difficulty,
         category: p.category,
@@ -973,7 +1015,7 @@ export const ProblemRepository = {
         createdBy: null,
       });
       return {
-        id: doc._id.toString(),
+        id: doc._id ? doc._id.toString() : '',
         name: doc.name,
         difficulty: doc.difficulty,
         category: doc.category,
@@ -1014,7 +1056,7 @@ export const ProblemRepository = {
       ).lean();
       if (!updated) return null;
       return {
-        id: updated._id.toString(),
+        id: updated._id ? updated._id.toString() : '',
         name: updated.name,
         difficulty: updated.difficulty,
         category: updated.category,
@@ -1075,8 +1117,8 @@ export const EventRepository = {
 
       const docs = await EventModel.find(filter).sort({ date: 1, createdAt: 1 }).lean();
       return docs.map((e) => ({
-        id: e._id.toString(),
-        userId: e.userId.toString(),
+        id: e._id ? e._id.toString() : '',
+        userId: e.userId ? e.userId.toString() : '',
         date: e.date,
         title: e.title,
         type: e.type,
@@ -1117,7 +1159,7 @@ export const EventRepository = {
         createdAt: new Date(),
       });
       return {
-        id: newEvt._id.toString(),
+        id: newEvt._id ? newEvt._id.toString() : '',
         userId: data.userId,
         date: newEvt.date,
         title: newEvt.title,
@@ -1163,7 +1205,7 @@ export const EventRepository = {
       evt.completed = !evt.completed;
       await evt.save();
       return {
-        id: evt._id.toString(),
+        id: evt._id ? evt._id.toString() : '',
         userId,
         date: evt.date,
         title: evt.title,
@@ -1244,11 +1286,13 @@ export const ProgressRepository = {
       }).lean();
 
       for (const r of records) {
-        map.set(r.itemId.toString(), {
-          status: r.status,
-          notes: r.notes || '',
-          completedAt: r.completedAt || null,
-        });
+        if (r.itemId) {
+          map.set(r.itemId.toString(), {
+            status: r.status,
+            notes: r.notes || '',
+            completedAt: r.completedAt || null,
+          });
+        }
       }
       return map;
     }
