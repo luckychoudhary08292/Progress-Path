@@ -23,6 +23,7 @@ import {
   GlobalProblemItem,
   ProblemDifficulty,
 } from '../../types.ts';
+import { VideoPlayerModal } from '../VideoPlayerModal.tsx';
 
 interface AdminContentSectionProps {
   subjects: GlobalSubjectItem[];
@@ -98,6 +99,16 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+
+  // Video player modal state
+  const [videoLectureToPlay, setVideoLectureToPlay] = useState<{
+    id?: string;
+    title: string;
+    session?: number;
+    videoUrl?: string;
+    completed?: boolean;
+    subjectName?: string;
+  } | null>(null);
 
   // Form Fields
   const [subjectName, setSubjectName] = useState('');
@@ -612,15 +623,24 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
                           </td>
                           <td className="py-3 px-4">
                             {lec.videoUrl ? (
-                              <a
-                                href={lec.videoUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 underline font-medium"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setVideoLectureToPlay({
+                                    id: lec.id,
+                                    title: lec.title,
+                                    session: lec.session,
+                                    videoUrl: lec.videoUrl,
+                                    completed: false,
+                                    subjectName: parentSub ? parentSub.name : lec.subjectName,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 font-medium text-xs bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                                title="Preview video in website player"
                               >
+                                <Video className="w-3.5 h-3.5 text-blue-600" />
                                 <span>Watch Video</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
+                              </button>
                             ) : (
                               <span className="text-slate-400 italic text-[11px]">No URL</span>
                             )}
@@ -1003,6 +1023,30 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
           </div>
         </div>
       )}
+
+      {/* Embedded In-Website Video Player Modal */}
+      <VideoPlayerModal
+        isOpen={!!videoLectureToPlay}
+        onClose={() => setVideoLectureToPlay(null)}
+        lecture={videoLectureToPlay}
+        subjectTitle={videoLectureToPlay?.subjectName}
+        playlist={lectures.map((l) => ({
+          id: l.id,
+          title: l.title,
+          session: l.session,
+          videoUrl: l.videoUrl,
+        }))}
+        onSelectLecture={(lec) => {
+          setVideoLectureToPlay({
+            id: lec.id,
+            title: lec.title,
+            session: lec.session,
+            videoUrl: lec.videoUrl,
+            completed: false,
+            subjectName: videoLectureToPlay?.subjectName,
+          });
+        }}
+      />
     </div>
   );
 };

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { SubjectDetail as ISubjectDetail, LectureItem } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
+import { VideoPlayerModal } from './VideoPlayerModal.tsx';
 
 interface SubjectDetailProps {
   subjectId: string;
@@ -37,6 +38,9 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   const [notesState, setNotesState] = useState<Record<string, string>>({});
   const [openNotesId, setOpenNotesId] = useState<string | null>(null);
   const [togglingLectureId, setTogglingLectureId] = useState<string | null>(null);
+
+  // Video Player state: opens in-website without redirecting to external apps/websites
+  const [activeVideoLecture, setActiveVideoLecture] = useState<LectureItem | null>(null);
 
   // Delete confirmations
   const [lectureToDelete, setLectureToDelete] = useState<{ id: string; title: string; session: number } | null>(null);
@@ -112,6 +116,9 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
         completedTopics: newCompletedCount,
       };
     });
+    setActiveVideoLecture((prev) =>
+      prev && prev.id === lecture.id ? { ...prev, completed: newCompleted } : prev
+    );
 
     try {
       const res = await fetch(`/api/subjects/${subjectId}/lectures/${lecture.id}/progress`, {
@@ -129,6 +136,9 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
       if (!res.ok) {
         // Revert on error
         fetchSubjectDetail();
+        setActiveVideoLecture((prev) =>
+          prev && prev.id === lecture.id ? { ...prev, completed: lecture.completed } : prev
+        );
       } else {
         const result = await res.json();
         setData((prev) => {
@@ -143,9 +153,15 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
             completedTopics: newCompletedCount,
           };
         });
+        setActiveVideoLecture((prev) =>
+          prev && prev.id === lecture.id ? { ...prev, completed: !!result.completed } : prev
+        );
       }
     } catch {
       fetchSubjectDetail();
+      setActiveVideoLecture((prev) =>
+        prev && prev.id === lecture.id ? { ...prev, completed: lecture.completed } : prev
+      );
     } finally {
       setTogglingLectureId(null);
     }
@@ -729,19 +745,19 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
 
                     {/* Right Action Icons */}
                     <div className="flex items-center gap-1 shrink-0">
-                      {/* Optional Video Link */}
+                      {/* Video Player Button - Plays inside website without redirecting */}
                       {lec.videoUrl && (
-                        <a
+                        <button
+                          type="button"
                           id={`video-link-${lec.id}`}
-                          href={lec.videoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors inline-flex items-center gap-1 text-xs"
-                          title="Watch video lecture"
+                          onClick={() => setActiveVideoLecture(lec)}
+                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50/80 active:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer group/vid border border-transparent hover:border-blue-200"
+                          title="Watch video lecture in website"
+                          aria-label={`Watch video lecture for #${lec.session} ${lec.title}`}
                         >
-                          <Video className="w-3.5 h-3.5 text-blue-600" />
-                          <ExternalLink className="w-3 h-3 text-slate-400" />
-                        </a>
+                          <Video className="w-3.5 h-3.5 text-blue-600 group-hover/vid:scale-110 transition-transform" />
+                          <span className="hidden sm:inline text-[11px] text-blue-700">Watch</span>
+                        </button>
                       )}
 
                       {/* Notes Toggle Button */}
@@ -859,6 +875,38 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
         isDestructive={true}
         onConfirm={handleConfirmDeleteSubject}
         onCancel={() => setIsConfirmingDeleteSubject(false)}
+      />
+
+      {/* Professional In-Website Video Player Modal */}
+      <VideoPlayerModal
+        isOpen={!!activeVideoLecture}
+        onClose={() => setActiveVideoLecture(null)}
+        lecture={activeVideoLecture}
+        subjectTitle={data?.subject.name}
+        subjectId={subjectId}
+        playlist={data?.lectures || []}
+        onToggleCompleted={(item) => {
+          const full = data?.lectures.find(
+            (l) => (l.id && l.id === item.id) || l.session === item.session
+          );
+          if (full) {
+            handleToggleLecture(full);
+          }
+        }}
+        onSaveNotes={async (lecId, notes) => {
+          setNotesState((prev) => ({ ...prev, [lecId]: notes }));
+          await handleSaveNotes(lecId);
+        }}
+        onSelectLecture={(item) => {
+          const full = data?.lectures.find(
+            (l) => (l.id && l.id === item.id) || l.session === item.session
+          );
+          if (full) {
+            setActiveVideoLecture(full);
+          } else {
+            setActiveVideoLecture(item as LectureItem);
+          }
+        }}
       />
     </div>
   );

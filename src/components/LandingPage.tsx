@@ -20,9 +20,16 @@ import {
 interface LandingPageProps {
   onNavigateToLogin: () => void;
   onNavigateToSignup: () => void;
+  onNavigateToTerms?: () => void;
+  onNavigateToPrivacy?: () => void;
 }
 
-export function LandingPage({ onNavigateToLogin, onNavigateToSignup }: LandingPageProps) {
+export function LandingPage({
+  onNavigateToLogin,
+  onNavigateToSignup,
+  onNavigateToTerms,
+  onNavigateToPrivacy,
+}: LandingPageProps) {
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | 'security' | null>(null);
 
   return (
@@ -725,8 +732,15 @@ export function LandingPage({ onNavigateToLogin, onNavigateToSignup }: LandingPa
               <ul className="space-y-2.5 text-sm">
                 <li>
                   <button
+                    id="footer-nav-privacy-btn"
                     type="button"
-                    onClick={() => setActiveLegalModal('privacy')}
+                    onClick={() => {
+                      if (onNavigateToPrivacy) {
+                        onNavigateToPrivacy();
+                      } else {
+                        setActiveLegalModal('privacy');
+                      }
+                    }}
                     className="hover:text-white transition-colors cursor-pointer text-left flex items-center gap-1.5"
                   >
                     <span>Privacy Policy</span>
@@ -737,11 +751,18 @@ export function LandingPage({ onNavigateToLogin, onNavigateToSignup }: LandingPa
                 </li>
                 <li>
                   <button
+                    id="footer-nav-terms-btn"
                     type="button"
-                    onClick={() => setActiveLegalModal('terms')}
+                    onClick={() => {
+                      if (onNavigateToTerms) {
+                        onNavigateToTerms();
+                      } else {
+                        setActiveLegalModal('terms');
+                      }
+                    }}
                     className="hover:text-white transition-colors cursor-pointer text-left"
                   >
-                    Terms &amp; Conditions
+                    Terms of Service
                   </button>
                 </li>
                 <li>
@@ -773,18 +794,32 @@ export function LandingPage({ onNavigateToLogin, onNavigateToSignup }: LandingPa
 
             <div className="flex items-center gap-6">
               <button
+                id="subfooter-privacy-btn"
                 type="button"
-                onClick={() => setActiveLegalModal('privacy')}
+                onClick={() => {
+                  if (onNavigateToPrivacy) {
+                    onNavigateToPrivacy();
+                  } else {
+                    setActiveLegalModal('privacy');
+                  }
+                }}
                 className="hover:text-slate-300 transition-colors cursor-pointer"
               >
-                Privacy
+                Privacy Policy
               </button>
               <button
+                id="subfooter-terms-btn"
                 type="button"
-                onClick={() => setActiveLegalModal('terms')}
+                onClick={() => {
+                  if (onNavigateToTerms) {
+                    onNavigateToTerms();
+                  } else {
+                    setActiveLegalModal('terms');
+                  }
+                }}
                 className="hover:text-slate-300 transition-colors cursor-pointer"
               >
-                Terms
+                Terms of Service
               </button>
               <button
                 type="button"

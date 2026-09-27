@@ -1567,3 +1567,129 @@ export const ProgressRepository = {
     });
   },
 };
+
+// ----------------------------------------------------------------------
+// ACCOUNT DELETION REPOSITORY
+// Cleans up a user's personal data (personal subjects, lectures, personal problems,
+// events, progress) while strictly preserving global/shared curriculum.
+// ----------------------------------------------------------------------
+export const AccountDeletionRepository = {
+  async deleteUserData(userId: string): Promise<{
+    personalSubjectsCount: number;
+    personalLecturesCount: number;
+    personalProblemsCount: number;
+    eventsCount: number;
+    progressCount: number;
+  }> {
+    if (!userId) {
+      return {
+        personalSubjectsCount: 0,
+        personalLecturesCount: 0,
+        personalProblemsCount: 0,
+        eventsCount: 0,
+        progressCount: 0,
+      };
+    }
+    const uId = toMongoId(userId);
+
+    let personalSubjectsCount = 0;
+    let personalLecturesCount = 0;
+    let personalProblemsCount = 0;
+    let eventsCount = 0;
+    let progressCount = 0;
+
+    if (isDbConnected()) {
+      try {
+        // 1. Find personal subjects created by user (preserving global subjects)
+        const personalSubjects = await SubjectModel.find({
+          $or: [{ createdBy: uId }, { createdBy: userId }],
+          isGlobal: false,
+        }).select('_id');
+        const personalSubjectIds = personalSubjects.map((s) => s._id);
+        personalSubjectsCount = personalSubjectIds.length;
+
+        // 2. Delete lectures from personal subjects or created by user (preserving global lectures)
+        const lecDeleteRes = await LectureModel.deleteMany({
+          $or: [
+            { subjectId: { $in: personalSubjectIds } },
+            { createdBy: userId },
+            { createdBy: uId ? uId.toString() : userId },
+          ],
+        });
+        personalLecturesCount = lecDeleteRes.deletedCount || 0;
+
+        // 3. Delete personal subjects
+        if (personalSubjectIds.length > 0) {
+          await SubjectModel.deleteMany({ _id: { $in: personalSubjectIds } });
+        }
+
+        // 4. Delete personal problems created by user (preserving global problem repository)
+        const probDeleteRes = await ProblemModel.deleteMany({
+          $or: [{ createdBy: uId }, { createdBy: userId }],
+          isGlobal: false,
+        });
+        personalProblemsCount = probDeleteRes.deletedCount || 0;
+
+        // 5. Delete personal calendar events
+        const evtDeleteRes = await EventModel.deleteMany({
+          $or: [{ userId: uId }, { userId: userId }],
+        });
+        eventsCount = evtDeleteRes.deletedCount || 0;
+
+        // 6. Delete personal progress marks
+        const progDeleteRes = await ProgressModel.deleteMany({
+          $or: [{ userId: uId }, { userId: userId }],
+        });
+        progressCount = progDeleteRes.deletedCount || 0;
+      } catch (err) {
+        console.error('[Account Deletion Error in DB]:', err);
+      }
+    }
+
+    // In-memory cleanup
+    const personalSubIds: string[] = [];
+    for (let i = inMemorySubjects.length - 1; i >= 0; i--) {
+      if (!inMemorySubjects[i].isGlobal && inMemorySubjects[i].createdBy === userId) {
+        personalSubIds.push(inMemorySubjects[i].id);
+        inMemorySubjects.splice(i, 1);
+        personalSubjectsCount++;
+      }
+    }
+
+    for (let i = inMemoryLectures.length - 1; i >= 0; i--) {
+      if (inMemoryLectures[i].createdBy === userId || personalSubIds.includes(inMemoryLectures[i].subjectId)) {
+        inMemoryLectures.splice(i, 1);
+        personalLecturesCount++;
+      }
+    }
+
+    for (let i = inMemoryProblems.length - 1; i >= 0; i--) {
+      if (!inMemoryProblems[i].isGlobal && inMemoryProblems[i].createdBy === userId) {
+        inMemoryProblems.splice(i, 1);
+        personalProblemsCount++;
+      }
+    }
+
+    for (let i = inMemoryEvents.length - 1; i >= 0; i--) {
+      if (inMemoryEvents[i].userId === userId) {
+        inMemoryEvents.splice(i, 1);
+        eventsCount++;
+      }
+    }
+
+    for (let i = inMemoryProgress.length - 1; i >= 0; i--) {
+      if (inMemoryProgress[i].userId === userId) {
+        inMemoryProgress.splice(i, 1);
+        progressCount++;
+      }
+    }
+
+    return {
+      personalSubjectsCount,
+      personalLecturesCount,
+      personalProblemsCount,
+      eventsCount,
+      progressCount,
+    };
+  },
+};

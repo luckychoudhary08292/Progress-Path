@@ -264,4 +264,26 @@ export const UserRepository = {
       role: getEffectiveRole(u.email, u.role),
     }));
   },
+
+  async deleteUser(id: string): Promise<boolean> {
+    if (!id || typeof id !== 'string') return false;
+
+    if (isDbConnected()) {
+      if (mongoose.isValidObjectId(id)) {
+        try {
+          const doc = await UserModel.findByIdAndDelete(id).exec();
+          return !!doc;
+        } catch (err) {
+          console.log('[DB Info in deleteUser]:', err instanceof Error ? err.message : err);
+        }
+      }
+    }
+
+    const idx = inMemoryUsers.findIndex((u) => u.id === id);
+    if (idx !== -1) {
+      inMemoryUsers.splice(idx, 1);
+      return true;
+    }
+    return false;
+  },
 };

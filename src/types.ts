@@ -130,6 +130,7 @@ export interface AdminUserComparison {
   email: string;
   role: 'admin' | 'user' | 'student';
   mustChangePassword?: boolean;
+  subjectsCount?: number;
   lecturesDone: number;
   totalLectures: number;
   lecturesCompletedPercent: number;
@@ -137,6 +138,8 @@ export interface AdminUserComparison {
   totalProblems: number;
   problemsSolvedPercent: number;
   overallReadinessPercent: number;
+  eventsCount?: number;
+  eventsDone?: number;
   createdAt: string;
 }
 

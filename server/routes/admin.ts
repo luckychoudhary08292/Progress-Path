@@ -8,6 +8,7 @@ import {
   LectureRepository,
   ProblemRepository,
   ProgressRepository,
+  EventRepository,
 } from '../repositories.ts';
 
 const router = Router();
@@ -365,30 +366,70 @@ router.get('/users', authenticateToken, authenticateAdmin, async (_req: Request,
   try {
     const users = await UserRepository.listAllUsers();
 
-    const totalLecturesInSystem = await LectureRepository.countTotal();
-    const totalProblemsInSystem = await ProblemRepository.countTotal();
-    const totalAcademicItems = totalLecturesInSystem + totalProblemsInSystem;
-
     const userStatsPromises = users.map(async (u) => {
       const uId = u.id;
-      const lecturesDone = await ProgressRepository.countCompleted(uId, 'lecture');
-      const problemsSolved = await ProgressRepository.countCompleted(uId, 'problem');
 
+      // 1. Individual user feed subjects (global + user-created)
+      const userSubjects = await SubjectRepository.listForUser(uId);
+      const subjectsCount = userSubjects.length;
+
+      // 2. Individual user feed lectures (from the subjects in this user's feed)
+      let userTotalLectures = 0;
+      const userLectureIds: string[] = [];
+      for (const subj of userSubjects) {
+        const lecs = await LectureRepository.listForSubject(subj.id, uId);
+        userTotalLectures += lecs.length;
+        userLectureIds.push(...lecs.map((l) => l.id));
+      }
+
+      // 3. Individual user completed lectures from their feed
+      const lecturesDone =
+        userLectureIds.length > 0
+          ? await ProgressRepository.countCompleted(uId, 'lecture', userLectureIds)
+          : 0;
+
+      // 4. Individual user feed problems (global + user-created)
+      const userProblems = await ProblemRepository.listForUser(uId);
+      const userTotalProblems = userProblems.length;
+      const userProblemIds = userProblems.map((p) => p.id);
+
+      // 5. Individual user solved problems from their feed
+      const problemsSolved =
+        userProblemIds.length > 0
+          ? await ProgressRepository.countCompleted(uId, 'problem', userProblemIds)
+          : 0;
+
+      // 6. Percentages computed from individual user's personalized feed totals
       const lecturesCompletedPercent =
-        totalLecturesInSystem > 0
-          ? Math.round(((lecturesDone / totalLecturesInSystem) * 100) * 10) / 10
+        userTotalLectures > 0
+          ? Math.round(((lecturesDone / userTotalLectures) * 100) * 10) / 10
           : 0.0;
 
       const problemsSolvedPercent =
-        totalProblemsInSystem > 0
-          ? Math.round(((problemsSolved / totalProblemsInSystem) * 100) * 10) / 10
+        userTotalProblems > 0
+          ? Math.round(((problemsSolved / userTotalProblems) * 100) * 10) / 10
           : 0.0;
 
+      const userAcademicTotal = userTotalLectures + userTotalProblems;
       const userAcademicDone = lecturesDone + problemsSolved;
-      const overallReadinessPercent =
-        totalAcademicItems > 0
-          ? Math.min(100, Math.round(((userAcademicDone / totalAcademicItems) * 100) * 10) / 10)
-          : 0.0;
+
+      // 7. Individual user calendar tasks / events from their personal feed
+      const userEvents = await EventRepository.listForUser(uId);
+      const eventsCount = userEvents.length;
+      const eventsDone = userEvents.filter((e) => e.completed).length;
+
+      let overallReadinessPercent = 0.0;
+      if (userAcademicTotal > 0) {
+        overallReadinessPercent = Math.min(
+          100,
+          Math.round(((userAcademicDone / userAcademicTotal) * 100) * 10) / 10
+        );
+      } else if (eventsCount > 0) {
+        overallReadinessPercent = Math.min(
+          100,
+          Math.round(((eventsDone / eventsCount) * 100) * 10) / 10
+        );
+      }
 
       return {
         id: u.id,
@@ -396,18 +437,24 @@ router.get('/users', authenticateToken, authenticateAdmin, async (_req: Request,
         email: u.email,
         role: u.role,
         mustChangePassword: Boolean(u.mustChangePassword),
+        subjectsCount,
         lecturesDone,
-        totalLectures: totalLecturesInSystem,
+        totalLectures: userTotalLectures,
         lecturesCompletedPercent,
         problemsSolved,
-        totalProblems: totalProblemsInSystem,
+        totalProblems: userTotalProblems,
         problemsSolvedPercent,
         overallReadinessPercent,
+        eventsCount,
+        eventsDone,
         createdAt: u.createdAt,
       };
     });
 
     const userComparison = await Promise.all(userStatsPromises);
+
+    const totalLecturesInSystem = await LectureRepository.countTotal();
+    const totalProblemsInSystem = await ProblemRepository.countTotal();
 
     res.json({
       users: userComparison,

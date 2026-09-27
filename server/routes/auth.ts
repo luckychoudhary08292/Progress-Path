@@ -11,6 +11,7 @@ import {
   ProblemRepository,
   EventRepository,
   ProgressRepository,
+  AccountDeletionRepository,
 } from '../repositories.ts';
 
 const router = Router();
@@ -242,22 +243,47 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     const user = (req as any).user;
     const userId = user.id;
 
-    // Fetch user-centric analytics safely using repositories
-    const subjectsCount = await SubjectRepository.countForUser(userId);
+    // 1. Fetch user-centric feed subjects
+    const subjects = await SubjectRepository.listForUser(userId);
+    const subjectsCount = subjects.length;
     const userSubjectsCreated = await SubjectRepository.countCreatedByUser(userId);
 
-    const totalLectures = await LectureRepository.countTotal();
-    const lecturesCompleted = await ProgressRepository.countCompleted(userId, 'lecture');
+    // 2. Compute individual feed total lectures and completed lectures
+    let totalLectures = 0;
+    const allLectureIds: string[] = [];
+    for (const subj of subjects) {
+      const lecs = await LectureRepository.listForSubject(subj.id, userId);
+      totalLectures += lecs.length;
+      allLectureIds.push(...lecs.map((l) => l.id));
+    }
+    const lecturesCompleted =
+      allLectureIds.length > 0
+        ? await ProgressRepository.countCompleted(userId, 'lecture', allLectureIds)
+        : 0;
 
-    const totalProblems = await ProblemRepository.countTotal();
-    const problemsSolved = await ProgressRepository.countCompleted(userId, 'problem');
+    // 3. Compute individual feed total problems and solved problems
+    const problems = await ProblemRepository.listForUser(userId);
+    const totalProblems = problems.length;
+    const problemIds = problems.map((p) => p.id);
+    const problemsSolved =
+      problemIds.length > 0
+        ? await ProgressRepository.countCompleted(userId, 'problem', problemIds)
+        : 0;
 
+    // 4. Academic Calendar events
     const eventsCount = await EventRepository.countForUser(userId);
 
-    // Compute readiness score
-    const lectureRate = totalLectures > 0 ? (lecturesCompleted / totalLectures) * 50 : 0;
-    const problemRate = totalProblems > 0 ? (problemsSolved / totalProblems) * 50 : 0;
-    const overallReadinessPercent = Math.min(100, Math.round(lectureRate + problemRate));
+    // 5. Individual readiness score based on user's feed items
+    const totalAcademicItems = totalLectures + totalProblems;
+    const academicCompleted = lecturesCompleted + problemsSolved;
+    let overallReadinessPercent = 0;
+    if (totalAcademicItems > 0) {
+      overallReadinessPercent = Math.min(100, Math.round(((academicCompleted / totalAcademicItems) * 100) * 10) / 10);
+    } else if (eventsCount > 0) {
+      const userEvents = await EventRepository.listForUser(userId);
+      const eventsDone = userEvents.filter((e) => e.completed).length;
+      overallReadinessPercent = Math.min(100, Math.round(((eventsDone / eventsCount) * 100) * 10) / 10);
+    }
 
     res.status(200).json({
       user: {
@@ -289,7 +315,7 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
 router.put('/profile', authenticateToken, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const { name, currentPassword, newPassword } = req.body || {};
+    const { name, currentPassword, newPassword, confirmPassword } = req.body || {};
     const fieldErrors: Record<string, string> = {};
 
     let updatedName = user.name;
@@ -307,7 +333,7 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     }
 
     // Validate Password update if requested
-    if (newPassword || currentPassword) {
+    if (newPassword || currentPassword || confirmPassword) {
       if (!currentPassword) {
         fieldErrors.currentPassword = 'Current password is required to set a new password';
       } else {
@@ -321,7 +347,15 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
         fieldErrors.newPassword = 'New password is required';
       } else if (newPassword.length < 6) {
         fieldErrors.newPassword = 'New password must be at least 6 characters';
-      } else {
+      }
+
+      if (!confirmPassword || typeof confirmPassword !== 'string') {
+        fieldErrors.confirmPassword = 'Confirm new password is required';
+      } else if (newPassword && confirmPassword !== newPassword) {
+        fieldErrors.confirmPassword = 'Passwords do not match';
+      }
+
+      if (!fieldErrors.currentPassword && !fieldErrors.newPassword && !fieldErrors.confirmPassword && newPassword) {
         updatedPasswordHash = await bcrypt.hash(newPassword, 10);
       }
     }
@@ -357,6 +391,64 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     res.status(500).json({ message: 'Server error updating profile' });
   }
 });
+
+// DELETE /api/auth/profile and /api/auth/account
+// Irreversibly deletes user account and personal data (subjects, lectures, problems, events, progress)
+// Strictly protects global/shared content from deletion
+const deleteAccountHandler = async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const { confirmation } = req.body || {};
+
+    if (!confirmation || typeof confirmation !== 'string') {
+      res.status(400).json({
+        message: `Please type your email (${user.email}) or "DELETE" to confirm account deletion.`,
+      });
+      return;
+    }
+
+    const trimmed = confirmation.trim();
+    if (trimmed !== 'DELETE' && trimmed.toLowerCase() !== user.email.toLowerCase()) {
+      res.status(400).json({
+        message: `Confirmation mismatch. You must enter your exact email address (${user.email}) or "DELETE" to confirm.`,
+      });
+      return;
+    }
+
+    // 1. Delete user personal data (subjects, lectures, problems, events, progress) while preserving global content
+    const summary = await AccountDeletionRepository.deleteUserData(user.id);
+
+    // 2. Delete user account record
+    const deleted = await UserRepository.deleteUser(user.id);
+    if (!deleted) {
+      res.status(404).json({ message: 'User account not found to delete.' });
+      return;
+    }
+
+    // 3. Log audit event
+    await AuditLogRepository.log({
+      actorId: user.id,
+      actorName: user.name,
+      actorEmail: user.email,
+      action: 'user_account_deleted',
+      targetUserId: user.id,
+      targetEmail: user.email,
+      details: `User ${user.name} (${user.email}) permanently deleted their account. Purged personal items: ${summary.personalSubjectsCount} subjects, ${summary.personalLecturesCount} lectures, ${summary.personalProblemsCount} problems, ${summary.eventsCount} events, and ${summary.progressCount} progress records. Shared platform content preserved intact.`,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Your account and personal data have been permanently deleted.',
+      summary,
+    });
+  } catch (error) {
+    console.error('[Account Deletion Error]:', error);
+    res.status(500).json({ message: 'Server error occurred while deleting account.' });
+  }
+};
+
+router.delete('/profile', authenticateToken, deleteAccountHandler);
+router.delete('/account', authenticateToken, deleteAccountHandler);
 
 // POST /api/auth/change-first-password
 // Enforces that new admins provisioned with a temporary password set their own secure password

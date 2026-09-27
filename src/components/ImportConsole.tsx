@@ -20,6 +20,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { SubjectSummary } from '../types.ts';
+import { VideoPlayerModal } from './VideoPlayerModal.tsx';
 
 type ImportType = 'lectures' | 'problems';
 
@@ -90,6 +91,11 @@ export function ImportConsole({ onNavigateToSubject, onNavigateToCoding }: Impor
   const [syntaxError, setSyntaxError] = useState<string | null>(null);
   const [previewLectures, setPreviewLectures] = useState<ValidatedLecture[] | null>(null);
   const [previewProblems, setPreviewProblems] = useState<ValidatedProblem[] | null>(null);
+  const [previewVideoLecture, setPreviewVideoLecture] = useState<{
+    title: string;
+    videoUrl: string;
+    session?: number;
+  } | null>(null);
 
   // Ingestion Execution States
   const [isImporting, setIsImporting] = useState(false);
@@ -1044,16 +1050,21 @@ export function ImportConsole({ onNavigateToSubject, onNavigateToCoding }: Impor
                           </td>
                           <td className="py-2.5 px-3.5">
                             {lecture.videoUrl ? (
-                              <a
-                                href={lecture.videoUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 hover:underline max-w-md truncate"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setPreviewVideoLecture({
+                                    title: lecture.title,
+                                    videoUrl: lecture.videoUrl!,
+                                    session: idx + 1,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1.5 text-blue-600 hover:text-blue-800 text-xs font-medium bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors max-w-md truncate cursor-pointer"
+                                title="Preview video in website player"
                               >
-                                <Video className="w-3 h-3 shrink-0 text-slate-400" />
+                                <Video className="w-3.5 h-3.5 shrink-0 text-blue-600" />
                                 <span className="truncate">{lecture.videoUrl}</span>
-                                <ExternalLink className="w-3 h-3 shrink-0" />
-                              </a>
+                              </button>
                             ) : (
                               <span className="text-slate-400 italic">None</span>
                             )}
@@ -1132,6 +1143,30 @@ export function ImportConsole({ onNavigateToSubject, onNavigateToCoding }: Impor
           </section>
         )}
       </div>
+
+      {/* Embedded In-Website Video Player Modal */}
+      <VideoPlayerModal
+        isOpen={!!previewVideoLecture}
+        onClose={() => setPreviewVideoLecture(null)}
+        lecture={previewVideoLecture}
+        subjectTitle="Import Preview"
+        playlist={
+          previewLectures
+            ? previewLectures.map((l, idx) => ({
+                title: l.title,
+                session: idx + 1,
+                videoUrl: l.videoUrl,
+              }))
+            : []
+        }
+        onSelectLecture={(lec) => {
+          setPreviewVideoLecture({
+            title: lec.title,
+            session: lec.session,
+            videoUrl: lec.videoUrl || '',
+          });
+        }}
+      />
     </div>
   );
 }

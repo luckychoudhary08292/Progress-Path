@@ -216,18 +216,17 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
 
   // Lazy loading triggered on active section change
   useEffect(() => {
-    if (activeSection === 'overview' && !loadedSections.overview) {
+    if (activeSection === 'overview') {
       fetchOverviewData();
-    } else if (activeSection === 'users' && !loadedSections.users) {
+    } else if (activeSection === 'users') {
       fetchUsersData();
-    } else if (activeSection === 'content' && !loadedSections.content) {
+    } else if (activeSection === 'content') {
       fetchContentData();
-    } else if (activeSection === 'activity' && !loadedSections.activity) {
+    } else if (activeSection === 'activity') {
       fetchActivityLogs();
     }
   }, [
     activeSection,
-    loadedSections,
     fetchOverviewData,
     fetchUsersData,
     fetchContentData,

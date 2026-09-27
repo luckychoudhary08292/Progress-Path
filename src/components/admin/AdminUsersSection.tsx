@@ -602,6 +602,16 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
                               )}
                             </div>
                             <div className="text-[11px] text-slate-400">{user.email}</div>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className="text-[10px] text-slate-600 font-medium bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded">
+                                {user.subjectsCount ?? 0} {(user.subjectsCount ?? 0) === 1 ? 'subject' : 'subjects'} in feed
+                              </span>
+                              {typeof user.eventsCount === 'number' && user.eventsCount > 0 && (
+                                <span className="text-[10px] text-slate-600 font-medium bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded">
+                                  {user.eventsCount} {(user.eventsCount ?? 0) === 1 ? 'task' : 'tasks'}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -630,7 +640,7 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
 
                       {/* Lectures Progress */}
                       <td className="py-3 px-4 text-center">
-                        <div className="font-medium text-slate-800">
+                        <div className="font-semibold text-slate-800">
                           {user.lecturesDone}{' '}
                           <span className="text-slate-400 font-normal">/ {user.totalLectures}</span>
                         </div>
@@ -641,7 +651,7 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
 
                       {/* Problems Progress */}
                       <td className="py-3 px-4 text-center">
-                        <div className="font-medium text-slate-800">
+                        <div className="font-semibold text-slate-800">
                           {user.problemsSolved}{' '}
                           <span className="text-slate-400 font-normal">/ {user.totalProblems}</span>
                         </div>
@@ -654,9 +664,10 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
                       <td className="py-3 px-4">
                         <div className="w-36 space-y-1">
                           <div className="flex justify-between text-[11px]">
-                            <span className="font-semibold text-slate-700">
+                            <span className="font-bold text-slate-800">
                               {user.overallReadinessPercent}%
                             </span>
+                            <span className="text-[10px] text-slate-400">Readiness</span>
                           </div>
                           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                             <div
@@ -665,7 +676,9 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
                                   ? 'bg-emerald-500'
                                   : user.overallReadinessPercent >= 40
                                   ? 'bg-indigo-500'
-                                  : 'bg-amber-500'
+                                  : user.overallReadinessPercent > 0
+                                  ? 'bg-amber-500'
+                                  : 'bg-slate-200'
                               }`}
                               style={{ width: `${Math.min(100, Math.max(2, user.overallReadinessPercent))}%` }}
                             />

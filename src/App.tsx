@@ -15,13 +15,17 @@ import { SystemSecurityModal } from './components/SystemSecurityModal.tsx';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal.tsx';
 import { LandingPage } from './components/LandingPage.tsx';
 import { SystemLogo } from './components/SystemLogo.tsx';
+import { TermsOfService } from './components/TermsOfService.tsx';
+import { PrivacyPolicy } from './components/PrivacyPolicy.tsx';
 
-type AuthView = 'landing' | 'login' | 'signup';
+type AuthView = 'landing' | 'login' | 'signup' | 'terms' | 'privacy';
 type AppView = 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'admin' | 'import' | 'profile';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<AuthView>('landing');
+  const [previousAuthView, setPreviousAuthView] = useState<AuthView>('landing');
+  const [activeLegalDoc, setActiveLegalDoc] = useState<'terms' | 'privacy' | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
   // In-app navigation states
@@ -104,6 +108,26 @@ export default function App() {
     setCurrentView('landing');
   };
 
+  const navigateToTerms = (from: AuthView = currentView) => {
+    if (user) {
+      setActiveLegalDoc('terms');
+    } else {
+      setPreviousAuthView(from);
+      setCurrentView('terms');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const navigateToPrivacy = (from: AuthView = currentView) => {
+    if (user) {
+      setActiveLegalDoc('privacy');
+    } else {
+      setPreviousAuthView(from);
+      setCurrentView('privacy');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   if (isInitializing) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -112,6 +136,31 @@ export default function App() {
           <p className="text-sm font-medium text-slate-500">Checking session...</p>
         </div>
       </div>
+    );
+  }
+
+  // Legal documentation views for authenticated users
+  if (activeLegalDoc === 'terms') {
+    return (
+      <TermsOfService
+        onBack={() => {
+          setActiveLegalDoc(null);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigateToPrivacy={() => setActiveLegalDoc('privacy')}
+      />
+    );
+  }
+
+  if (activeLegalDoc === 'privacy') {
+    return (
+      <PrivacyPolicy
+        onBack={() => {
+          setActiveLegalDoc(null);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigateToTerms={() => setActiveLegalDoc('terms')}
+      />
     );
   }
 
@@ -232,6 +281,23 @@ export default function App() {
                     >
                       <FileCode className="w-3.5 h-3.5" />
                       <span>Import</span>
+                    </button>
+
+                    <button
+                      id="nav-tab-profile"
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('profile');
+                        setSelectedSubjectId(null);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        activeTab === 'profile' && !selectedSubjectId
+                          ? 'bg-slate-100 text-slate-900 font-semibold'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <UserIcon className="w-3.5 h-3.5" />
+                      <span>Profile</span>
                     </button>
 
                     {/* Admin-only Navigation Tab */}
@@ -540,6 +606,8 @@ export default function App() {
                   setActiveTab(tab);
                   setSelectedSubjectId(null);
                 }}
+                onNavigateToTerms={() => navigateToTerms('landing')}
+                onNavigateToPrivacy={() => navigateToPrivacy('landing')}
               />
             ) : activeTab === 'admin' ? (
               <AdminMonitor
@@ -574,12 +642,40 @@ export default function App() {
         <LandingPage
           onNavigateToLogin={() => setCurrentView('login')}
           onNavigateToSignup={() => setCurrentView('signup')}
+          onNavigateToTerms={() => navigateToTerms('landing')}
+          onNavigateToPrivacy={() => navigateToPrivacy('landing')}
         />
       ) : currentView === 'signup' ? (
         <SignupForm
           onSuccess={handleAuthSuccess}
           onNavigateToLogin={() => setCurrentView('login')}
           onNavigateToHome={() => setCurrentView('landing')}
+          onNavigateToTerms={() => navigateToTerms('signup')}
+          onNavigateToPrivacy={() => navigateToPrivacy('signup')}
+        />
+      ) : currentView === 'terms' ? (
+        <TermsOfService
+          onBack={() => {
+            setCurrentView(previousAuthView || 'landing');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onNavigateToPrivacy={() => navigateToPrivacy(previousAuthView)}
+          onNavigateToSignup={() => {
+            setCurrentView('signup');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        />
+      ) : currentView === 'privacy' ? (
+        <PrivacyPolicy
+          onBack={() => {
+            setCurrentView(previousAuthView || 'landing');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onNavigateToTerms={() => navigateToTerms(previousAuthView)}
+          onNavigateToSignup={() => {
+            setCurrentView('signup');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         />
       ) : (
         <LoginForm

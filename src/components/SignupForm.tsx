@@ -8,13 +8,22 @@ interface SignupFormProps {
   onSuccess: (user: User, token: string) => void;
   onNavigateToLogin: () => void;
   onNavigateToHome?: () => void;
+  onNavigateToTerms?: () => void;
+  onNavigateToPrivacy?: () => void;
 }
 
-export function SignupForm({ onSuccess, onNavigateToLogin, onNavigateToHome }: SignupFormProps) {
+export function SignupForm({
+  onSuccess,
+  onNavigateToLogin,
+  onNavigateToHome,
+  onNavigateToTerms,
+  onNavigateToPrivacy,
+}: SignupFormProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -50,6 +59,10 @@ export function SignupForm({ onSuccess, onNavigateToLogin, onNavigateToHome }: S
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (confirmPassword !== password) {
       newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!agreedToTerms) {
+      newErrors.terms = 'You must agree to the Terms of Service and Privacy Policy to create an account';
     }
 
     setErrors(newErrors);
@@ -339,12 +352,65 @@ export function SignupForm({ onSuccess, onNavigateToLogin, onNavigateToHome }: S
                 )}
               </div>
 
+              {/* Terms and Privacy Policy Required Checkbox */}
+              <div className="pt-1">
+                <div className="flex items-start gap-2.5">
+                  <input
+                    id="signup-terms-checkbox"
+                    name="terms"
+                    type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => {
+                      setAgreedToTerms(e.target.checked);
+                      if (errors.terms) {
+                        setErrors((prev) => ({ ...prev, terms: undefined }));
+                      }
+                    }}
+                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900/20 cursor-pointer shrink-0"
+                    aria-invalid={errors.terms ? 'true' : 'false'}
+                    aria-describedby={errors.terms ? 'terms-error' : undefined}
+                  />
+                  <label
+                    htmlFor="signup-terms-checkbox"
+                    className="text-xs text-slate-600 select-none leading-relaxed"
+                  >
+                    I agree to the{' '}
+                    <button
+                      type="button"
+                      onClick={onNavigateToTerms}
+                      className="font-semibold text-slate-900 underline hover:text-blue-600 cursor-pointer transition-colors"
+                    >
+                      Terms of Service
+                    </button>{' '}
+                    and{' '}
+                    <button
+                      type="button"
+                      onClick={onNavigateToPrivacy}
+                      className="font-semibold text-slate-900 underline hover:text-blue-600 cursor-pointer transition-colors"
+                    >
+                      Privacy Policy
+                    </button>
+                  </label>
+                </div>
+                {errors.terms && (
+                  <p
+                    id="terms-error"
+                    role="alert"
+                    className="mt-1.5 text-xs font-medium text-rose-600 flex items-center gap-1.5"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-500" />
+                    <span>{errors.terms}</span>
+                  </p>
+                )}
+              </div>
+
               {/* Primary Action Button */}
               <div className="pt-2">
                 <button
                   id="signup-submit-btn"
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !agreedToTerms}
+                  title={!agreedToTerms ? 'Please agree to the Terms and Privacy Policy to continue' : undefined}
                   className="w-full bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
                 >
                   {isLoading ? (
