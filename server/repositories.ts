@@ -7,6 +7,7 @@ import {
   EventModel,
   ProgressModel,
 } from './models/index.ts';
+import { UserModel, UserRepository } from './models/User.ts';
 import type { ProblemDifficulty } from './models/index.ts';
 
 // Helper to convert ID to ObjectId if valid, else keep as string
@@ -1693,3 +1694,112 @@ export const AccountDeletionRepository = {
     };
   },
 };
+
+// ----------------------------------------------------------------------
+// PUBLIC STATS REPOSITORY
+// Provides aggregated, privacy-safe real-time numbers for the landing page.
+// Strictly returns numerical aggregates only — zero user names, emails or private details.
+// ----------------------------------------------------------------------
+export const PublicStatsRepository = {
+  async getPlatformStats(): Promise<{
+    totalUsers: number;
+    totalLectures: number;
+    completedLectures: number;
+    leetcodeQuestions: number;
+    usersWithTasks: number;
+    totalTasksAdded: number;
+  }> {
+    // 1. Total real-time registered users
+    let totalUsers = 0;
+    if (isDbConnected()) {
+      try {
+        totalUsers = await UserModel.countDocuments();
+      } catch {
+        const users = await UserRepository.listAllUsers();
+        totalUsers = users.length;
+      }
+    } else {
+      const users = await UserRepository.listAllUsers();
+      totalUsers = users.length;
+    }
+    if (totalUsers < 1) totalUsers = 1;
+
+    // 2. Total lectures across all curricula
+    let totalLectures = 0;
+    if (isDbConnected()) {
+      try {
+        totalLectures = await LectureModel.countDocuments();
+      } catch {
+        totalLectures = inMemoryLectures.length;
+      }
+    } else {
+      totalLectures = inMemoryLectures.length;
+    }
+    if (totalLectures === 0 && inMemoryLectures.length > 0) {
+      totalLectures = inMemoryLectures.length;
+    }
+
+    // 3. Completed lectures (platform wide)
+    let completedLectures = 0;
+    if (isDbConnected()) {
+      try {
+        completedLectures = await ProgressModel.countDocuments({
+          itemType: 'lecture',
+          status: 'completed',
+        });
+      } catch {
+        completedLectures = inMemoryProgress.filter(
+          (p) => p.itemType === 'lecture' && p.status === 'completed'
+        ).length;
+      }
+    } else {
+      completedLectures = inMemoryProgress.filter(
+        (p) => p.itemType === 'lecture' && p.status === 'completed'
+      ).length;
+    }
+
+    // 4. Number of LeetCode / coding questions in the vault
+    let leetcodeQuestions = 0;
+    if (isDbConnected()) {
+      try {
+        leetcodeQuestions = await ProblemModel.countDocuments();
+      } catch {
+        leetcodeQuestions = inMemoryProblems.length;
+      }
+    } else {
+      leetcodeQuestions = inMemoryProblems.length;
+    }
+    if (leetcodeQuestions === 0 && inMemoryProblems.length > 0) {
+      leetcodeQuestions = inMemoryProblems.length;
+    }
+
+    // 5. Total number of users who have added their tasks + total tasks
+    let usersWithTasks = 0;
+    let totalTasksAdded = 0;
+    if (isDbConnected()) {
+      try {
+        totalTasksAdded = await EventModel.countDocuments();
+        const distinctUsers = await EventModel.distinct('userId');
+        usersWithTasks = distinctUsers.length;
+      } catch {
+        totalTasksAdded = inMemoryEvents.length;
+        const set = new Set(inMemoryEvents.map((e) => e.userId));
+        usersWithTasks = set.size;
+      }
+    } else {
+      totalTasksAdded = inMemoryEvents.length;
+      const set = new Set(inMemoryEvents.map((e) => e.userId));
+      usersWithTasks = set.size;
+    }
+
+    return {
+      totalUsers,
+      totalLectures,
+      completedLectures,
+      leetcodeQuestions,
+      usersWithTasks,
+      totalTasksAdded,
+    };
+  },
+};
+

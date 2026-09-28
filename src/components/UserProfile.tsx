@@ -27,8 +27,11 @@ import {
   RotateCcw,
   Sparkles,
   X,
+  FileCode,
+  ArrowLeft,
 } from 'lucide-react';
 import { User, UserProfileStats } from '../types.ts';
+import { ImportConsole } from './ImportConsole.tsx';
 
 interface UserProfileProps {
   user: User;
@@ -54,6 +57,7 @@ export function UserProfile({
 
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState<ProfileTab>('all');
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Floating Toast State
   const [toast, setToast] = useState<{
@@ -378,8 +382,89 @@ export function UserProfile({
         </div>
       )}
 
+      {/* Top Import Action Card (Easy access at top of profile as requested) */}
+      <div
+        id="profile-import-access-card"
+        className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3 shadow-xs"
+      >
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0 text-indigo-300">
+            <FileCode className="w-4.5 h-4.5" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-xs sm:text-sm font-semibold text-white truncate">
+              Import Syllabus & Content
+            </h2>
+            <p className="text-[11px] text-slate-300 truncate">
+              Upload curriculum JSON or bulk import lectures & problems
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          id="profile-open-import-btn"
+          onClick={() => setIsImportOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-900 transition-colors cursor-pointer shrink-0 shadow-xs"
+        >
+          <FileCode className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Open Import</span>
+        </button>
+      </div>
+
+      {/* Import Section Overlay with Back Button */}
+      {isImportOpen && (
+        <div
+          id="profile-import-overlay"
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex flex-col p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200"
+        >
+          <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto min-h-[85vh] max-h-[92vh]">
+            {/* Top Bar with Back Button */}
+            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <button
+                type="button"
+                id="profile-import-back-btn"
+                onClick={() => setIsImportOpen(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer shadow-xs"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Profile</span>
+              </button>
+
+              <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                Curriculum & Syllabus Importer
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setIsImportOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Import Content Body */}
+            <div className="p-3 sm:p-6 flex-1 overflow-y-auto">
+              <ImportConsole
+                onNavigateToSubject={(id) => {
+                  setIsImportOpen(false);
+                  onNavigateToTab('subjects');
+                }}
+                onNavigateToCoding={() => {
+                  setIsImportOpen(false);
+                  onNavigateToTab('coding');
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Identity Header Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 shadow-xs">
+      <div className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-5 shadow-xs">
         <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
           {/* Avatar with status indicator */}
           <div className="relative shrink-0">
@@ -460,25 +545,25 @@ export function UserProfile({
         </div>
       </div>
 
-      {/* Metric Bento-Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+      {/* Metric Bento-Grid: Compact Small App Cards for Mobile */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Readiness Metric */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-500">
               Exam Readiness
             </span>
-            <div className="p-1.5 rounded-md bg-slate-100 text-slate-700">
-              <TrendingUp className="w-4 h-4" />
+            <div className="p-1 sm:p-1.5 rounded-md bg-slate-100 text-slate-700">
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900">
+          <div className="mt-2 sm:mt-3">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900">
                 {isLoadingStats ? '--' : `${stats?.overallReadinessPercent ?? 0}%`}
               </span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2.5 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
               <div
                 className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(100, stats?.overallReadinessPercent ?? 0)}%` }}
@@ -488,25 +573,25 @@ export function UserProfile({
         </div>
 
         {/* Lectures Metric */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-500">
               Lectures Done
             </span>
-            <div className="p-1.5 rounded-md bg-slate-100 text-slate-700">
-              <BookOpen className="w-4 h-4" />
+            <div className="p-1 sm:p-1.5 rounded-md bg-slate-100 text-slate-700">
+              <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900">
+          <div className="mt-2 sm:mt-3">
+            <div className="flex items-baseline gap-1 flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900">
                 {isLoadingStats ? '--' : stats?.lecturesCompleted ?? 0}
               </span>
-              <span className="text-xs text-slate-500">
+              <span className="text-[10px] sm:text-xs text-slate-500">
                 of {stats?.totalLectures ?? 0}
               </span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2.5 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
               <div
                 className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
                 style={{
@@ -522,25 +607,25 @@ export function UserProfile({
         </div>
 
         {/* Coding Problems Metric */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-500">
               Coding Solved
             </span>
-            <div className="p-1.5 rounded-md bg-slate-100 text-slate-700">
-              <Code className="w-4 h-4" />
+            <div className="p-1 sm:p-1.5 rounded-md bg-slate-100 text-slate-700">
+              <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900">
+          <div className="mt-2 sm:mt-3">
+            <div className="flex items-baseline gap-1 flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900">
                 {isLoadingStats ? '--' : stats?.problemsSolved ?? 0}
               </span>
-              <span className="text-xs text-slate-500">
+              <span className="text-[10px] sm:text-xs text-slate-500">
                 of {stats?.totalProblems ?? 0}
               </span>
             </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2.5 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
               <div
                 className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
                 style={{
@@ -556,28 +641,26 @@ export function UserProfile({
         </div>
 
         {/* Academic Curriculum Metric */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 flex flex-col justify-between shadow-xs">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-slate-500">
               Curriculum Hub
             </span>
-            <div className="p-1.5 rounded-md bg-slate-100 text-slate-700">
-              <Award className="w-4 h-4" />
+            <div className="p-1 sm:p-1.5 rounded-md bg-slate-100 text-slate-700">
+              <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-slate-900">
+          <div className="mt-2 sm:mt-3">
+            <div className="flex items-baseline gap-1 flex-wrap">
+              <span className="text-xl sm:text-2xl font-bold text-slate-900">
                 {isLoadingStats ? '--' : stats?.subjectsCount ?? 0}
               </span>
-              <span className="text-xs text-slate-500">
-                Subjects ({stats?.eventsCount ?? 0} Tasks)
+              <span className="text-[10px] sm:text-xs text-slate-500">
+                Subjects
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2 truncate">
-              {user.role === 'admin'
-                ? 'Full administrative authoring'
-                : 'Enrolled in academic curriculum'}
+            <p className="text-[10px] text-slate-400 mt-1.5 truncate">
+              {stats?.eventsCount ?? 0} scheduled tasks
             </p>
           </div>
         </div>

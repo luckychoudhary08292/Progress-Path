@@ -8,6 +8,7 @@ import subjectsRoutes from './server/routes/subjects.ts';
 import problemsRoutes from './server/routes/problems.ts';
 import calendarRoutes from './server/routes/calendar.ts';
 import adminRoutes from './server/routes/admin.ts';
+import { PublicStatsRepository } from './server/repositories.ts';
 import { initDatabase, isDbConnected, getDbError, getConnectedDbName } from './server/db.ts';
 import { bootstrapInitialAdmin } from './server/bootstrap.ts';
 import {
@@ -97,7 +98,18 @@ async function startServer() {
   app.use('/api', apiRateLimiter);
   app.use('/api/auth', authRateLimiter, authRoutes);
 
-  // 8. API Routes
+  // 8. Public Platform Stats (Anonymous Real-Time Counts)
+  app.get('/api/public-stats', async (_req, res) => {
+    try {
+      const stats = await PublicStatsRepository.getPlatformStats();
+      res.json(stats);
+    } catch (err) {
+      console.error('[Public Stats Error]:', err);
+      res.status(500).json({ error: 'Failed to retrieve public platform stats' });
+    }
+  });
+
+  // 9. API Routes
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/subjects', subjectsRoutes);
   app.use('/api/problems', problemsRoutes);
