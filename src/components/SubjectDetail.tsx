@@ -33,6 +33,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   const [videoUrl, setVideoUrl] = useState('');
   const [isSubmittingTopic, setIsSubmittingTopic] = useState(false);
   const [topicError, setTopicError] = useState('');
+  const [isAddLectureModalOpen, setIsAddLectureModalOpen] = useState(false);
 
   // Editing notes state: mapping lectureId -> notes
   const [notesState, setNotesState] = useState<Record<string, string>>({});
@@ -232,6 +233,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
 
         setTopicTitle('');
         setVideoUrl('');
+        setIsAddLectureModalOpen(false);
       } else {
         const err = await res.json();
         setTopicError(err.message || 'Failed to create topic');
@@ -369,63 +371,80 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   const percent = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
   return (
-    <div id="subject-detail-container" className="w-full space-y-6">
-      {/* Top Header Card with Back Button and Live Counter */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <button
-            id="back-to-subjects-btn"
-            type="button"
-            onClick={onBack}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-            title="Return to subjects list"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>All Subjects</span>
-          </button>
-
-          {subject.isOwner && (
+    <div id="subject-detail-container" className="w-full space-y-2 sm:space-y-6">
+      {/* Compact Space-Friendly Subject Header (Small back arrow, subject name, and + icon button) */}
+      <div className="bg-white rounded-xl border border-slate-200 p-2.5 sm:p-4 shadow-2xs">
+        <div className="flex items-center justify-between gap-2">
+          {/* Left: Small Back Arrow Button + Subject Name */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
-              id="delete-subject-btn"
+              id="back-to-subjects-btn"
               type="button"
-              onClick={() => setIsConfirmingDeleteSubject(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
-              title="Delete this subject and all its topics"
+              onClick={onBack}
+              className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center shrink-0 transition-all cursor-pointer"
+              title="Return to subjects list"
+              aria-label="Back to subjects"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Delete Subject</span>
+              <ArrowLeft className="w-4 h-4" />
             </button>
-          )}
-        </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 id="subject-name-heading" className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              {subject.name}
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Sequential session checklist with independent completion tracking.
-            </p>
+            <div className="min-w-0 flex items-center gap-2">
+              <h1 id="subject-name-heading" className="text-sm sm:text-lg font-bold tracking-tight text-slate-900 truncate">
+                {subject.name}
+              </h1>
+
+              {/* Compact Progress Badge */}
+              <span
+                id="live-progress-counter"
+                className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-md border shrink-0 ${
+                  percent === 100
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : percent > 0
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}
+              >
+                {percent}% <span className="hidden sm:inline">({completedTopics}/{totalTopics})</span>
+              </span>
+            </div>
           </div>
 
-          {/* Live Progress Counter */}
-          <div className="flex flex-col sm:items-end shrink-0">
-            <span
-              id="live-progress-counter"
-              className="text-base sm:text-lg font-bold text-slate-900"
+          {/* Right: + Icon button to add new lecture (and delete subject if owner) */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {subject.isOwner && (
+              <button
+                id="delete-subject-btn"
+                type="button"
+                onClick={() => setIsConfirmingDeleteSubject(true)}
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors cursor-pointer"
+                title="Delete this subject and all its topics"
+                aria-label="Delete subject"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* + Icon button to add new lectures */}
+            <button
+              id="open-add-lecture-btn"
+              type="button"
+              onClick={() => {
+                setTopicError('');
+                setIsAddLectureModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white shadow-xs transition-all cursor-pointer"
+              title="Add new lecture"
+              aria-label="Add new lecture"
             >
-              {completedTopics} / {totalTopics} completed
-            </span>
-            <span className="text-xs text-slate-500 mt-0.5">
-              {percent}% ready
-            </span>
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+            </button>
           </div>
         </div>
 
-        {/* Visual Progress Bar */}
-        <div className="w-full bg-slate-100 rounded-full h-1.5 mt-4 overflow-hidden">
+        {/* Thin progress line */}
+        <div className="w-full bg-slate-100 rounded-full h-1 mt-2.5 overflow-hidden">
           <div
-            className={`h-1.5 rounded-full transition-all duration-300 ${
+            className={`h-1 rounded-full transition-all duration-300 ${
               percent === 100 ? 'bg-emerald-600' : 'bg-blue-600'
             }`}
             style={{ width: `${percent}%` }}
@@ -433,61 +452,136 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
         </div>
       </div>
 
-      {/* Small, Unobtrusive Form to Add a New Topic to this Subject */}
-      <form
-        id="add-topic-form"
-        onSubmit={handleAddTopic}
-        className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2.5"
-      >
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex-1 flex flex-col sm:flex-row items-center gap-2.5">
-            <input
-              id="topic-title-input"
-              type="text"
-              placeholder="New topic title (e.g. Memory Management, CPU Scheduling)"
-              value={topicTitle}
-              onChange={(e) => setTopicTitle(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
-            />
-
-            <input
-              id="topic-video-url-input"
-              type="url"
-              placeholder="Optional video link (YouTube, drive...)"
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full sm:w-64 px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
-            />
-          </div>
-
-          <button
-            id="submit-add-topic-btn"
-            type="submit"
-            disabled={isSubmittingTopic || !topicTitle.trim()}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors shrink-0 cursor-pointer"
+      {/* Modal Popup to Add New Lecture */}
+      {isAddLectureModalOpen && (
+        <div
+          id="add-lecture-modal-overlay"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-xs p-0 sm:p-4 transition-opacity"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-lecture-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsAddLectureModalOpen(false);
+              setTopicError('');
+            }
+          }}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl border-t sm:border border-slate-200 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            {isSubmittingTopic ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Plus className="w-3.5 h-3.5" />
-            )}
-            <span>Add Topic</span>
-          </button>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-3.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 id="add-lecture-modal-title" className="text-sm font-bold text-slate-900 leading-tight">
+                    Add New Lecture
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Add topic &amp; video link to {subject.name}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                id="close-add-lecture-modal-btn"
+                onClick={() => {
+                  setIsAddLectureModalOpen(false);
+                  setTopicError('');
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 active:scale-95 transition-colors"
+                aria-label="Close dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              id="add-topic-form"
+              onSubmit={handleAddTopic}
+              className="space-y-3.5"
+            >
+              <div>
+                <label htmlFor="topic-title-input" className="block text-xs font-semibold text-slate-700 mb-1">
+                  Topic Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  id="topic-title-input"
+                  type="text"
+                  placeholder="e.g. Memory Management, CPU Scheduling"
+                  value={topicTitle}
+                  onChange={(e) => setTopicTitle(e.target.value)}
+                  autoFocus
+                  required
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="topic-video-url-input" className="block text-xs font-semibold text-slate-700 mb-1">
+                  Video URL <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  id="topic-video-url-input"
+                  type="url"
+                  placeholder="e.g. https://www.youtube.com/watch?v=..."
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-slate-900"
+                />
+              </div>
+
+              {subject.isGlobal && (
+                <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  Topics you add to this global curriculum are private to your account.
+                </p>
+              )}
+
+              {topicError && (
+                <p className="text-xs text-rose-600 font-medium">{topicError}</p>
+              )}
+
+              <div className="pt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddLectureModalOpen(false);
+                    setTopicError('');
+                  }}
+                  className="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 active:scale-98 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  id="submit-add-topic-btn"
+                  type="submit"
+                  disabled={isSubmittingTopic || !topicTitle.trim()}
+                  className="flex-1 py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-98 disabled:opacity-50 text-white text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {isSubmittingTopic ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Add Lecture</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-
-        {data?.subject.isGlobal && (
-          <p className="text-[11px] text-slate-500">
-            Topics you add to this global subject are private to your account and will not affect other users.
-          </p>
-        )}
-
-        {topicError && (
-          <p className="text-xs text-rose-600 font-medium">{topicError}</p>
-        )}
-      </form>
+      )}
 
       {/* Search & Filter Toolbar for Lectures */}
-      <div id="lectures-filter-toolbar" className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 space-y-3">
+      <div id="lectures-filter-toolbar" className="bg-white rounded-xl border border-slate-200 p-2.5 sm:p-4 space-y-2.5 sm:space-y-3">
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Search input with live debouncing and clear icon */}
           <div className="relative flex-1">
@@ -553,7 +647,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
             id="lectures-filter-panel"
             className="pt-3 border-t border-slate-100 space-y-3.5 animate-in fade-in duration-150"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
               {/* Status Filter */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -585,33 +679,6 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
                     );
                   })}
                 </div>
-              </div>
-
-              {/* Video Content Filter Toggle */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Media / Video
-                </label>
-                <label
-                  id="filter-video-toggle-label"
-                  className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-colors ${
-                    hasVideoOnly
-                      ? 'bg-blue-50/80 border-blue-200 text-blue-900'
-                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="flex items-center gap-2 text-xs font-medium">
-                    <Video className={`w-3.5 h-3.5 ${hasVideoOnly ? 'text-blue-600' : 'text-slate-400'}`} />
-                    <span>Has video lecture only</span>
-                  </span>
-                  <input
-                    id="filter-video-checkbox"
-                    type="checkbox"
-                    checked={hasVideoOnly}
-                    onChange={(e) => setHasVideoOnly(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
-                  />
-                </label>
               </div>
             </div>
 

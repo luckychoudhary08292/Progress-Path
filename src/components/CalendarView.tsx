@@ -325,7 +325,7 @@ export function CalendarView() {
   const isSelectedDateToday = selectedDate === todayStr;
 
   return (
-    <div id="calendar-page-container" className="w-full space-y-6">
+    <div id="calendar-page-container" className="w-full space-y-2 sm:space-y-6">
       {/* Header & Month Navigator */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">

@@ -193,7 +193,7 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
   }
 
   return (
-    <div id="subjects-hub-container" className="w-full space-y-6">
+    <div id="subjects-hub-container" className="w-full space-y-2 sm:space-y-6">
       {/* Header with Add Subject action */}
       <div className="flex items-center justify-between gap-3 bg-transparent sm:bg-white border-0 sm:border border-slate-200 p-0 sm:p-6 rounded-none sm:rounded-xl">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -482,32 +482,33 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
       {subjects.length > 0 ? (
         <div
           id="subjects-grid"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4"
         >
           {subjects.map((subj) => (
             <div
               key={subj.id}
               id={`subject-card-${subj.id}`}
               onClick={() => onSelectSubject(subj.id)}
-              className="group bg-white rounded-xl border border-slate-200 hover:border-slate-300 p-3.5 sm:p-5 transition-colors cursor-pointer flex flex-col justify-between shadow-xs"
+              className="group bg-white rounded-xl border border-slate-200 hover:border-slate-300 p-2.5 sm:p-5 transition-all hover:shadow-xs cursor-pointer flex flex-col justify-between shadow-2xs"
             >
-              <div>
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+              {/* Mobile Mini Card Layout: No line progress, percentage number badge */}
+              <div className="sm:hidden flex flex-col justify-between h-full space-y-2">
+                <div className="flex items-start justify-between gap-1">
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200 truncate">
                     {subj.isGlobal ? (
                       <>
-                        <Globe className="w-3 h-3 text-slate-500" />
-                        <span>Curriculum Core</span>
+                        <Globe className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                        <span className="truncate">Core</span>
                       </>
                     ) : (
                       <>
-                        <UserCheck className="w-3 h-3 text-slate-500" />
-                        <span>Custom Subject</span>
+                        <UserCheck className="w-2.5 h-2.5 text-slate-500 shrink-0" />
+                        <span className="truncate">Custom</span>
                       </>
                     )}
                   </span>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     {subj.isOwner && (
                       <button
                         type="button"
@@ -515,44 +516,103 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
                           e.stopPropagation();
                           setSubjectToDelete(subj);
                         }}
-                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                        className="p-0.5 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
                         title="Delete subject"
                         aria-label={`Delete subject "${subj.name}"`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     )}
-                    <span className="text-xs font-medium text-slate-400 group-hover:text-slate-900 transition-colors inline-flex items-center gap-1">
-                      View <ArrowRight className="w-3 h-3" />
+                    {/* Percentage number only on mobile (no line progress) */}
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
+                        subj.percent === 100
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : subj.percent > 0
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}
+                    >
+                      {subj.percent}%
                     </span>
                   </div>
                 </div>
 
-                <h2 className="text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-                  {subj.name}
-                </h2>
+                <div>
+                  <h2 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1 leading-snug">
+                    {subj.name}
+                  </h2>
+                  <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                    {subj.completedTopics}/{subj.totalTopics} done
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-5 pt-3.5 border-t border-slate-100">
-                <div className="flex items-center justify-between text-xs font-medium mb-1.5">
-                  <span className="text-slate-500">Progress</span>
-                  <span className="text-slate-700">
-                    {subj.completedTopics} / {subj.totalTopics} done
-                  </span>
+              {/* Desktop Full Card Layout (Preserved with Line Progress Bar) */}
+              <div className="hidden sm:flex flex-col justify-between h-full">
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                      {subj.isGlobal ? (
+                        <>
+                          <Globe className="w-3 h-3 text-slate-500" />
+                          <span>Curriculum Core</span>
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="w-3 h-3 text-slate-500" />
+                          <span>Custom Subject</span>
+                        </>
+                      )}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      {subj.isOwner && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSubjectToDelete(subj);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                          title="Delete subject"
+                          aria-label={`Delete subject "${subj.name}"`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <span className="text-xs font-medium text-slate-400 group-hover:text-slate-900 transition-colors inline-flex items-center gap-1">
+                        View <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </div>
+
+                  <h2 className="text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                    {subj.name}
+                  </h2>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      subj.percent === 100
-                        ? 'bg-emerald-600'
-                        : subj.percent > 0
-                        ? 'bg-blue-600'
-                        : 'bg-slate-200'
-                    }`}
-                    style={{ width: `${subj.percent}%` }}
-                  />
+                <div className="mt-5 pt-3.5 border-t border-slate-100">
+                  <div className="flex items-center justify-between text-xs font-medium mb-1.5">
+                    <span className="text-slate-500">Progress</span>
+                    <span className="text-slate-700">
+                      {subj.completedTopics} / {subj.totalTopics} done
+                    </span>
+                  </div>
+
+                  {/* Progress Bar (Desktop only) */}
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        subj.percent === 100
+                          ? 'bg-emerald-600'
+                          : subj.percent > 0
+                          ? 'bg-blue-600'
+                          : 'bg-slate-200'
+                      }`}
+                      style={{ width: `${subj.percent}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

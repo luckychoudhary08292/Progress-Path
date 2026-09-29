@@ -164,3 +164,15 @@ export function parseVideoUrl(rawUrl: string): ParsedVideo {
     originalUrl: url,
   };
 }
+
+/**
+ * Returns a high-res or standard video thumbnail (e.g. YouTube mqdefault/hqdefault) if available.
+ */
+export function getVideoThumbnail(url?: string): string | null {
+  if (!url) return null;
+  const parsed = parseVideoUrl(url);
+  if (parsed.type === 'youtube' && parsed.videoId) {
+    return `https://img.youtube.com/vi/${parsed.videoId}/mqdefault.jpg`;
+  }
+  return null;
+}

@@ -361,34 +361,33 @@ export function CodingRepository() {
   }
 
   return (
-    <div id="coding-repository-container" className="w-full space-y-6">
-      {/* Header Bar */}
-      <header className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
-              <Code className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 id="coding-repo-title" className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                Coding Repository
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Track your DSA practice, categorized LeetCode problems, and revision queues.
-              </p>
-            </div>
+    <div id="coding-repository-container" className="w-full space-y-2 sm:space-y-6">
+      {/* Header Bar - Normal 1 line design on mobile, full card on desktop */}
+      <header className="bg-white rounded-xl border border-slate-200 p-3 sm:p-6 flex flex-row items-center justify-between gap-3">
+        <div className="min-w-0 flex items-center gap-2 sm:gap-2.5">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+            <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </div>
+          <div className="min-w-0">
+            <h1 id="coding-repo-title" className="text-sm sm:text-2xl font-bold tracking-tight text-slate-900 truncate">
+              Coding Repository
+            </h1>
+            <p className="hidden sm:block text-xs sm:text-sm text-slate-500 mt-0.5">
+              Track your DSA practice, categorized LeetCode problems, and revision queues.
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             id="open-add-problem-btn"
             type="button"
             onClick={() => setIsAdding(!isAdding)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white text-xs font-medium rounded-lg transition-all cursor-pointer shadow-2xs"
           >
             {isAdding ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-            <span>{isAdding ? 'Cancel' : 'Add Problem'}</span>
+            <span className="sm:hidden">{isAdding ? 'Cancel' : 'Add'}</span>
+            <span className="hidden sm:inline">{isAdding ? 'Cancel' : 'Add Problem'}</span>
           </button>
         </div>
       </header>
@@ -497,7 +496,7 @@ export function CodingRepository() {
       )}
 
       {/* Search & Filter Toolbar for Problems */}
-      <div id="problems-filter-toolbar" className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 space-y-3">
+      <div id="problems-filter-toolbar" className="bg-white rounded-xl border border-slate-200 p-2.5 sm:p-4 space-y-2.5 sm:space-y-3">
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Always-Visible Search input with debouncing and clear icon */}
           <div className="relative flex-1">
@@ -728,17 +727,17 @@ export function CodingRepository() {
                 <li
                   key={prob.id}
                   id={`problem-row-${prob.id}`}
-                  className="p-3 sm:p-3.5 hover:bg-slate-50/50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="px-2.5 sm:px-3.5 py-2 sm:py-2.5 hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-2 sm:gap-3"
                 >
-                  {/* Left: Problem Name, Difficulty, Category */}
-                  <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                  {/* Left: Status Toggle Button & Problem Name */}
+                  <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
                     {/* Status Button: Cycles through todo -> in_progress -> completed -> revision */}
                     <button
                       id={`cycle-status-btn-${prob.id}`}
                       type="button"
                       onClick={() => handleCycleStatus(prob)}
                       disabled={togglingId === prob.id}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors shrink-0 cursor-pointer ${statConfig.bg} ${statConfig.text} ${statConfig.border}`}
+                      className={`inline-flex items-center justify-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md border text-[11px] sm:text-xs font-medium transition-colors shrink-0 cursor-pointer ${statConfig.bg} ${statConfig.text} ${statConfig.border}`}
                       title={`Current status: ${statConfig.label}. Click to cycle: To Do → In Progress → Completed → Revision`}
                       aria-label={`Cycle status for ${prob.name}, currently ${statConfig.label}`}
                     >
@@ -747,56 +746,54 @@ export function CodingRepository() {
                       ) : (
                         <StatusIcon className="w-3 h-3 shrink-0" />
                       )}
-                      <span>{statConfig.label}</span>
+                      <span className="hidden sm:inline">{statConfig.label}</span>
                     </button>
 
-                    {/* Problem Name & Category Tag */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`text-sm font-medium truncate ${
-                            prob.status === 'completed'
-                              ? 'text-slate-400 line-through'
-                              : 'text-slate-900'
-                          }`}
-                        >
-                          {prob.name}
-                        </span>
+                    {/* Problem Name & Squeezed Category Tag in single line */}
+                    <div className="min-w-0 flex-1 flex items-center gap-1.5">
+                      <span
+                        className={`text-xs sm:text-sm font-medium truncate leading-tight ${
+                          prob.status === 'completed'
+                            ? 'text-slate-400 line-through'
+                            : 'text-slate-900'
+                        }`}
+                        title={prob.name}
+                      >
+                        {prob.name}
+                      </span>
 
-                        {/* Category Tag */}
-                        <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/80 shrink-0">
-                          {prob.category}
-                        </span>
-                      </div>
+                      {/* Contracted Category Tag */}
+                      <span className="hidden md:inline-flex text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200/80 shrink-0">
+                        {prob.category}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Right: Difficulty Badge, External Link, Delete Button */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                    {/* Difficulty Badge */}
+                  {/* Right: Difficulty Badge, External Solve Link, and Delete in single line */}
+                  <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                    {/* Squeezed Difficulty Badge */}
                     <span
                       id={`difficulty-badge-${prob.id}`}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border ${diffConfig.bg} ${diffConfig.text} ${diffConfig.border}`}
+                      className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-semibold border shrink-0 ${diffConfig.bg} ${diffConfig.text} ${diffConfig.border}`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${diffConfig.dot}`} />
-                      <span>{prob.difficulty}</span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${diffConfig.dot} shrink-0`} />
+                      <span className="hidden sm:inline">{prob.difficulty}</span>
+                      <span className="sm:hidden">{prob.difficulty.charAt(0)}</span>
                     </span>
 
                     {/* External Link Button */}
-                    {prob.link ? (
+                    {prob.link && (
                       <a
                         id={`problem-external-link-${prob.id}`}
                         href={prob.link}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg text-xs font-medium transition-colors"
+                        className="p-1 sm:p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors shrink-0"
                         title="Open problem in new tab"
+                        aria-label={`Solve ${prob.name} on external site`}
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Solve</span>
                       </a>
-                    ) : (
-                      <span className="w-6" />
                     )}
 
                     {/* Delete button */}
@@ -805,7 +802,7 @@ export function CodingRepository() {
                         id={`delete-problem-btn-${prob.id}`}
                         type="button"
                         onClick={() => setProblemToDelete(prob)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1 sm:p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer shrink-0"
                         title="Delete problem"
                         aria-label={`Delete problem "${prob.name}"`}
                       >

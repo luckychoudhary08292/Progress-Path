@@ -509,72 +509,77 @@ export default function App() {
           </nav>
 
           {/* Main Body View */}
-          <main className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 min-w-0 flex-1 pb-24 md:pb-12">
-            {selectedSubjectId ? (
-              <SubjectDetail
-                subjectId={selectedSubjectId}
-                onBack={() => setSelectedSubjectId(null)}
-              />
-            ) : activeTab === 'subjects' ? (
-              <SubjectsHub
-                onSelectSubject={(id) => setSelectedSubjectId(id)}
-              />
-            ) : activeTab === 'coding' ? (
-              <CodingRepository />
-            ) : activeTab === 'calendar' ? (
-              <CalendarView />
-            ) : activeTab === 'import' ? (
-              <ImportConsole
-                onNavigateToSubject={(id) => {
-                  setActiveTab('subjects');
-                  setSelectedSubjectId(id);
-                }}
-                onNavigateToCoding={() => {
-                  setActiveTab('coding');
-                  setSelectedSubjectId(null);
-                }}
-              />
-            ) : activeTab === 'profile' ? (
-              <UserProfile
-                user={user}
-                onUpdateUser={(updated) => {
-                  setUser(updated);
-                }}
-                onLogout={handleLogout}
-                onNavigateToTab={(tab) => {
-                  setActiveTab(tab);
-                  setSelectedSubjectId(null);
-                }}
-                onNavigateToTerms={() => navigateToTerms('landing')}
-                onNavigateToPrivacy={() => navigateToPrivacy('landing')}
-              />
-            ) : activeTab === 'admin' ? (
-              <AdminMonitor
-                currentUser={user}
-                onNavigateToDashboard={() => setActiveTab('dashboard')}
-              />
-            ) : (
-              <Dashboard
-                user={user}
-                onLogout={handleLogout}
-                onNavigateToSubjects={() => {
-                  setActiveTab('subjects');
-                  setSelectedSubjectId(null);
-                }}
-                onNavigateToProblems={() => {
-                  setActiveTab('coding');
-                  setSelectedSubjectId(null);
-                }}
-                onNavigateToCalendar={() => {
-                  setActiveTab('calendar');
-                  setSelectedSubjectId(null);
-                }}
-                onNavigateToProfile={() => {
-                  setActiveTab('profile');
-                  setSelectedSubjectId(null);
-                }}
-              />
-            )}
+          <main className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 min-w-0 flex-1 pb-24 md:pb-12 overflow-x-hidden">
+            <div
+              key={selectedSubjectId ? `subject-${selectedSubjectId}` : activeTab}
+              className="tab-slide-enter w-full min-w-0"
+            >
+              {selectedSubjectId ? (
+                <SubjectDetail
+                  subjectId={selectedSubjectId}
+                  onBack={() => setSelectedSubjectId(null)}
+                />
+              ) : activeTab === 'subjects' ? (
+                <SubjectsHub
+                  onSelectSubject={(id) => setSelectedSubjectId(id)}
+                />
+              ) : activeTab === 'coding' ? (
+                <CodingRepository />
+              ) : activeTab === 'calendar' ? (
+                <CalendarView />
+              ) : activeTab === 'import' ? (
+                <ImportConsole
+                  onNavigateToSubject={(id) => {
+                    setActiveTab('subjects');
+                    setSelectedSubjectId(id);
+                  }}
+                  onNavigateToCoding={() => {
+                    setActiveTab('coding');
+                    setSelectedSubjectId(null);
+                  }}
+                />
+              ) : activeTab === 'profile' ? (
+                <UserProfile
+                  user={user}
+                  onUpdateUser={(updated) => {
+                    setUser(updated);
+                  }}
+                  onLogout={handleLogout}
+                  onNavigateToTab={(tab) => {
+                    setActiveTab(tab);
+                    setSelectedSubjectId(null);
+                  }}
+                  onNavigateToTerms={() => navigateToTerms('landing')}
+                  onNavigateToPrivacy={() => navigateToPrivacy('landing')}
+                />
+              ) : activeTab === 'admin' ? (
+                <AdminMonitor
+                  currentUser={user}
+                  onNavigateToDashboard={() => setActiveTab('dashboard')}
+                />
+              ) : (
+                <Dashboard
+                  user={user}
+                  onLogout={handleLogout}
+                  onNavigateToSubjects={() => {
+                    setActiveTab('subjects');
+                    setSelectedSubjectId(null);
+                  }}
+                  onNavigateToProblems={() => {
+                    setActiveTab('coding');
+                    setSelectedSubjectId(null);
+                  }}
+                  onNavigateToCalendar={() => {
+                    setActiveTab('calendar');
+                    setSelectedSubjectId(null);
+                  }}
+                  onNavigateToProfile={() => {
+                    setActiveTab('profile');
+                    setSelectedSubjectId(null);
+                  }}
+                />
+              )}
+            </div>
           </main>
 
           {/* Mobile App Bottom Navigation Bar: Home, Subjects, Coding, Calendar, Profile */}

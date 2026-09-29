@@ -117,13 +117,13 @@ export function LandingPage({
             <span className="hover:text-white transition-colors cursor-default">Grow</span>
           </nav>
 
-          {/* Right Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* Right Action Buttons - Space-friendly on mobile, comfortable on desktop */}
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             <button
               id="nav-login-btn"
               type="button"
               onClick={onNavigateToLogin}
-              className="text-xs sm:text-base font-semibold text-slate-300 hover:text-white px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-lg sm:rounded-xl hover:bg-slate-900 transition-colors cursor-pointer"
+              className="text-[11px] sm:text-base font-medium sm:font-semibold text-slate-300 hover:text-white px-2 py-1 sm:px-4 sm:py-2.5 rounded-md sm:rounded-xl hover:bg-slate-900 transition-colors cursor-pointer"
             >
               Log In
             </button>
@@ -131,10 +131,10 @@ export function LandingPage({
               id="nav-signup-btn"
               type="button"
               onClick={onNavigateToSignup}
-              className="text-xs sm:text-base font-semibold bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white px-3 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl transition-all shadow-sm hover:shadow flex items-center gap-1.5 sm:gap-2 cursor-pointer"
+              className="text-[11px] sm:text-base font-semibold bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white px-2.5 py-1 sm:px-6 sm:py-3 rounded-md sm:rounded-xl transition-all shadow-2xs hover:shadow flex items-center gap-1 sm:gap-2 cursor-pointer"
             >
               <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
@@ -159,61 +159,76 @@ export function LandingPage({
 
         <div className="w-full max-w-[1560px] mx-auto relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-            {/* Left Content Column - Direct, Punchy, Crystal-Clear Words */}
-            <div className="lg:col-span-6 space-y-3.5 sm:space-y-6 text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-white/95 border border-blue-200/80 text-[11px] sm:text-sm font-semibold text-blue-700 shadow-2xs backdrop-blur-md">
-                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 animate-pulse" />
+            {/* Left Content Column - Direct, Punchy, Crystal-Clear Words (Targeted Element) */}
+            <div className="lg:col-span-6 space-y-3 sm:space-y-6 text-left">
+              {/* Badge - Clean micro-pill on mobile, full badge on desktop */}
+              <div className="sm:hidden inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50/90 border border-blue-200/60 text-[11px] font-semibold text-blue-700 shadow-2xs backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                <span>CS Study &amp; Practice</span>
+              </div>
+              <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-blue-200/80 text-sm font-semibold text-blue-700 shadow-2xs backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
                 <span>CS Curriculum &amp; Practice System</span>
               </div>
 
-              {/* Headline */}
+              {/* Headline - Light, high-impact aesthetic on mobile */}
+              <h1 className="sm:hidden text-[26px] font-black tracking-tight text-slate-950 leading-tight">
+                Master CS &amp; Code.{' '}
+                <span className="text-blue-600 block">Clean &amp; Focused.</span>
+              </h1>
               <h1
                 id="hero-headline"
-                className="text-2xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.18] sm:leading-[1.14]"
+                className="hidden sm:block text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.14]"
               >
                 Master Computer Science.{' '}
                 <span className="text-blue-600 block sm:inline">With Zero Clutter.</span>
               </h1>
 
-              {/* Subtext - Clear, Readable, No Heavy Fluff */}
+              {/* Subtext - Crisp single line on mobile, complete copy on desktop */}
+              <p className="sm:hidden text-xs text-slate-600 leading-relaxed font-normal">
+                Curated roadmaps, LeetCode vaults, and study planner.
+              </p>
               <p
                 id="hero-subtext"
-                className="text-xs sm:text-lg text-slate-700 leading-relaxed max-w-xl font-normal"
+                className="hidden sm:block text-lg text-slate-700 leading-relaxed max-w-xl font-normal"
               >
                 Sequential lecture roadmaps, curated LeetCode vaults, and daily study scheduling — built to help you learn without distractions.
               </p>
 
-              {/* Action Buttons */}
-              <div className="pt-1 sm:pt-2 flex items-center gap-2 sm:gap-3">
+              {/* Desktop Action Buttons (Mobile uses sticky top navigation buttons for zero clutter) */}
+              <div className="hidden sm:flex pt-2 items-center gap-3">
                 <button
                   id="hero-signup-btn"
                   type="button"
                   onClick={onNavigateToSignup}
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 sm:gap-3 px-4 py-2.5 sm:px-9 sm:py-4 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-xs sm:text-lg shadow-md hover:shadow-xl transition-all cursor-pointer group"
+                  className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-lg shadow-md hover:shadow-xl transition-all cursor-pointer group"
                 >
                   <span>Start Learning Free</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-5 sm:h-5 transition-transform group-hover:translate-x-1" />
-                </button>
-                <button
-                  type="button"
-                  onClick={onNavigateToLogin}
-                  className="sm:hidden px-3.5 py-2.5 rounded-xl border border-slate-300 hover:bg-white text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
-                >
-                  Log In
+                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </button>
               </div>
 
-              {/* Micro Trust Row */}
-              <div className="pt-0.5 sm:pt-2 flex flex-wrap items-center gap-3 sm:gap-6 text-[10px] sm:text-sm text-slate-600 font-medium">
+              {/* Micro Trust Row - Clean, single-line micro-strip on mobile, full badges on desktop */}
+              <div className="sm:hidden flex items-center justify-between text-[10px] text-slate-500 font-medium pt-2 border-t border-slate-200/60">
                 <span className="flex items-center gap-1">
-                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-slate-500" /> Free forever
+                  <Shield className="w-3 h-3 text-slate-400" /> Free forever
+                </span>
+                <span className="text-slate-300">&bull;</span>
+                <span className="flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-slate-400" /> 100% private
+                </span>
+                <span className="text-slate-300">&bull;</span>
+                <span>No credit card</span>
+              </div>
+              <div className="hidden sm:flex pt-2 flex-wrap items-center gap-6 text-sm text-slate-600 font-medium">
+                <span className="flex items-center gap-1">
+                  <Shield className="w-4 h-4 text-slate-500" /> Free forever
                 </span>
                 <span className="flex items-center gap-1">
-                  <Lock className="w-3 h-3 sm:w-4 sm:h-4 text-slate-500" /> 100% private data
+                  <Lock className="w-4 h-4 text-slate-500" /> 100% private data
                 </span>
                 <span className="flex items-center gap-1">
-                  <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 text-slate-500" /> No credit card
+                  <CreditCard className="w-4 h-4 text-slate-500" /> No credit card
                 </span>
               </div>
             </div>
@@ -268,301 +283,245 @@ export function LandingPage({
         </div>
       </section>
 
-      {/* 3. Quick Metrics & Platform Highlights Strip - Compact on Mobile, Spacious on Desktop */}
+      {/* 3. Real-Time Platform Stats - Compact Small Cards with Live Numbers (No User Private Details) */}
       <section
-        id="stats-strip"
-        className="w-full bg-slate-900 text-white border-y border-slate-800 py-3.5 sm:py-6 px-3.5 sm:px-8"
+        id="live-stats-section"
+        className="w-full py-5 sm:py-9 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-slate-900 text-white border-y border-slate-800"
       >
-        <div className="w-full max-w-[1560px] mx-auto grid grid-cols-4 gap-1.5 sm:gap-6 text-center">
-          <div className="space-y-0.5">
-            <span className="block text-sm sm:text-2xl font-black tracking-tight text-white">40+</span>
-            <span className="block text-[9px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Curricula</span>
+        <div className="w-full max-w-[1560px] mx-auto space-y-3.5 sm:space-y-5">
+          {/* Section Header with Live Activity Pulse */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-emerald-400">
+                Live Platform Activity
+              </span>
+            </div>
+            <span className="text-[10px] sm:text-xs text-slate-400">
+              Real-time aggregate platform statistics &bull; 100% private data
+            </span>
           </div>
-          <div className="space-y-0.5 border-l border-slate-800">
-            <span className="block text-sm sm:text-2xl font-black tracking-tight text-white">150+</span>
-            <span className="block text-[9px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Problems</span>
-          </div>
-          <div className="space-y-0.5 border-l border-slate-800">
-            <span className="block text-sm sm:text-2xl font-black tracking-tight text-white">100%</span>
-            <span className="block text-[9px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Free &amp; Private</span>
-          </div>
-          <div className="space-y-0.5 border-l border-slate-800">
-            <span className="block text-sm sm:text-2xl font-black tracking-tight text-white">Daily</span>
-            <span className="block text-[9px] sm:text-xs font-semibold text-slate-400 uppercase tracking-wider">Planner</span>
+
+          {/* 5 Small Real-Time Stat Cards Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
+            {/* Card 1: Real-time Number of Users */}
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Total Users</span>
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+              </div>
+              <div className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                {platformStats.totalUsers.toLocaleString()}
+              </div>
+              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+                Active learners
+              </p>
+            </div>
+
+            {/* Card 2: Total Number of Lectures */}
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Total Lectures</span>
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0">
+                  <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+              </div>
+              <div className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                {platformStats.totalLectures.toLocaleString()}
+              </div>
+              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+                Curriculum sessions
+              </p>
+            </div>
+
+            {/* Card 3: Completed Lectures */}
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Completed</span>
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+              </div>
+              <div className="text-lg sm:text-2xl font-black text-emerald-400 tracking-tight">
+                {platformStats.completedLectures.toLocaleString()}
+              </div>
+              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+                Lectures completed
+              </p>
+            </div>
+
+            {/* Card 4: LeetCode Questions */}
+            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">LeetCode</span>
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
+                  <Code2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+              </div>
+              <div className="text-lg sm:text-2xl font-black text-amber-400 tracking-tight">
+                {platformStats.leetcodeQuestions.toLocaleString()}
+              </div>
+              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+                Questions in vault
+              </p>
+            </div>
+
+            {/* Card 5: Total Users with Tasks Added */}
+            <div className="col-span-2 sm:col-span-1 bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Users with Tasks</span>
+                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0">
+                  <CalendarCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </div>
+              </div>
+              <div className="text-lg sm:text-2xl font-black text-purple-400 tracking-tight">
+                {platformStats.usersWithTasks.toLocaleString()}
+              </div>
+              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
+                {platformStats.totalTasksAdded} tasks logged
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 4. Key Features Section - Compact 2x2 Small Cards on Mobile, 4-Card Widescreen Grid on Desktop */}
+      {/* 4. Core Features - Tiny Small Cards (Mobile: Row 1 = 2 columns, Row 2 = 1 column; Desktop = 3 columns) */}
       <section
         id="features-section"
-        className="w-full py-6 sm:py-28 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-white border-t border-slate-100"
+        className="w-full py-5 sm:py-20 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-white border-t border-slate-100"
       >
-        <div className="w-full max-w-[1560px] mx-auto text-center">
-          {/* Section Overline */}
-          <span className="text-[10px] sm:text-sm font-bold tracking-widest text-slate-400 uppercase">
-            KEY FEATURES
-          </span>
+        <div className="w-full max-w-[1560px] mx-auto text-center space-y-4 sm:space-y-10">
+          <div className="space-y-0.5 sm:space-y-2">
+            <span className="text-[10px] sm:text-xs font-bold tracking-widest text-blue-600 uppercase">
+              BUILT FOR CLARITY
+            </span>
+            <h2 className="text-lg sm:text-4xl font-extrabold text-slate-950 tracking-tight">
+              Everything You Need. Nothing You Don't.
+            </h2>
+          </div>
 
-          {/* Section Heading */}
-          <h2 className="mt-1 sm:mt-3 text-xl sm:text-5xl font-extrabold text-slate-950 tracking-tight">
-            Everything You Need to Stay on Track
-          </h2>
-
-          {/* 4 Feature Cards Grid: 2-column small cards on mobile, 4-column on desktop */}
-          <div className="mt-6 sm:mt-18 grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-8 text-left">
-            {/* Feature 1: Structured Curriculum */}
-            <div className="p-3.5 sm:p-9 rounded-xl sm:rounded-3xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md transition-all space-y-2.5 sm:space-y-5 shadow-2xs">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <BookOpen className="w-4 h-4 sm:w-7 sm:h-7" />
+          {/* Tiny Cards Grid: Mobile Row 1 = 2 cols, Row 2 = 1 col (spanning 2); Desktop = 3 cols */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-6 text-left">
+            {/* Card 1: Row 1, Col 1 */}
+            <div className="p-3 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/90 bg-white hover:border-blue-300 hover:shadow-xs transition-all shadow-2xs space-y-1.5 sm:space-y-2.5">
+              <div className="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <BookOpen className="w-3.5 h-3.5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h3 className="text-xs sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2 leading-snug">
-                  Structured Curriculum
+                <h3 className="text-xs sm:text-lg font-bold text-slate-900 mb-0.5 sm:mb-1 leading-snug">
+                  Roadmaps
                 </h3>
-                <p className="text-[11px] sm:text-base text-slate-500 leading-snug line-clamp-2 sm:line-clamp-none">
-                  Follow global roadmaps or add your own topics.
+                <p className="text-[11px] sm:text-sm text-slate-600 leading-tight sm:leading-relaxed">
+                  Sequential DSA, OS &amp; DBMS curriculums with progress tracking.
                 </p>
               </div>
             </div>
 
-            {/* Feature 2: Problem Vault */}
-            <div className="p-3.5 sm:p-9 rounded-xl sm:rounded-3xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md transition-all space-y-2.5 sm:space-y-5 shadow-2xs">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <Code2 className="w-4 h-4 sm:w-7 sm:h-7" />
+            {/* Card 2: Row 1, Col 2 */}
+            <div className="p-3 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/90 bg-white hover:border-emerald-300 hover:shadow-xs transition-all shadow-2xs space-y-1.5 sm:space-y-2.5">
+              <div className="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Code2 className="w-3.5 h-3.5 sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h3 className="text-xs sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2 leading-snug">
+                <h3 className="text-xs sm:text-lg font-bold text-slate-900 mb-0.5 sm:mb-1 leading-snug">
                   Problem Vault
                 </h3>
-                <p className="text-[11px] sm:text-base text-slate-500 leading-snug line-clamp-2 sm:line-clamp-none">
-                  Practice from LeetCode, Codeforces and more.
+                <p className="text-[11px] sm:text-sm text-slate-600 leading-tight sm:leading-relaxed">
+                  Curated LeetCode problems organized by pattern &amp; difficulty.
                 </p>
               </div>
             </div>
 
-            {/* Feature 3: Study Calendar */}
-            <div className="p-3.5 sm:p-9 rounded-xl sm:rounded-3xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md transition-all space-y-2.5 sm:space-y-5 shadow-2xs">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                <CalendarIcon className="w-4 h-4 sm:w-7 sm:h-7" />
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2 leading-snug">
-                  Study Calendar
-                </h3>
-                <p className="text-[11px] sm:text-base text-slate-500 leading-snug line-clamp-2 sm:line-clamp-none">
-                  Plan your days, not just your reminders.
-                </p>
-              </div>
-            </div>
-
-            {/* Feature 4: Readiness Gauge */}
-            <div className="p-3.5 sm:p-9 rounded-xl sm:rounded-3xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md transition-all space-y-2.5 sm:space-y-5 shadow-2xs">
-              <div className="w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-4 h-4 sm:w-7 sm:h-7" />
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-xl font-bold text-slate-900 mb-1 sm:mb-2 leading-snug">
-                  Readiness Gauge
-                </h3>
-                <p className="text-[11px] sm:text-base text-slate-500 leading-snug line-clamp-2 sm:line-clamp-none">
-                  See your real progress with simple metrics.
-                </p>
+            {/* Card 3: Row 2, Col 1 (Spans full width across 2 columns on mobile) */}
+            <div className="col-span-2 sm:col-span-1 p-3 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/90 bg-white hover:border-purple-300 hover:shadow-xs transition-all shadow-2xs">
+              <div className="flex sm:flex-col items-center sm:items-start gap-2.5 sm:gap-0 sm:space-y-2.5 text-left">
+                <div className="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <CalendarIcon className="w-3.5 h-3.5 sm:w-6 sm:h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-lg font-bold text-slate-900 mb-0.5 sm:mb-1 leading-snug">
+                    Daily Study Planner
+                  </h3>
+                  <p className="text-[11px] sm:text-sm text-slate-600 leading-tight sm:leading-relaxed">
+                    Schedule focus blocks, set priorities &amp; track completed tasks.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 5. Middle Showcase Section ("Learn. Practice. Get Interview Ready.") */}
+      {/* 5. Desktop-Only Showcase (Hidden on Mobile to keep Mobile clean & light) */}
       <section
         id="showcase-section"
-        className="w-full py-6 sm:py-28 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-slate-50/60"
+        className="hidden sm:block w-full py-16 lg:py-24 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-slate-50/60"
       >
-        <div className="w-full max-w-[1560px] mx-auto">
-          {/* Mobile-only High-Impact Compact Value Card */}
-          <div className="block sm:hidden bg-slate-900 text-white rounded-2xl p-4 space-y-3 text-left shadow-md">
-            <span className="text-[10px] font-bold tracking-widest text-blue-400 uppercase block">
-              BUILT FOR YOUR GOALS
-            </span>
-            <h3 className="text-lg font-extrabold text-white tracking-tight leading-snug">
-              Learn. Practice. Get Interview Ready.
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              A distraction-free system engineered to turn scattered notes into verified technical competence.
-            </p>
-            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800 text-[11px] font-medium text-slate-200">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Track progress</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Real questions</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Custom roadmaps</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Daily consistency</span>
+        <div className="w-full max-w-[1560px] mx-auto bg-slate-100/70 rounded-3xl p-8 sm:p-14 border border-slate-200/70">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Left Column: Overlapping Mockups */}
+            <div className="lg:col-span-7 relative flex items-center justify-center">
+              <div className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-xl p-6 space-y-4 text-left ml-auto">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <span className="text-base font-bold text-slate-900">Today's Plan</span>
+                  <span className="text-xs font-mono text-slate-400">Study Session</span>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
+                      <span className="font-mono text-slate-500 text-xs">09:00 &ndash; 10:30</span>
+                      <span className="font-semibold text-slate-900">Operating Systems</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-600 border border-rose-100">
+                      High
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-5 h-5 rounded-full border border-blue-400 shrink-0 flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      </div>
+                      <span className="font-mono text-slate-500 text-xs">11:00 &ndash; 12:00</span>
+                      <span className="font-semibold text-slate-900">DSA Practice</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
+                      Normal
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Direct Mobile Conversion Action */}
-            <div className="pt-1.5">
-              <button
-                type="button"
-                onClick={onNavigateToSignup}
-                className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
-              >
-                <span>Start Preparing Free</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Desktop Full Dual-Column Showcase (Hidden on Mobile) */}
-          <div className="hidden sm:block bg-slate-100/70 rounded-3xl 2xl:rounded-[36px] p-8 sm:p-14 lg:p-18 2xl:p-22 border border-slate-200/70">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-              {/* Left Column: Overlapping Real-Time Mockups */}
-              <div className="lg:col-span-7 relative flex items-center justify-center">
-                {/* Back Main Card: "Today's Plan" */}
-                <div className="w-full max-w-lg lg:max-w-xl bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 space-y-5 text-left ml-auto">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <span className="text-base font-bold text-slate-900">Today's Plan</span>
-                    <span className="text-xs sm:text-sm font-mono text-slate-400">23 Apr, 2025</span>
-                  </div>
-
-                  <div className="space-y-3.5 text-xs sm:text-sm">
-                    {/* Block 1 */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 shrink-0" />
-                        <span className="font-mono text-slate-500 text-xs sm:text-sm">09:00 &ndash; 10:30</span>
-                        <span className="font-semibold text-slate-900">Operating Systems</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-600 border border-rose-100">
-                          High
-                        </span>
-                        <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-                      </div>
-                    </div>
-
-                    {/* Block 2 */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-blue-400 shrink-0 flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        </div>
-                        <span className="font-mono text-slate-500 text-xs sm:text-sm">11:00 &ndash; 12:00</span>
-                        <span className="font-semibold text-slate-900">DSA Practice</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-600 border border-rose-100">
-                          High
-                        </span>
-                        <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
-                      </div>
-                    </div>
-
-                    {/* Block 3 */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-slate-300 shrink-0" />
-                        <span className="font-mono text-slate-500 text-xs sm:text-sm">02:00 &ndash; 04:00</span>
-                        <span className="font-semibold text-slate-900">DBMS</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
-                          Normal
-                        </span>
-                        <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
-                      </div>
-                    </div>
-
-                    {/* Block 4 */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full border border-slate-300 shrink-0" />
-                        <span className="font-mono text-slate-500 text-xs sm:text-sm">05:00 &ndash; 06:00</span>
-                        <span className="font-semibold text-slate-900">Revision</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600">
-                          Low
-                        </span>
-                        <Circle className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
-                      </div>
-                    </div>
-                  </div>
+            {/* Right Column: Copy */}
+            <div className="lg:col-span-5 space-y-5 text-left">
+              <span className="text-xs font-bold tracking-widest text-slate-400 uppercase block">
+                BUILT FOR YOUR GOALS
+              </span>
+              <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
+                Learn. Practice. <br />
+                Get Interview Ready.
+              </h3>
+              <p className="text-base text-slate-600 leading-relaxed">
+                A simple, focused platform for engineering students and developers to maintain daily momentum.
+              </p>
+              <div className="pt-2 space-y-3 text-sm font-medium text-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>Sequential roadmaps with video lectures</span>
                 </div>
-
-                {/* Front Floating Offset Card: "Problem Details" */}
-                <div className="absolute -bottom-6 sm:-bottom-8 -left-2 sm:left-4 w-60 sm:w-68 bg-white rounded-2xl border border-slate-200 shadow-2xl p-5 space-y-3 text-left transition-transform hover:scale-[1.02]">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                    Problem Details
-                  </span>
-                  <div className="space-y-1">
-                    <h5 className="text-base font-bold text-slate-900">Two Sum</h5>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="font-medium text-slate-500">LeetCode</span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold text-[11px]">
-                        Easy
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-medium text-[11px]">
-                        Array
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-500 leading-snug">
-                    Find two numbers that add up to target.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold text-center transition-colors cursor-pointer"
-                  >
-                    View Solution
-                  </button>
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>Practice with curated coding problems</span>
                 </div>
-              </div>
-
-              {/* Right Column: Narrative Copy & Checkpoint List */}
-              <div className="lg:col-span-5 space-y-6 text-left">
-                <span className="text-xs sm:text-sm font-bold tracking-widest text-slate-400 uppercase block">
-                  BUILT FOR YOUR GOALS
-                </span>
-
-                <h3 className="text-4xl sm:text-5xl 2xl:text-6xl font-extrabold text-slate-950 tracking-tight leading-tight">
-                  Learn. Practice. <br />
-                  Get Interview Ready.
-                </h3>
-
-                <p className="text-base sm:text-lg 2xl:text-xl text-slate-600 leading-relaxed">
-                  A simple, focused platform for engineering students and developers.
-                </p>
-
-                {/* 4 Green Checkpoint Items */}
-                <div className="pt-2 space-y-4 text-base sm:text-lg font-medium text-slate-800">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                    <span>Track your progress</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                    <span>Practice with real questions</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                    <span>Build your own topics</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0" />
-                    <span>Stay consistent</span>
-                  </div>
+                <div className="flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>Daily schedule to stay consistent</span>
                 </div>
               </div>
             </div>
@@ -570,54 +529,55 @@ export function LandingPage({
         </div>
       </section>
 
-      {/* 6. Closing Mountain Summit Call To Action */}
+      {/* 6. Closing Call To Action (Compact & Clean on Mobile, Spacious on Desktop) */}
       <section
         id="closing-cta-section"
-        className="relative w-full pt-12 sm:pt-36 pb-12 sm:pb-28 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-gradient-to-b from-white via-blue-50/25 to-blue-50/60 overflow-hidden text-center"
+        className="relative w-full py-4 sm:py-24 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-gradient-to-b from-white via-blue-50/25 to-blue-50/60 overflow-hidden text-center"
       >
-        {/* Mountain Peak Vector Illustration in Background */}
-        <div className="absolute bottom-0 left-0 right-0 w-full flex justify-center pointer-events-none opacity-45 select-none overflow-hidden max-h-24 sm:max-h-none">
+        {/* Mountain Peak Vector Illustration in Background (Desktop only) */}
+        <div className="hidden sm:flex absolute bottom-0 left-0 right-0 w-full justify-center pointer-events-none opacity-40 select-none overflow-hidden">
           <svg
             viewBox="0 0 1600 260"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className="w-full max-w-7xl h-auto"
           >
-            {/* Left mountain */}
             <polygon points="120,260 400,130 680,260" fill="#E2E8F0" />
             <polygon points="400,130 460,170 400,260" fill="#CBD5E1" />
-            {/* Center-right peak with summit flag */}
             <polygon points="560,260 960,40 1360,260" fill="#E2E8F0" />
             <polygon points="960,40 1040,120 960,260" fill="#CBD5E1" />
             <polygon points="920,260 960,40 1000,120" fill="#F1F5F9" />
-            {/* Summit Flag */}
             <line x1="960" y1="40" x2="960" y2="12" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" />
             <polygon points="960,12 1005,24 960,36" fill="#3B82F6" />
           </svg>
         </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto space-y-4 sm:space-y-7">
-          <h2 className="text-xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-tight leading-tight">
-            Build Compounding Technical Competence <br className="hidden sm:inline" />
-            Every Single Day.
+        <div className="relative z-10 max-w-2xl mx-auto space-y-2 sm:space-y-6">
+          <h2 className="text-sm sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight leading-snug">
+            <span className="sm:hidden">Start Your Preparation Today</span>
+            <span className="hidden sm:inline">Build Compounding Technical Competence Every Single Day.</span>
           </h2>
 
-          <div>
+          <p className="hidden sm:block text-xs sm:text-base text-slate-600 max-w-lg mx-auto">
+            Join learners tracking roadmaps, problem solving, and daily study habits without cognitive noise.
+          </p>
+
+          <div className="pt-0.5 sm:pt-1">
             <button
               id="cta-signup-btn"
               type="button"
               onClick={onNavigateToSignup}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 sm:gap-3 px-6 py-3 sm:px-10 sm:py-5 rounded-xl sm:rounded-2xl bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white font-semibold text-sm sm:text-lg shadow-md hover:shadow-xl transition-all cursor-pointer group"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 sm:px-10 sm:py-4 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-xs sm:text-base shadow-sm hover:shadow-xl transition-all cursor-pointer group"
             >
               <span>Get Started Free</span>
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:translate-x-1" />
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
 
-          <div className="pt-1 sm:pt-2 text-[11px] sm:text-sm text-slate-500 font-medium">
-            <span>Free to use</span>
+          <div className="hidden sm:block pt-1 text-[11px] sm:text-xs text-slate-500 font-medium">
+            <span>Free forever</span>
             <span className="mx-2 sm:mx-3">&bull;</span>
-            <span>Private personal data</span>
+            <span>100% private data</span>
             <span className="mx-2 sm:mx-3">&bull;</span>
             <span>No credit card required</span>
           </div>
@@ -626,8 +586,89 @@ export function LandingPage({
 
       {/* 7. Comprehensive Professional Footer */}
       <footer id="landing-footer" className="w-full bg-slate-950 text-slate-400 border-t border-slate-800">
-        <div className="w-full max-w-[1560px] mx-auto px-3.5 sm:px-8 lg:px-12 2xl:px-16 pt-8 sm:pt-16 pb-6 sm:pb-12">
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-12 gap-x-4 gap-y-6 sm:gap-8 lg:gap-12 pb-6 sm:pb-12 border-b border-slate-800/80">
+        <div className="w-full max-w-[1560px] mx-auto px-3.5 sm:px-8 lg:px-12 2xl:px-16 pt-3.5 sm:pt-16 pb-3.5 sm:pb-12">
+          {/* Mobile-Only Minimal Structured Footer - Minimal Vertical Space */}
+          <div className="sm:hidden space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div
+                className="flex items-center gap-2 cursor-pointer select-none"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                <SystemLogo size="sm" />
+                <span className="font-bold text-white tracking-tight text-xs">
+                  ProgressPath
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href="mailto:luckypc08292@gmail.com?subject=ProgressPath%20Inquiry"
+                  aria-label="Gmail Support"
+                  className="w-6 h-6 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-red-400 flex items-center justify-center"
+                >
+                  <Mail className="w-3 h-3" />
+                </a>
+                <a
+                  href="https://github.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="GitHub"
+                  className="w-6 h-6 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center"
+                >
+                  <Github className="w-3 h-3" />
+                </a>
+                <a
+                  href="https://www.youtube.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="YouTube"
+                  className="w-6 h-6 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-red-500 flex items-center justify-center"
+                >
+                  <Youtube className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigateToPrivacy) onNavigateToPrivacy();
+                  else setActiveLegalModal('privacy');
+                }}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <span className="text-slate-700">&bull;</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigateToTerms) onNavigateToTerms();
+                  else setActiveLegalModal('terms');
+                }}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Terms of Service
+              </button>
+              <span className="text-slate-700">&bull;</span>
+              <button
+                type="button"
+                onClick={() => setActiveLegalModal('security')}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Security
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between text-[9px] text-slate-500 pt-0.5">
+              <span>&copy; {new Date().getFullYear()} ProgressPath</span>
+              <span className="font-mono text-slate-500">luckypc08292@gmail.com</span>
+            </div>
+          </div>
+
+          {/* Desktop Full Multi-Column Grid */}
+          <div className="hidden sm:grid grid-cols-2 md:grid-cols-2 lg:grid-cols-12 gap-x-4 gap-y-6 sm:gap-8 lg:gap-12 pb-6 sm:pb-12 border-b border-slate-800/80">
             {/* Column 1: Brand Info & Social Icons */}
             <div className="col-span-2 lg:col-span-5 space-y-2.5 sm:space-y-5 text-left">
               <div
@@ -840,8 +881,8 @@ export function LandingPage({
             </div>
           </div>
 
-          {/* Sub-Footer Copyright & Status */}
-          <div className="pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-[11px] sm:text-xs text-slate-500">
+          {/* Desktop Sub-Footer Copyright & Status */}
+          <div className="hidden sm:flex pt-6 sm:pt-8 flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-[11px] sm:text-xs text-slate-500">
             <div className="flex items-center gap-2">
               <span>&copy; {new Date().getFullYear()} ProgressPath Inc. All rights reserved.</span>
             </div>

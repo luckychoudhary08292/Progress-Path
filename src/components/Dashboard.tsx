@@ -194,7 +194,7 @@ export function Dashboard({
   const hasZeroData = stats?.hasZeroData ?? true;
 
   return (
-    <div id="dashboard-container" className="w-full space-y-3 sm:space-y-6">
+    <div id="dashboard-container" className="w-full space-y-2 sm:space-y-6">
       {/* Desktop & Tablet: Full Welcome Back Card */}
       <header
         id="dashboard-desktop-welcome-bar"
