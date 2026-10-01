@@ -101,13 +101,11 @@ export function parseVideoUrl(rawUrl: string): ParsedVideo {
       }
     }
 
-    // Build privacy-enhanced YouTube embed link
+    // Build standard YouTube embed link that works across all browsers and devices
     const params = new URLSearchParams({
       autoplay: '1',
       enablejsapi: '1',
       rel: '0',
-      modestbranding: '1',
-      iv_load_policy: '3',
       playsinline: '1',
     });
 
@@ -115,7 +113,7 @@ export function parseVideoUrl(rawUrl: string): ParsedVideo {
       params.set('start', startTime.toString());
     }
 
-    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 
     return {
       type: 'youtube',

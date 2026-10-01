@@ -27,11 +27,12 @@ import {
   RotateCcw,
   Sparkles,
   X,
-  FileCode,
   ArrowLeft,
+  Settings,
+  FileText,
+  ChevronRight,
 } from 'lucide-react';
 import { User, UserProfileStats } from '../types.ts';
-import { ImportConsole } from './ImportConsole.tsx';
 
 interface UserProfileProps {
   user: User;
@@ -40,6 +41,9 @@ interface UserProfileProps {
   onNavigateToTab: (tab: 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'import' | 'admin') => void;
   onNavigateToTerms?: () => void;
   onNavigateToPrivacy?: () => void;
+  isSettingsOpen?: boolean;
+  onOpenSettings?: () => void;
+  onCloseSettings?: () => void;
 }
 
 type ProfileTab = 'all' | 'profile' | 'security' | 'danger' | 'permissions';
@@ -51,13 +55,28 @@ export function UserProfile({
   onNavigateToTab,
   onNavigateToTerms,
   onNavigateToPrivacy,
+  isSettingsOpen,
+  onOpenSettings,
+  onCloseSettings,
 }: UserProfileProps) {
   const [stats, setStats] = useState<UserProfileStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState<ProfileTab>('all');
-  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  // Mobile Dynamic Sub-page state ('overview' | 'profile' | 'security' | 'permissions' | 'danger')
+  // On mobile: default is 'overview' (only profile info card + dashboard). Clicking setting options opens dynamic sub-page.
+  const [mobileSubPage, setMobileSubPage] = useState<'overview' | 'profile' | 'security' | 'permissions' | 'danger'>('overview');
+
+  // Mobile Settings Hub Modal state (controlled from top nav Settings button or internal)
+  const [internalSettingsModalOpen, setInternalSettingsModalOpen] = useState(false);
+  const isSettingsModalOpen = isSettingsOpen !== undefined ? isSettingsOpen : internalSettingsModalOpen;
+  const setIsSettingsModalOpen = (open: boolean) => {
+    if (onCloseSettings && !open) onCloseSettings();
+    if (onOpenSettings && open) onOpenSettings();
+    setInternalSettingsModalOpen(open);
+  };
 
   // Floating Toast State
   const [toast, setToast] = useState<{
@@ -348,7 +367,7 @@ export function UserProfile({
   };
 
   return (
-    <div id="user-profile-page" className="w-full space-y-6 pb-12 relative">
+    <div id="user-profile-page" className="w-full flex flex-col gap-4 sm:gap-6 pb-12 relative">
       {/* Floating Toast Notification */}
       {toast && (
         <div
@@ -382,89 +401,8 @@ export function UserProfile({
         </div>
       )}
 
-      {/* Top Import Action Card (Easy access at top of profile as requested) */}
-      <div
-        id="profile-import-access-card"
-        className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl p-3 sm:p-4 flex items-center justify-between gap-3 shadow-xs"
-      >
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0 text-indigo-300">
-            <FileCode className="w-4.5 h-4.5" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-xs sm:text-sm font-semibold text-white truncate">
-              Import Syllabus & Content
-            </h2>
-            <p className="text-[11px] text-slate-300 truncate">
-              Upload curriculum JSON or bulk import lectures & problems
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          id="profile-open-import-btn"
-          onClick={() => setIsImportOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-900 transition-colors cursor-pointer shrink-0 shadow-xs"
-        >
-          <FileCode className="w-3.5 h-3.5 text-indigo-600" />
-          <span>Open Import</span>
-        </button>
-      </div>
-
-      {/* Import Section Overlay with Back Button */}
-      {isImportOpen && (
-        <div
-          id="profile-import-overlay"
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex flex-col p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200"
-        >
-          <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col my-auto min-h-[85vh] max-h-[92vh]">
-            {/* Top Bar with Back Button */}
-            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-              <button
-                type="button"
-                id="profile-import-back-btn"
-                onClick={() => setIsImportOpen(false)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 transition-colors cursor-pointer shadow-xs"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Profile</span>
-              </button>
-
-              <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-                Curriculum & Syllabus Importer
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsImportOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-                title="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Import Content Body */}
-            <div className="p-3 sm:p-6 flex-1 overflow-y-auto">
-              <ImportConsole
-                onNavigateToSubject={(id) => {
-                  setIsImportOpen(false);
-                  onNavigateToTab('subjects');
-                }}
-                onNavigateToCoding={() => {
-                  setIsImportOpen(false);
-                  onNavigateToTab('coding');
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Top Identity Header Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-5 shadow-xs">
+      {/* Top Identity Header Card: Visible on desktop always, on mobile only in overview mode */}
+      <div className={`${mobileSubPage !== 'overview' ? 'hidden md:flex' : 'flex'} bg-white rounded-xl border border-slate-200 p-3.5 sm:p-5 flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-5 shadow-xs`}>
         <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
           {/* Avatar with status indicator */}
           <div className="relative shrink-0">
@@ -532,12 +470,12 @@ export function UserProfile({
         </div>
 
         {/* Header Action Buttons */}
-        <div className="flex items-center justify-start sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+        <div className="flex items-center justify-start sm:justify-end gap-2 sm:gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
           <button
             id="profile-sign-out-btn"
             type="button"
             onClick={onLogout}
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-600 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-rose-600 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
@@ -545,8 +483,8 @@ export function UserProfile({
         </div>
       </div>
 
-      {/* Metric Bento-Grid: Compact Small App Cards for Mobile */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      {/* Metric Bento-Grid: Visible on desktop always, on mobile only in overview mode */}
+      <div className={`${mobileSubPage !== 'overview' ? 'hidden md:grid' : 'grid'} grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4`}>
         {/* Readiness Metric */}
         <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5 flex flex-col justify-between shadow-xs">
           <div className="flex items-center justify-between">
@@ -666,8 +604,11 @@ export function UserProfile({
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-slate-200 pb-3 overflow-x-auto scrollbar-none">
+      {/* Sub-Navigation Tabs: Visible on desktop, hidden on mobile */}
+      <div
+        id="profile-subnav-tabs-bar"
+        className="hidden md:flex items-center gap-1.5 border-b border-slate-200 pb-3 overflow-x-auto scrollbar-none shrink-0"
+      >
         <button
           id="profile-subtab-all"
           type="button"
@@ -739,11 +680,44 @@ export function UserProfile({
         </button>
       </div>
 
+      {/* Mobile Dynamic Sub-Page Header (Only on mobile when performing a specific task) */}
+      {mobileSubPage !== 'overview' && (
+        <div className="md:hidden flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 shadow-2xs animate-in fade-in duration-150">
+          <button
+            type="button"
+            id="mobile-back-to-profile-btn"
+            onClick={() => {
+              setMobileSubPage('overview');
+              setActiveTab('all');
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 active:scale-95 transition-all cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
+            <span>Back to Profile</span>
+          </button>
+          <span className="text-xs font-bold text-slate-800">
+            {mobileSubPage === 'profile'
+              ? 'Personal Information'
+              : mobileSubPage === 'security'
+              ? 'Change Password'
+              : mobileSubPage === 'permissions'
+              ? 'Roles & Permissions'
+              : 'Delete Account'}
+          </span>
+        </div>
+      )}
+
       {/* SECTION 1: Personal Information (Name editable with Save button, Email read-only) */}
-      {(activeTab === 'all' || activeTab === 'profile') && (
+      {(
+        mobileSubPage === 'profile' ||
+        activeTab === 'all' ||
+        activeTab === 'profile'
+      ) && (
         <section
           id="profile-personal-info-section"
-          className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 space-y-6 shadow-xs"
+          className={`${
+            mobileSubPage !== 'profile' ? 'hidden md:block' : 'block'
+          } bg-white rounded-xl border border-slate-200 p-5 sm:p-6 space-y-6 shadow-xs`}
         >
           <div className="border-b border-slate-100 pb-4">
             <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
@@ -879,11 +853,17 @@ export function UserProfile({
         </section>
       )}
 
-      {/* SECTION 2: Change Password (current password, new password, confirm new password) */}
-      {(activeTab === 'all' || activeTab === 'security') && (
+      {/* SECTION 2: Change Password */}
+      {(
+        mobileSubPage === 'security' ||
+        activeTab === 'all' ||
+        activeTab === 'security'
+      ) && (
         <section
           id="profile-password-section"
-          className="bg-white rounded-xl border border-slate-200 p-5 sm:p-6 space-y-6 shadow-xs"
+          className={`${
+            mobileSubPage !== 'security' ? 'hidden md:block' : 'block'
+          } bg-white rounded-xl border border-slate-200 p-5 sm:p-6 space-y-6 shadow-xs`}
         >
           <div className="border-b border-slate-100 pb-4">
             <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
@@ -1075,11 +1055,17 @@ export function UserProfile({
         </section>
       )}
 
-      {/* SECTION 3: Delete Account (visually separated red-bordered box at the bottom) */}
-      {(activeTab === 'all' || activeTab === 'danger') && (
+      {/* SECTION 3: Delete Account (Danger Zone) */}
+      {(
+        mobileSubPage === 'danger' ||
+        activeTab === 'all' ||
+        activeTab === 'danger'
+      ) && (
         <section
           id="delete-account-section"
-          className="rounded-xl border-2 border-rose-300 bg-rose-50/50 p-5 sm:p-6 space-y-4 shadow-xs"
+          className={`${
+            mobileSubPage !== 'danger' ? 'hidden md:block' : 'block'
+          } rounded-xl border-2 border-rose-300 bg-rose-50/50 p-5 sm:p-6 space-y-4 shadow-xs`}
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
@@ -1189,11 +1175,16 @@ export function UserProfile({
         </section>
       )}
 
-      {/* SECTION 4: Role & Permissions Info (when explicitly selected) */}
-      {activeTab === 'permissions' && (
+      {/* SECTION 4: Role & Permissions Info */}
+      {(
+        mobileSubPage === 'permissions' ||
+        activeTab === 'permissions'
+      ) && (
         <section
           id="profile-permissions-section"
-          className="bg-white rounded-xl border border-slate-200 p-6 space-y-4 shadow-xs"
+          className={`${
+            mobileSubPage !== 'permissions' ? 'hidden md:block' : 'block'
+          } bg-white rounded-xl border border-slate-200 p-6 space-y-4 shadow-xs`}
         >
           <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
             <div className="p-2.5 rounded-lg bg-slate-100 text-slate-700">
@@ -1274,7 +1265,7 @@ export function UserProfile({
       )}
 
       {/* Quick Hub Navigation Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+      <div className={`${mobileSubPage !== 'overview' ? 'hidden md:grid' : 'grid'} grid-cols-1 sm:grid-cols-3 gap-4 pt-2`}>
         <button
           type="button"
           onClick={() => onNavigateToTab('subjects')}
@@ -1355,6 +1346,233 @@ export function UserProfile({
           </a>
         </div>
       </footer>
+
+      {/* Settings & Services Modal / Drawer */}
+      {isSettingsModalOpen && (
+        <div
+          id="profile-settings-modal-overlay"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 p-0 sm:p-4 transition-opacity animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="profile-settings-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsSettingsModalOpen(false);
+          }}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl border-t sm:border border-slate-200 max-h-[85vh] overflow-y-auto space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shadow-2xs">
+                  <Settings className="w-4 h-4 text-slate-700" />
+                </div>
+                <div>
+                  <h3 id="profile-settings-modal-title" className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+                    Settings & Services
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Account management, privacy & security
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="close-profile-settings-btn"
+                onClick={() => setIsSettingsModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                aria-label="Close settings"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* List of Settings Service Cards */}
+            <div className="space-y-2">
+              {/* 1. Edit Personal Information */}
+              <button
+                type="button"
+                id="settings-service-personal-info"
+                onClick={() => {
+                  setActiveTab('profile');
+                  setMobileSubPage('profile');
+                  setIsSettingsModalOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <Edit3 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      Edit Personal Information
+                    </h4>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      Display name, email & profile details
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
+
+              {/* 2. Change Password */}
+              <button
+                type="button"
+                id="settings-service-password-change"
+                onClick={() => {
+                  setActiveTab('security');
+                  setMobileSubPage('security');
+                  setIsSettingsModalOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <Key className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
+                      Change Password
+                    </h4>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      Update your account security password
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
+
+              {/* 3. Roles & Permissions */}
+              <button
+                type="button"
+                id="settings-service-roles-permissions"
+                onClick={() => {
+                  setActiveTab('permissions');
+                  setMobileSubPage('permissions');
+                  setIsSettingsModalOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-purple-400 hover:bg-purple-50/40 text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
+                      Roles & Permissions
+                    </h4>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      View role privileges & system access
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
+
+              {/* 4. Privacy Guidelines */}
+              {onNavigateToPrivacy && (
+                <button
+                  type="button"
+                  id="settings-service-privacy"
+                  onClick={() => {
+                    setIsSettingsModalOpen(false);
+                    onNavigateToPrivacy();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-left transition-all group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-slate-900 transition-colors">
+                        Privacy Guidelines
+                      </h4>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        Data privacy policy & GDPR compliance
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                </button>
+              )}
+
+              {/* 5. Terms of Service */}
+              {onNavigateToTerms && (
+                <button
+                  type="button"
+                  id="settings-service-terms"
+                  onClick={() => {
+                    setIsSettingsModalOpen(false);
+                    onNavigateToTerms();
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-left transition-all group cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-slate-900 transition-colors">
+                        Terms of Service
+                      </h4>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        Platform usage rules & academic agreements
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                </button>
+              )}
+
+              {/* 6. Delete Account (Danger Zone) */}
+              <button
+                type="button"
+                id="settings-service-delete-account"
+                onClick={() => {
+                  setActiveTab('danger');
+                  setMobileSubPage('danger');
+                  setIsSettingsModalOpen(false);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-rose-200/80 hover:border-rose-400 hover:bg-rose-50/40 text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-rose-700 group-hover:text-rose-800 transition-colors">
+                      Delete Account
+                    </h4>
+                    <p className="text-[11px] text-rose-500 truncate">
+                      Permanent account removal & data purge
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-rose-400 group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
+            </div>
+
+            {/* Logout Footer Option */}
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSettingsModalOpen(false);
+                  onLogout();
+                }}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out of ProgressPath</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

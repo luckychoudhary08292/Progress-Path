@@ -10,6 +10,7 @@ import {
   BookOpen,
   CheckSquare,
   Loader2,
+  ArrowLeft,
 } from 'lucide-react';
 import { CalendarEvent, EventType } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
@@ -30,7 +31,11 @@ const MONTH_NAMES = [
   'December',
 ];
 
-export function CalendarView() {
+interface CalendarViewProps {
+  onBack?: () => void;
+}
+
+export function CalendarView({ onBack }: CalendarViewProps = {}) {
   const now = useMemo(() => new Date(), []);
   const todayStr = useMemo(() => {
     const y = now.getFullYear();
@@ -327,8 +332,26 @@ export function CalendarView() {
   return (
     <div id="calendar-page-container" className="w-full space-y-2 sm:space-y-6">
       {/* Header & Month Navigator */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="bg-white rounded-xl border border-slate-200 p-2.5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 shadow-2xs sm:shadow-none">
+        {/* Mobile View: Back arrow button then title name */}
+        <div className="sm:hidden flex items-center gap-2 min-w-0">
+          <button
+            id="calendar-mobile-back-btn"
+            type="button"
+            onClick={onBack ? onBack : () => window.history.back()}
+            className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center shrink-0 transition-all cursor-pointer border border-slate-200"
+            title="Go back"
+            aria-label="Back"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <h1 id="calendar-mobile-heading" className="text-sm font-bold tracking-tight text-slate-900 truncate">
+            Academic Calendar
+          </h1>
+        </div>
+
+        {/* Desktop View: Icon + Full Heading + Subtitle (Untouched) */}
+        <div className="hidden sm:flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
             <CalendarIcon className="w-4 h-4" />
           </div>
@@ -342,17 +365,18 @@ export function CalendarView() {
           </div>
         </div>
 
-        {/* Month Switching Controls */}
-        <div className="flex items-center gap-2 w-full justify-between sm:w-auto sm:justify-start flex-wrap">
+        {/* Below with minimal space on mobile: Today button + Month/Year selection card */}
+        <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
           <button
             id="calendar-jump-today-btn"
             type="button"
             onClick={handleJumpToToday}
-            className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+            className="px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer shrink-0 border border-slate-200"
           >
             Today
           </button>
-          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+
+          <div className="flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200 shrink-0">
             <button
               id="calendar-prev-month-btn"
               type="button"
@@ -364,7 +388,7 @@ export function CalendarView() {
             </button>
             <span
               id="calendar-current-month-label"
-              className="px-2.5 py-0.5 text-xs sm:text-sm font-semibold text-slate-800 select-none min-w-[110px] sm:min-w-[120px] text-center"
+              className="px-2 sm:px-2.5 py-0.5 text-xs sm:text-sm font-semibold text-slate-800 select-none min-w-[100px] sm:min-w-[120px] text-center"
             >
               {MONTH_NAMES[currentMonth]} {currentYear}
             </span>

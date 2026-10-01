@@ -271,6 +271,202 @@ router.post('/:id/lectures/bulk', authenticateToken, async (req: Request, res: R
   }
 });
 
+// Helper to extract YouTube playlist ID
+function extractPlaylistId(input: string): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (/^[A-Za-z0-9_-]{12,64}$/.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    const list = url.searchParams.get('list');
+    if (list) return list;
+  } catch {}
+  const match = trimmed.match(/[?&]list=([A-Za-z0-9_-]+)/i);
+  return match ? match[1] : null;
+}
+
+// POST /api/subjects/extract-youtube-playlist - Extract titles and URLs from a YouTube playlist
+router.post('/extract-youtube-playlist', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { url } = req.body || {};
+    if (!url || typeof url !== 'string' || !url.trim()) {
+      res.status(400).json({ message: 'YouTube playlist URL is required' });
+      return;
+    }
+
+    const playlistId = extractPlaylistId(url);
+    if (!playlistId) {
+      res.status(400).json({
+        message: 'Invalid YouTube playlist URL. Make sure it contains a playlist ID (e.g. list=PL...).',
+      });
+      return;
+    }
+
+    const targetUrl = `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
+    const ytRes = await fetch(targetUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+
+    if (!ytRes.ok) {
+      res.status(502).json({
+        message: `Failed to fetch playlist from YouTube (HTTP ${ytRes.status}). The playlist might be private or deleted.`,
+      });
+      return;
+    }
+
+    const html = await ytRes.text();
+    const startIdx = html.indexOf('var ytInitialData =');
+    let playlistTitle = 'YouTube Playlist';
+    const extractedVideos: Array<{
+      videoId: string;
+      title: string;
+      videoUrl: string;
+      thumbnail: string;
+    }> = [];
+
+    if (startIdx !== -1) {
+      const endIdx = html.indexOf(';</script>', startIdx);
+      if (endIdx !== -1) {
+        try {
+          const jsonStr = html.slice(startIdx + 'var ytInitialData ='.length, endIdx).trim();
+          const data = JSON.parse(jsonStr);
+
+          // Check if YouTube returned an error alert
+          if (Array.isArray(data.alerts)) {
+            const errorAlert = data.alerts.find(
+              (a: any) => a?.alertRenderer?.type === 'ERROR'
+            );
+            if (errorAlert) {
+              const alertMsg =
+                errorAlert.alertRenderer?.text?.runs?.[0]?.text ||
+                errorAlert.alertRenderer?.text?.simpleText ||
+                'This playlist is private or does not exist.';
+              res.status(404).json({ message: alertMsg });
+              return;
+            }
+          }
+
+          // Playlist Title
+          const title =
+            data?.metadata?.playlistMetadataRenderer?.title ||
+            data?.header?.playlistHeaderRenderer?.title?.simpleText ||
+            data?.header?.playlistHeaderRenderer?.title?.runs?.[0]?.text;
+          if (title) {
+            playlistTitle = title;
+          }
+
+          // Traverse to find videos
+          const seen = new Set<string>();
+          function searchNodes(obj: any) {
+            if (!obj || typeof obj !== 'object') return;
+            // 1. YouTube lockupViewModel (modern layout)
+            if (obj.lockupViewModel) {
+              const lvm = obj.lockupViewModel;
+              const contentId = lvm.contentId;
+              const videoTitle = lvm.metadata?.lockupMetadataViewModel?.title?.content;
+              if (contentId && videoTitle && !seen.has(contentId)) {
+                seen.add(contentId);
+                extractedVideos.push({
+                  videoId: contentId,
+                  title: videoTitle.trim(),
+                  videoUrl: `https://www.youtube.com/watch?v=${contentId}`,
+                  thumbnail: `https://img.youtube.com/vi/${contentId}/mqdefault.jpg`,
+                });
+              }
+            }
+            // 2. YouTube playlistVideoRenderer (classic layout)
+            if (obj.playlistVideoRenderer) {
+              const pvr = obj.playlistVideoRenderer;
+              const videoId = pvr.videoId;
+              const videoTitle = pvr.title?.runs?.[0]?.text || pvr.title?.simpleText;
+              if (videoId && videoTitle && !seen.has(videoId)) {
+                seen.add(videoId);
+                extractedVideos.push({
+                  videoId,
+                  title: videoTitle.trim(),
+                  videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+                  thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+                });
+              }
+            }
+            for (const key of Object.keys(obj)) {
+              searchNodes(obj[key]);
+            }
+          }
+          searchNodes(data);
+        } catch (parseErr) {
+          console.error('[YouTube Playlist Parse Error]:', parseErr);
+        }
+      }
+    }
+
+    // Fallback: If 0 videos found via web scraping, attempt RSS feed
+    if (extractedVideos.length === 0) {
+      try {
+        const rssRes = await fetch(
+          `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`
+        );
+        if (rssRes.ok) {
+          const xml = await rssRes.text();
+          const titleMatch = xml.match(/<title>([^<]+)<\/title>/);
+          if (titleMatch && titleMatch[1]) {
+            playlistTitle = titleMatch[1].trim();
+          }
+
+          const entryRegex =
+            /<entry>[\s\S]*?<yt:videoId>([^<]+)<\/yt:videoId>[\s\S]*?<media:title>([^<]+)<\/media:title>[\s\S]*?<\/entry>/g;
+          let entryMatch;
+          while ((entryMatch = entryRegex.exec(xml)) !== null) {
+            const vId = entryMatch[1];
+            const vTitle = entryMatch[2];
+            extractedVideos.push({
+              videoId: vId,
+              title: vTitle.trim(),
+              videoUrl: `https://www.youtube.com/watch?v=${vId}`,
+              thumbnail: `https://img.youtube.com/vi/${vId}/mqdefault.jpg`,
+            });
+          }
+        }
+      } catch (rssErr) {
+        console.error('[YouTube RSS Fallback Error]:', rssErr);
+      }
+    }
+
+    if (extractedVideos.length === 0) {
+      res.status(404).json({
+        message:
+          'No public videos could be extracted from this playlist. Please ensure the playlist is Public or Unlisted (not Private).',
+      });
+      return;
+    }
+
+    const numberedVideos = extractedVideos.map((item, idx) => ({
+      session: idx + 1,
+      title: item.title,
+      videoUrl: item.videoUrl,
+      videoId: item.videoId,
+      thumbnail: item.thumbnail,
+    }));
+
+    res.json({
+      success: true,
+      playlistId,
+      playlistTitle,
+      totalVideos: numberedVideos.length,
+      videos: numberedVideos,
+    });
+  } catch (err) {
+    console.error('[Extract YouTube Playlist Error]:', err);
+    res.status(500).json({ message: 'Internal server error while extracting YouTube playlist' });
+  }
+});
+
 // PATCH /api/subjects/:id/lectures/:lectureId/progress - Update progress (checklist / notes) for this user only
 router.patch(
   '/:id/lectures/:lectureId/progress',

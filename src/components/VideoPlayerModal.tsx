@@ -12,6 +12,8 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
+  ListVideo,
   Video,
   LayoutGrid,
   Tv,
@@ -86,6 +88,29 @@ export function VideoPlayerModal({
 
   // Toggle completion loading state
   const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // Mobile playlist dropdown accordion open/close state
+  const [isMobilePlaylistOpen, setIsMobilePlaylistOpen] = useState(true);
+
+  // Viewport breakpoint detection: exactly synchronized with Tailwind lg (min-width: 1024px)
+  // Renders ONLY ONE video element at any instant to prevent duplicate audio/video streams or echoes
+  const [isDesktopView, setIsDesktopView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(min-width: 1024px)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsDesktopView(e.matches);
+    };
+    handleMediaChange(mql);
+    mql.addEventListener('change', handleMediaChange);
+    return () => mql.removeEventListener('change', handleMediaChange);
+  }, []);
 
   // Direct video controls state (HTML5 video)
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
@@ -363,63 +388,68 @@ export function VideoPlayerModal({
         <div
           id="mobile-player-scroll-body"
           ref={mobileVideoTopRef}
-          className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col"
+          className="flex-1 overflow-y-auto min-h-0 custom-scrollbar flex flex-col relative"
         >
-          {/* 16:9 Ratio Video Lecture Frame */}
+          {/* 16:9 Ratio Video Lecture Frame (Sticky Frame 1) */}
           <div
             id="mobile-video-16-9-frame"
-            className="w-full aspect-video bg-black relative shrink-0 overflow-hidden shadow-sm"
+            style={{ top: 0 }}
+            className="sticky top-0 z-30 w-full aspect-video bg-black relative shrink-0 overflow-hidden shadow-sm"
           >
-            {parsedVideo.type === 'direct' ? (
-              <div className="w-full h-full flex items-center justify-center bg-black">
-                <video
-                  ref={videoElementRef}
-                  src={parsedVideo.embedUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-contain bg-black"
-                />
-              </div>
-            ) : parsedVideo.embedUrl ? (
-              <iframe
-                key={parsedVideo.embedUrl}
-                id="mobile-video-iframe"
-                src={parsedVideo.embedUrl}
-                title={lecture.title}
-                className="w-full h-full border-0 absolute inset-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                allowFullScreen
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-zinc-950 text-white">
-                <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 mb-2">
-                  <Video className="w-6 h-6" />
+            {!isDesktopView && (
+              parsedVideo.type === 'direct' ? (
+                <div className="w-full h-full flex items-center justify-center bg-black">
+                  <video
+                    ref={videoElementRef}
+                    key={parsedVideo.embedUrl}
+                    src={parsedVideo.embedUrl}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-contain bg-black"
+                  />
                 </div>
-                <h3 className="text-sm font-semibold text-white mb-0.5">
-                  No video for this class
-                </h3>
-                <p className="text-xs text-zinc-400 max-w-sm mb-3">
-                  Session #{lecture.session}: "{lecture.title}" has no video URL.
-                </p>
-                {nextVideoLecture && onSelectLecture && (
-                  <button
-                    type="button"
-                    onClick={() => handleSelectLecture(nextVideoLecture)}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Play Next Class (#{nextVideoLecture.session})</span>
-                  </button>
-                )}
-              </div>
+              ) : parsedVideo.embedUrl ? (
+                <iframe
+                  key={`mobile-${parsedVideo.embedUrl}`}
+                  id="mobile-video-iframe"
+                  src={parsedVideo.embedUrl}
+                  title={lecture.title}
+                  className="w-full h-full border-0 absolute inset-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-zinc-950 text-white">
+                  <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 mb-2">
+                    <Video className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-white mb-0.5">
+                    No video for this class
+                  </h3>
+                  <p className="text-xs text-zinc-400 max-w-sm mb-3">
+                    Session #{lecture.session}: "{lecture.title}" has no video URL.
+                  </p>
+                  {nextVideoLecture && onSelectLecture && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectLecture(nextVideoLecture)}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Play Next Class (#{nextVideoLecture.session})</span>
+                    </button>
+                  )}
+                </div>
+              )
             )}
           </div>
 
-          {/* Current Lecture Name & Mark Done Action */}
+          {/* Current Lecture Name & Mark Done Action (Sticky Frame 2) */}
           <div
             id="mobile-current-lecture-info"
-            className={`p-3.5 border-b flex items-start justify-between gap-3 shrink-0 transition-colors ${
+            style={{ top: '56.25vw' }}
+            className={`sticky top-[56.25vw] z-20 p-3.5 border-b flex items-start justify-between gap-3 shrink-0 transition-colors shadow-xs ${
               isDark
                 ? 'bg-zinc-900 border-zinc-800 text-zinc-100'
                 : 'bg-white border-slate-200 text-slate-900'
@@ -472,18 +502,107 @@ export function VideoPlayerModal({
             )}
           </div>
 
-          {/* Remaining Classes or Lectures in Normal Format with Notes Icon */}
-          <section id="mobile-remaining-lectures" className="p-3 w-full">
-            <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
-              <h3 className={`text-xs font-bold tracking-tight ${isDark ? 'text-zinc-200' : 'text-slate-800'}`}>
-                Classes & Lectures ({sortedPlaylist.length})
-              </h3>
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                {completedCount} of {sortedPlaylist.length} completed
-              </span>
+          {/* Remaining Classes or Lectures in Normal Format with Dropdown */}
+          <section id="mobile-remaining-lectures" className="p-3 w-full flex-1">
+            {/* Playlist Dropdown Header Bar */}
+            <div
+              id="mobile-playlist-dropdown-bar"
+              onClick={() => setIsMobilePlaylistOpen((prev) => !prev)}
+              className={`mb-2.5 p-2.5 rounded-xl border flex items-center justify-between gap-2.5 cursor-pointer select-none transition-all ${
+                isDark
+                  ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800 text-zinc-100'
+                  : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-2xs'
+              }`}
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div
+                  className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
+                    isDark
+                      ? 'bg-zinc-800 border-zinc-700 text-zinc-300'
+                      : 'bg-slate-100 border-slate-200 text-slate-700'
+                  }`}
+                >
+                  <ListVideo className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-bold tracking-tight">Playlist</span>
+                    <span
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                        isDark ? 'bg-zinc-800 text-zinc-400' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {sortedPlaylist.length} Classes
+                    </span>
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      • {completedCount}/{sortedPlaylist.length} done
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side: Quick Dropdown Select + Expand/Collapse Chevron */}
+              <div
+                className="flex items-center gap-1.5 shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Dropdown Menu for Quick Jump */}
+                <div className="relative">
+                  <select
+                    id="mobile-playlist-dropdown-select"
+                    aria-label="See and select playlist lecture"
+                    value={lecture.id || `${lecture.session}`}
+                    onChange={(e) => {
+                      const selected = sortedPlaylist.find(
+                        (item) => (item.id || `${item.session}`) === e.target.value
+                      );
+                      if (selected) {
+                        handleSelectLecture(selected);
+                      }
+                    }}
+                    className={`text-[11px] font-medium py-1 pl-2 pr-5 rounded-lg border appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500 max-w-[125px] sm:max-w-[170px] truncate ${
+                      isDark
+                        ? 'bg-zinc-800 border-zinc-700 text-zinc-200'
+                        : 'bg-slate-50 border-slate-300 text-slate-700'
+                    }`}
+                  >
+                    {sortedPlaylist.map((item, idx) => (
+                      <option
+                        key={item.id || `${item.session ?? idx}`}
+                        value={item.id || `${item.session ?? idx}`}
+                      >
+                        #{item.session ?? idx + 1} {item.title} {item.completed ? '✓' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3 h-3 text-slate-400 dark:text-zinc-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                {/* Dropdown Expand / Collapse Button */}
+                <button
+                  type="button"
+                  id="mobile-playlist-dropdown-toggle-btn"
+                  onClick={() => setIsMobilePlaylistOpen((prev) => !prev)}
+                  className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                    isDark
+                      ? 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border-zinc-700'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                  }`}
+                  title={isMobilePlaylistOpen ? 'Collapse playlist' : 'Expand playlist'}
+                  aria-label={isMobilePlaylistOpen ? 'Collapse playlist' : 'Expand playlist'}
+                >
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      isMobilePlaylistOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-1.5">
+            {/* Dropdown Body: Playlist Items or Collapsed State */}
+            {isMobilePlaylistOpen ? (
+              <div className="space-y-1.5">
               {sortedPlaylist.map((item, idx) => {
                 const isCurrent =
                   (item.id && item.id === lecture.id) ||
@@ -680,6 +799,22 @@ export function VideoPlayerModal({
                 );
               })}
             </div>
+            ) : (
+              <div
+                onClick={() => setIsMobilePlaylistOpen(true)}
+                className={`p-3.5 rounded-xl border border-dashed text-center cursor-pointer transition-colors ${
+                  isDark
+                    ? 'border-zinc-800 hover:border-zinc-700 text-zinc-400 bg-zinc-900/40 hover:bg-zinc-900/60'
+                    : 'border-slate-300 hover:border-slate-400 text-slate-600 bg-slate-50 hover:bg-slate-100/70'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold">
+                  <ListVideo className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Tap to drop down full playlist ({sortedPlaylist.length} classes)</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </div>
@@ -846,74 +981,77 @@ export function VideoPlayerModal({
           >
             {/* Edge-to-edge Video Viewport */}
             <div className="flex-1 w-full h-full relative flex items-center justify-center bg-black overflow-hidden select-none">
-              {parsedVideo.type === 'direct' ? (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-black relative">
-                  <video
-                    ref={videoElementRef}
-                    src={parsedVideo.embedUrl}
-                    controls
-                    autoPlay
-                    playsInline
-                    className="w-full h-full max-h-full object-contain bg-black"
-                  />
-                  {/* Speed Controls Bar */}
-                  <div
-                    className={`w-full flex items-center justify-between px-4 py-1.5 text-xs border-t shrink-0 ${
-                      isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-300' : 'bg-zinc-900 border-zinc-800 text-zinc-200'
-                    }`}
-                  >
-                    <span className="text-zinc-400">Direct Video</span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] text-zinc-400 mr-1">Speed:</span>
-                      {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
-                        <button
-                          key={spd}
-                          type="button"
-                          onClick={() => handleChangeDirectSpeed(spd)}
-                          className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-colors cursor-pointer ${
-                            playbackSpeed === spd
-                              ? 'bg-emerald-600 text-white font-bold'
-                              : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                          }`}
-                        >
-                          {spd}x
-                        </button>
-                      ))}
+              {isDesktopView && (
+                parsedVideo.type === 'direct' ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-black relative">
+                    <video
+                      ref={videoElementRef}
+                      key={parsedVideo.embedUrl}
+                      src={parsedVideo.embedUrl}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="w-full h-full max-h-full object-contain bg-black"
+                    />
+                    {/* Speed Controls Bar */}
+                    <div
+                      className={`w-full flex items-center justify-between px-4 py-1.5 text-xs border-t shrink-0 ${
+                        isDark ? 'bg-zinc-950 border-zinc-800 text-zinc-300' : 'bg-zinc-900 border-zinc-800 text-zinc-200'
+                      }`}
+                    >
+                      <span className="text-zinc-400">Direct Video</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-zinc-400 mr-1">Speed:</span>
+                        {[0.75, 1, 1.25, 1.5, 2].map((spd) => (
+                          <button
+                            key={spd}
+                            type="button"
+                            onClick={() => handleChangeDirectSpeed(spd)}
+                            className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-colors cursor-pointer ${
+                              playbackSpeed === spd
+                                ? 'bg-emerald-600 text-white font-bold'
+                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                            }`}
+                          >
+                            {spd}x
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : parsedVideo.embedUrl ? (
-                <div className="w-full h-full relative flex items-center justify-center bg-black">
-                  <iframe
-                    key={parsedVideo.embedUrl}
-                    id="desktop-75-percent-iframe"
-                    src={parsedVideo.embedUrl}
-                    title={lecture.title}
-                    className="w-full h-full border-0 absolute inset-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                    allowFullScreen
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto text-white">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-zinc-900 border border-zinc-800 text-zinc-400">
-                    <Video className="w-7 h-7" />
+                ) : parsedVideo.embedUrl ? (
+                  <div className="w-full h-full relative flex items-center justify-center bg-black">
+                    <iframe
+                      key={parsedVideo.embedUrl}
+                      id="desktop-75-percent-iframe"
+                      src={parsedVideo.embedUrl}
+                      title={lecture.title}
+                      className="w-full h-full border-0 absolute inset-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                      allowFullScreen
+                    />
                   </div>
-                  <h2 className="text-base font-semibold mb-1">No Video for this Session</h2>
-                  <p className="text-xs text-zinc-400 leading-relaxed mb-6">
-                    Session #{lecture.session}: "{lecture.title}" does not currently have an embedded video link.
-                  </p>
-                  {nextVideoLecture && onSelectLecture && (
-                    <button
-                      type="button"
-                      onClick={() => handleSelectLecture(nextVideoLecture)}
-                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl inline-flex items-center gap-2 transition-colors shadow-lg cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>Play Next Lecture (#{nextVideoLecture.session})</span>
-                    </button>
-                  )}
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto text-white">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 bg-zinc-900 border border-zinc-800 text-zinc-400">
+                      <Video className="w-7 h-7" />
+                    </div>
+                    <h2 className="text-base font-semibold mb-1">No Video for this Session</h2>
+                    <p className="text-xs text-zinc-400 leading-relaxed mb-6">
+                      Session #{lecture.session}: "{lecture.title}" does not currently have an embedded video link.
+                    </p>
+                    {nextVideoLecture && onSelectLecture && (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectLecture(nextVideoLecture)}
+                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl inline-flex items-center gap-2 transition-colors shadow-lg cursor-pointer"
+                      >
+                        <Play className="w-4 h-4 fill-current" />
+                        <span>Play Next Lecture (#{nextVideoLecture.session})</span>
+                      </button>
+                    )}
+                  </div>
+                )
               )}
             </div>
 

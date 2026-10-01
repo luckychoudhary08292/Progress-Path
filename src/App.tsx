@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, FileCode, User as UserIcon, ShieldCheck, Home } from 'lucide-react';
+import { Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, FileCode, User as UserIcon, ShieldCheck, Home, UploadCloud, Settings } from 'lucide-react';
 import { User } from './types.ts';
 import { SignupForm } from './components/SignupForm.tsx';
 import { LoginForm } from './components/LoginForm.tsx';
@@ -41,6 +41,7 @@ export default function App() {
 
   // Profile menu dropdown state
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // Close profile dropdown on outside click or Escape key
@@ -239,6 +240,23 @@ export default function App() {
                     </button>
 
                     <button
+                      id="nav-tab-import"
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('import');
+                        setSelectedSubjectId(null);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        activeTab === 'import' && !selectedSubjectId
+                          ? 'bg-red-50 text-red-700 font-semibold border border-red-200/60 shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 text-red-600" />
+                      <span>Import</span>
+                    </button>
+
+                    <button
                       id="nav-tab-coding"
                       type="button"
                       onClick={() => {
@@ -312,24 +330,33 @@ export default function App() {
                   </button>
 
                   <div className="relative shrink-0" ref={profileMenuRef}>
-                  <button
-                    id="nav-profile-circle-btn"
-                    type="button"
-                    onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                    className={`relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full font-semibold text-xs transition-colors cursor-pointer select-none ${
-                      activeTab === 'profile'
-                        ? 'bg-slate-900 text-white ring-2 ring-slate-900 ring-offset-2 ring-offset-white'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
-                    }`}
-                    title={`Profile: ${user.name} (${user.email})`}
-                    aria-label="User Profile Navigation"
-                    aria-expanded={isProfileMenuOpen}
-                    aria-haspopup="true"
-                  >
-                    {user.name.charAt(0).toUpperCase()}
-                    {/* Active online indicator dot */}
-                    <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-                  </button>
+                  {activeTab === 'profile' && !selectedSubjectId ? (
+                    <button
+                      id="nav-profile-circle-btn"
+                      type="button"
+                      onClick={() => setIsProfileSettingsOpen(true)}
+                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer select-none bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-2xs active:scale-95"
+                      title="Settings & Services"
+                      aria-label="Settings and Services"
+                    >
+                      <Settings className="w-4 h-4 text-slate-700" />
+                    </button>
+                  ) : (
+                    <button
+                      id="nav-profile-circle-btn"
+                      type="button"
+                      onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full font-semibold text-xs transition-colors cursor-pointer select-none bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
+                      title={`Profile: ${user.name} (${user.email})`}
+                      aria-label="User Profile Navigation"
+                      aria-expanded={isProfileMenuOpen}
+                      aria-haspopup="true"
+                    >
+                      {user.name.charAt(0).toUpperCase()}
+                      {/* Active online indicator dot */}
+                      <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                    </button>
+                  )}
 
                   {/* Professional Floating Profile Dropdown */}
                   {isProfileMenuOpen && (
@@ -451,6 +478,39 @@ export default function App() {
                           )}
                         </button>
 
+                        {/* Import YouTube Playlist Tab */}
+                        <button
+                          id="dropdown-nav-import-link"
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('import');
+                            setSelectedSubjectId(null);
+                            setIsProfileMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                            activeTab === 'import'
+                              ? 'bg-red-50 text-red-700 font-semibold border border-red-200/60 shadow-2xs'
+                              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              activeTab === 'import' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600'
+                            }`}>
+                              <UploadCloud className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="text-left">
+                              <span className="block text-xs font-semibold leading-tight">Import Playlist</span>
+                              <span className="block text-[10px] text-slate-400">YouTube auto-extract</span>
+                            </div>
+                          </div>
+                          {activeTab === 'import' && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 font-semibold">
+                              Active
+                            </span>
+                          )}
+                        </button>
+
                         {/* Dashboard Tab */}
                         <button
                           id="dropdown-nav-dashboard-link"
@@ -526,7 +586,7 @@ export default function App() {
               ) : activeTab === 'coding' ? (
                 <CodingRepository />
               ) : activeTab === 'calendar' ? (
-                <CalendarView />
+                <CalendarView onBack={() => setActiveTab('dashboard')} />
               ) : activeTab === 'import' ? (
                 <ImportConsole
                   onNavigateToSubject={(id) => {
@@ -551,6 +611,9 @@ export default function App() {
                   }}
                   onNavigateToTerms={() => navigateToTerms('landing')}
                   onNavigateToPrivacy={() => navigateToPrivacy('landing')}
+                  isSettingsOpen={isProfileSettingsOpen}
+                  onOpenSettings={() => setIsProfileSettingsOpen(true)}
+                  onCloseSettings={() => setIsProfileSettingsOpen(false)}
                 />
               ) : activeTab === 'admin' ? (
                 <AdminMonitor
@@ -582,11 +645,11 @@ export default function App() {
             </div>
           </main>
 
-          {/* Mobile App Bottom Navigation Bar: Home, Subjects, Coding, Calendar, Profile */}
+          {/* Mobile App Bottom Navigation Bar: Home, Subjects, Import, Coding, Calendar, Profile */}
           <nav
             id="mobile-bottom-app-nav"
             aria-label="Mobile Bottom Navigation"
-            className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-1 py-1.5 flex items-center justify-around shadow-lg"
+            className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-1 py-1.5 flex items-center justify-around shadow-lg"
           >
             {/* 1. Home */}
             <button
@@ -624,7 +687,25 @@ export default function App() {
               <span>Subjects</span>
             </button>
 
-            {/* 3. Coding */}
+            {/* 3. Import (YouTube Playlist Importer) */}
+            <button
+              type="button"
+              id="mobile-bottom-nav-import"
+              onClick={() => {
+                setActiveTab('import');
+                setSelectedSubjectId(null);
+              }}
+              className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                activeTab === 'import' && !selectedSubjectId
+                  ? 'text-red-600 font-bold'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <UploadCloud className={`w-5 h-5 mb-0.5 ${activeTab === 'import' && !selectedSubjectId ? 'text-red-600' : 'text-slate-500'}`} />
+              <span>Import</span>
+            </button>
+
+            {/* 4. Coding */}
             <button
               type="button"
               id="mobile-bottom-nav-coding"
@@ -642,7 +723,7 @@ export default function App() {
               <span>Coding</span>
             </button>
 
-            {/* 4. Calendar */}
+            {/* 5. Calendar */}
             <button
               type="button"
               id="mobile-bottom-nav-calendar"
@@ -660,7 +741,7 @@ export default function App() {
               <span>Calendar</span>
             </button>
 
-            {/* 5. Profile Circle */}
+            {/* 6. Profile Circle */}
             <button
               type="button"
               id="mobile-bottom-nav-profile"

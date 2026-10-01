@@ -52,32 +52,18 @@ body::-webkit-scrollbar {
   height: 0 !important;
 }
 
-@keyframes tabSlideInMobile {
-  from {
-    opacity: 0;
-    transform: translate3d(16px, 0, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
 .tab-slide-enter {
-  animation: tabSlideInMobile 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+  opacity: 1;
 }
 
 @media (min-width: 768px) {
   .tab-slide-enter {
     animation: none;
-    will-change: auto;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tab-slide-enter {
     animation: none !important;
-    will-change: auto !important;
   }
 }
