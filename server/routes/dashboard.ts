@@ -22,29 +22,33 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
       ? dateParam
       : new Date().toISOString().split('T')[0];
 
-    // 1. Subjects available to user
-    const subjects = await SubjectRepository.listForUser(userId);
+    // Run primary user queries and progress lookups in parallel
+    const [subjects, problems, todayEvents, completedLectureIds, completedProblemIds] =
+      await Promise.all([
+        SubjectRepository.listForUser(userId),
+        ProblemRepository.listForUser(userId),
+        EventRepository.listForUser(userId, todayStr),
+        ProgressRepository.getCompletedItemIds(userId, 'lecture'),
+        ProgressRepository.getCompletedItemIds(userId, 'problem'),
+      ]);
 
-    // 2. Lectures: total vs done
-    let totalLectures = 0;
-    const allLectureIds: string[] = [];
-    for (const subj of subjects) {
-      const lecs = await LectureRepository.listForSubject(subj.id, userId);
-      totalLectures += lecs.length;
-      allLectureIds.push(...lecs.map((l) => l.id));
+    // 2. Fetch all lectures across subjects in a single query
+    const subjectIds = subjects.map((s) => s.id);
+    const allLectures = await LectureRepository.listForSubjects(subjectIds, userId);
+    const totalLectures = allLectures.length;
+    let lecturesDone = 0;
+    for (const l of allLectures) {
+      if (completedLectureIds.has(l.id)) lecturesDone++;
     }
 
-    const lecturesDone = await ProgressRepository.countCompleted(userId, 'lecture', allLectureIds);
-
     // 3. Problems: total vs solved
-    const problems = await ProblemRepository.listForUser(userId);
     const totalProblems = problems.length;
-    const problemIds = problems.map((p) => p.id);
-    const problemsSolved = await ProgressRepository.countCompleted(userId, 'problem', problemIds);
+    let problemsSolved = 0;
+    for (const p of problems) {
+      if (completedProblemIds.has(p.id)) problemsSolved++;
+    }
 
     // 4. Today's tasks (events)
-    const todayEvents = await EventRepository.listForUser(userId, todayStr);
-
     const todayTasksDone = todayEvents.filter((e) => e.completed).length;
     const todayTasksTotal = todayEvents.length;
 

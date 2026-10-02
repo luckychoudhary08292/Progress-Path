@@ -16,33 +16,49 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
     const userId = user.id;
 
     const subjects = await SubjectRepository.listForUser(userId);
+    const subjectIds = subjects.map((s) => s.id);
 
-    const subjectStats = await Promise.all(
-      subjects.map(async (subj) => {
-        const lectures = await LectureRepository.listForSubject(subj.id, userId);
-        const totalTopics = lectures.length;
-        const lectureIds = lectures.map((l) => l.id);
+    // Single-query batch fetch for all lectures and completed progress in parallel
+    const [allLectures, completedLectureIds] = await Promise.all([
+      LectureRepository.listForSubjects(subjectIds, userId),
+      ProgressRepository.getCompletedItemIds(userId, 'lecture'),
+    ]);
 
-        let completedTopics = 0;
-        if (lectureIds.length > 0) {
-          completedTopics = await ProgressRepository.countCompleted(userId, 'lecture', lectureIds);
+    // Group lectures by subjectId in memory (sub-millisecond O(N) map)
+    const lecturesBySubject = new Map<string, typeof allLectures>();
+    for (const lec of allLectures) {
+      const list = lecturesBySubject.get(lec.subjectId);
+      if (list) {
+        list.push(lec);
+      } else {
+        lecturesBySubject.set(lec.subjectId, [lec]);
+      }
+    }
+
+    const subjectStats = subjects.map((subj) => {
+      const lectures = lecturesBySubject.get(subj.id) || [];
+      const totalTopics = lectures.length;
+      let completedTopics = 0;
+      for (const l of lectures) {
+        if (completedLectureIds.has(l.id)) {
+          completedTopics++;
         }
+      }
 
-        return {
-          id: subj.id,
-          name: subj.name,
-          isGlobal: !!subj.isGlobal,
-          isOwner: !!subj.isOwner,
-          nextSessionNumber: subj.nextSessionNumber,
-          totalTopics,
-          completedTopics,
-          percent:
-            totalTopics > 0
-              ? Math.min(100, Math.round((completedTopics / totalTopics) * 100))
-              : 0,
-        };
-      })
-    );
+      return {
+        id: subj.id,
+        name: subj.name,
+        isGlobal: !!subj.isGlobal,
+        isOwner: !!subj.isOwner,
+        nextSessionNumber: subj.nextSessionNumber,
+        totalTopics,
+        completedTopics,
+        percent:
+          totalTopics > 0
+            ? Math.min(100, Math.round((completedTopics / totalTopics) * 100))
+            : 0,
+      };
+    });
 
     res.json({ subjects: subjectStats });
   } catch (err) {

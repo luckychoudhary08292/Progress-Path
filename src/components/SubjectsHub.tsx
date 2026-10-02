@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Plus, Loader2, Globe, UserCheck, ArrowRight, Trash2, X } from 'lucide-react';
 import { SubjectSummary } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
+import { apiCache } from '../services/apiCache.ts';
 
 interface SubjectsHubProps {
   onSelectSubject: (subjectId: string) => void;
 }
 
 export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
-  const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const cachedSubjects = apiCache.get<SubjectSummary[]>('subjects_list');
+  const [subjects, setSubjects] = useState<SubjectSummary[]>(cachedSubjects || []);
+  const [isLoading, setIsLoading] = useState(!cachedSubjects);
   const [isAdding, setIsAdding] = useState(false);
   const [addMode, setAddMode] = useState<'subject' | 'lecture'>('subject');
   const [newSubjectName, setNewSubjectName] = useState('');
@@ -34,7 +36,9 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
 
       if (res.ok) {
         const data = await res.json();
-        setSubjects(data.subjects || []);
+        const list = data.subjects || [];
+        setSubjects(list);
+        apiCache.set('subjects_list', list);
       }
     } catch (err) {
       console.error('Failed to fetch subjects:', err);
@@ -174,6 +178,8 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
 
       if (res.ok) {
         setSubjects((prev) => prev.filter((s) => s.id !== subjectToDelete.id));
+        apiCache.invalidate('subjects_list');
+        apiCache.invalidate('dashboard');
       }
     } catch (err) {
       console.error('Failed to delete subject:', err);

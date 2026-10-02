@@ -613,6 +613,46 @@ export const LectureRepository = {
       .sort((a, b) => a.session - b.session);
   },
 
+  async listForSubjects(subjectIds: string[], userId?: string) {
+    if (!subjectIds || subjectIds.length === 0) return [];
+    if (isDbConnected()) {
+      const validIds = subjectIds.filter((id) => mongoose.isValidObjectId(id)).map(toMongoId);
+      if (validIds.length === 0) return [];
+
+      const query: any = { subjectId: { $in: validIds } };
+      if (userId) {
+        const uId = toMongoId(userId);
+        query.$or = [
+          { createdBy: null },
+          { createdBy: { $exists: false } },
+          { createdBy: uId },
+          { createdBy: userId },
+        ];
+      } else {
+        query.$or = [{ createdBy: null }, { createdBy: { $exists: false } }];
+      }
+
+      const lecs = await LectureModel.find(query).sort({ session: 1 }).lean();
+      return lecs.map((l) => ({
+        id: l._id ? l._id.toString() : '',
+        subjectId: l.subjectId ? l.subjectId.toString() : '',
+        session: l.session,
+        title: l.title,
+        videoUrl: l.videoUrl || '',
+        createdBy: l.createdBy ? l.createdBy.toString() : null,
+        createdAt: l.createdAt,
+      }));
+    }
+
+    return inMemoryLectures
+      .filter((l) => {
+        if (!subjectIds.includes(l.subjectId)) return false;
+        if (!userId) return !l.createdBy || l.createdBy === 'admin';
+        return !l.createdBy || l.createdBy === 'admin' || l.createdBy === userId;
+      })
+      .sort((a, b) => a.session - b.session);
+  },
+
   async createSequential(data: {
     subjectId: string;
     title: string;
@@ -1474,6 +1514,37 @@ export const ProgressRepository = {
       }
       return true;
     }).length;
+  },
+
+  async getCompletedItemIds(
+    userId: string,
+    itemType: 'lecture' | 'problem',
+    candidateItemIds?: string[]
+  ): Promise<Set<string>> {
+    if (isDbConnected()) {
+      const uId = toMongoId(userId);
+      const filter: any = {
+        $or: [{ userId: uId }, { userId }],
+        itemType,
+        status: 'completed',
+      };
+      if (candidateItemIds && candidateItemIds.length > 0) {
+        filter.itemId = { $in: candidateItemIds.map(toMongoId) };
+      }
+      const records = await ProgressModel.find(filter).select('itemId').lean();
+      return new Set(records.map((r: any) => (r.itemId ? r.itemId.toString() : '')));
+    }
+
+    const filtered = inMemoryProgress.filter((p) => {
+      if (p.userId !== userId || p.itemType !== itemType || p.status !== 'completed') {
+        return false;
+      }
+      if (candidateItemIds && !candidateItemIds.includes(p.itemId)) {
+        return false;
+      }
+      return true;
+    });
+    return new Set(filtered.map((p) => p.itemId));
   },
 
   async countTotalCompleted() {

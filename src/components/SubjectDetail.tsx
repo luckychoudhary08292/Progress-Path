@@ -18,6 +18,7 @@ import {
 import { SubjectDetail as ISubjectDetail, LectureItem } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
 import { VideoPlayerModal } from './VideoPlayerModal.tsx';
+import { apiCache } from '../services/apiCache.ts';
 
 interface SubjectDetailProps {
   subjectId: string;
@@ -25,8 +26,9 @@ interface SubjectDetailProps {
 }
 
 export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
-  const [data, setData] = useState<ISubjectDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const cachedDetail = apiCache.get<ISubjectDetail>(`subject_${subjectId}`);
+  const [data, setData] = useState<ISubjectDetail | null>(cachedDetail || null);
+  const [isLoading, setIsLoading] = useState(!cachedDetail);
 
   // Form states for adding topic
   const [topicTitle, setTopicTitle] = useState('');
@@ -77,6 +79,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
       if (res.ok) {
         const detail: ISubjectDetail = await res.json();
         setData(detail);
+        apiCache.set(`subject_${subjectId}`, detail);
         // Initialize notes dictionary
         const notesMap: Record<string, string> = {};
         for (const lec of detail.lectures) {
@@ -142,6 +145,8 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
         );
       } else {
         const result = await res.json();
+        apiCache.invalidate('subjects_list');
+        apiCache.invalidate('dashboard');
         setData((prev) => {
           if (!prev) return prev;
           const updatedLectures = prev.lectures.map((l) =>
@@ -218,6 +223,9 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
 
       if (res.ok) {
         const createdLecture: LectureItem = await res.json();
+        apiCache.invalidate('subjects_list');
+        apiCache.invalidate('dashboard');
+        apiCache.invalidate(`subject_${subjectId}`);
         // Append sequentially maintaining sorted order by session
         setData((prev) => {
           if (!prev) return prev;

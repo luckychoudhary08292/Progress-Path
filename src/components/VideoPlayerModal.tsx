@@ -175,6 +175,20 @@ export function VideoPlayerModal({
     return parseVideoUrl(lecture.videoUrl);
   }, [lecture?.videoUrl]);
 
+  // Video cover art & fast stream loading states
+  const [isIframeLoading, setIsIframeLoading] = useState(true);
+
+  const videoThumbnail = useMemo(() => {
+    if (parsedVideo.videoId && parsedVideo.type === 'youtube') {
+      return `https://i.ytimg.com/vi/${parsedVideo.videoId}/hqdefault.jpg`;
+    }
+    return '';
+  }, [parsedVideo]);
+
+  useEffect(() => {
+    setIsIframeLoading(true);
+  }, [parsedVideo.embedUrl]);
+
   // Sync draft notes whenever active lecture changes
   useEffect(() => {
     if (lecture) {
@@ -410,15 +424,38 @@ export function VideoPlayerModal({
                   />
                 </div>
               ) : parsedVideo.embedUrl ? (
-                <iframe
-                  key={`mobile-${parsedVideo.embedUrl}`}
-                  id="mobile-video-iframe"
-                  src={parsedVideo.embedUrl}
-                  title={lecture.title}
-                  className="w-full h-full border-0 absolute inset-0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-                  allowFullScreen
-                />
+                <div className="w-full h-full relative flex items-center justify-center bg-black overflow-hidden">
+                  {/* Instant Video Cover Art / Fast Stream Buffering Overlay */}
+                  {videoThumbnail && isIframeLoading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black animate-in fade-in duration-100">
+                      <img
+                        src={videoThumbnail}
+                        alt={lecture.title}
+                        className="w-full h-full object-cover filter blur-[1px] opacity-80 scale-102"
+                      />
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-2xs flex flex-col items-center justify-center gap-2.5">
+                        <div className="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg animate-pulse">
+                          <Play className="w-5 h-5 fill-current ml-0.5" />
+                        </div>
+                        <span className="text-[11px] font-medium text-white/90 drop-shadow flex items-center gap-1.5">
+                          <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                          Buffering video...
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <iframe
+                    key={`mobile-${parsedVideo.embedUrl}`}
+                    id="mobile-video-iframe"
+                    src={parsedVideo.embedUrl}
+                    title={lecture.title}
+                    loading="eager"
+                    onLoad={() => setIsIframeLoading(false)}
+                    className="w-full h-full border-0 absolute inset-0 z-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                    allowFullScreen
+                  />
+                </div>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-zinc-950 text-white">
                   <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 mb-2">
@@ -1020,13 +1057,34 @@ export function VideoPlayerModal({
                     </div>
                   </div>
                 ) : parsedVideo.embedUrl ? (
-                  <div className="w-full h-full relative flex items-center justify-center bg-black">
+                  <div className="w-full h-full relative flex items-center justify-center bg-black overflow-hidden">
+                    {/* Instant Video Cover Art / Fast Stream Buffering Overlay */}
+                    {videoThumbnail && isIframeLoading && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-black animate-in fade-in duration-100">
+                        <img
+                          src={videoThumbnail}
+                          alt={lecture.title}
+                          className="w-full h-full object-cover filter blur-[2px] opacity-75 scale-102"
+                        />
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-2xs flex flex-col items-center justify-center gap-3">
+                          <div className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-950/60 animate-pulse">
+                            <Play className="w-6 h-6 fill-current ml-0.5" />
+                          </div>
+                          <span className="text-xs font-semibold text-white/90 drop-shadow flex items-center gap-2">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                            Streaming lecture in HD...
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     <iframe
                       key={parsedVideo.embedUrl}
                       id="desktop-75-percent-iframe"
                       src={parsedVideo.embedUrl}
                       title={lecture.title}
-                      className="w-full h-full border-0 absolute inset-0"
+                      loading="eager"
+                      onLoad={() => setIsIframeLoading(false)}
+                      className="w-full h-full border-0 absolute inset-0 z-0"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                       allowFullScreen
                     />

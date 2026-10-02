@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: lms-learning-platform
+    name: progresspath-platform
     runtime: node
     plan: free
     buildCommand: npm install && npm run build
@@ -9,8 +9,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
       - key: MONGODB_URI
         sync: false
       - key: JWT_SECRET

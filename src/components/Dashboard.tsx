@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LogOut, CheckCircle2, Circle, Calendar, BookOpen, Code, Award, Loader2, Sparkles, User as UserIcon, Plus, X } from 'lucide-react';
 import { User, DashboardStats, TodayEvent } from '../types.ts';
+import { apiCache } from '../services/apiCache.ts';
 
 interface DashboardProps {
   user: User;
@@ -19,15 +20,6 @@ export function Dashboard({
   onNavigateToCalendar,
   onNavigateToProfile,
 }: DashboardProps) {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
-  const [taskTitle, setTaskTitle] = useState('');
-  const [taskType, setTaskType] = useState<'task' | 'academic'>('task');
-  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
-  const [taskError, setTaskError] = useState('');
-
   // Format today's date for display and API query using local date
   const today = new Date();
   const y = today.getFullYear();
@@ -43,6 +35,16 @@ export function Dashboard({
   const shortDate = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const mobileShortDisplayDate = `${shortDay}, ${shortDate}`;
 
+  const cachedStats = apiCache.get<DashboardStats>(`dashboard_${dateStr}`);
+  const [stats, setStats] = useState<DashboardStats | null>(cachedStats || null);
+  const [isLoading, setIsLoading] = useState(!cachedStats);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskType, setTaskType] = useState<'task' | 'academic'>('task');
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const [taskError, setTaskError] = useState('');
+
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
@@ -57,6 +59,7 @@ export function Dashboard({
       if (res.ok) {
         const data: DashboardStats = await res.json();
         setStats(data);
+        apiCache.set(`dashboard_${dateStr}`, data);
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ProblemItem, ProblemDifficulty, ProblemStatus } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
+import { apiCache } from '../services/apiCache.ts';
 
 const STATUS_CYCLE_NEXT: Record<ProblemStatus, ProblemStatus> = {
   todo: 'in_progress',
@@ -84,9 +85,10 @@ const DIFFICULTY_CONFIG: Record<
 };
 
 export function CodingRepository() {
-  const [problems, setProblems] = useState<ProblemItem[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const cachedData = apiCache.get<{ problems: ProblemItem[]; categories: string[] }>('coding_problems');
+  const [problems, setProblems] = useState<ProblemItem[]>(cachedData?.problems || []);
+  const [availableCategories, setAvailableCategories] = useState<string[]>(cachedData?.categories || []);
+  const [isLoading, setIsLoading] = useState(!cachedData);
 
   // Filters state
   const [searchInput, setSearchInput] = useState('');
@@ -134,8 +136,11 @@ export function CodingRepository() {
 
       if (res.ok) {
         const data = await res.json();
-        setProblems(data.problems || []);
-        setAvailableCategories(data.categories || []);
+        const probs = data.problems || [];
+        const cats = data.categories || [];
+        setProblems(probs);
+        setAvailableCategories(cats);
+        apiCache.set('coding_problems', { problems: probs, categories: cats });
       }
     } catch (err) {
       console.error('Failed to fetch coding problems:', err);
@@ -180,6 +185,7 @@ export function CodingRepository() {
           setProblems((prev) =>
             prev.map((p) => (p.id === problem.id ? { ...p, status: data.status } : p))
           );
+          apiCache.invalidate('dashboard');
         }
       }
     } catch {
@@ -229,6 +235,8 @@ export function CodingRepository() {
         const created: ProblemItem = await res.json();
         // Server preserves createdAt ascending; created goes at end
         setProblems((prev) => [...prev, created]);
+        apiCache.invalidate('coding_problems');
+        apiCache.invalidate('dashboard');
         if (!availableCategories.includes(trimmedCategory)) {
           setAvailableCategories((prev) => [...prev, trimmedCategory].sort());
         }
@@ -264,6 +272,8 @@ export function CodingRepository() {
 
       if (res.ok) {
         setProblems((prev) => prev.filter((p) => p.id !== problemId));
+        apiCache.invalidate('coding_problems');
+        apiCache.invalidate('dashboard');
       }
     } catch (err) {
       console.error('Failed to delete problem:', err);

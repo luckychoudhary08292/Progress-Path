@@ -4,7 +4,9 @@ import app, { ensureDbInitialized } from './server/app.ts';
 import { createServer as createViteServer } from 'vite';
 
 async function startServer() {
-  const PORT = process.env.RENDER && process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const PORT = process.env.NODE_ENV === 'production' && process.env.PORT
+    ? parseInt(process.env.PORT, 10)
+    : 3000;
 
   // Initialize database and bootstrap initial admin
   await ensureDbInitialized();

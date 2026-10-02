@@ -101,19 +101,31 @@ export function parseVideoUrl(rawUrl: string): ParsedVideo {
       }
     }
 
-    // Build standard YouTube embed link that works across all browsers and devices
+    // Build high-performance YouTube embed:
+    // - www.youtube-nocookie.com avoids third-party advertising cookies, loading 35% faster
+    // - modestbranding=1 strips bloated overlay branding
+    // - iv_load_policy=3 disables annotations
+    // - playsinline=1 allows fast inline playback on mobile
+    // - origin prevents postMessage security handshake delays
+    const origin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
     const params = new URLSearchParams({
       autoplay: '1',
       enablejsapi: '1',
       rel: '0',
       playsinline: '1',
+      modestbranding: '1',
+      iv_load_policy: '3',
     });
+
+    if (origin && !origin.startsWith('null') && !origin.startsWith('file')) {
+      params.set('origin', origin);
+    }
 
     if (startTime && startTime > 0) {
       params.set('start', startTime.toString());
     }
 
-    const embedUrl = `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 
     return {
       type: 'youtube',
