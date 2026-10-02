@@ -190,126 +190,108 @@ export default function App() {
             <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
               {/* Main Nav Header */}
               <div className="flex items-center justify-between h-14 md:h-15">
-                <div className="flex items-center gap-6">
-                  <div
+                {/* Left: Brand Logo */}
+                <div
+                  onClick={() => {
+                    setActiveTab('dashboard');
+                    setSelectedSubjectId(null);
+                  }}
+                  className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
+                  title="Go to Dashboard"
+                >
+                  <SystemLogo size="sm" />
+                  <span className="font-semibold text-slate-900 tracking-tight text-sm sm:text-base">ProgressPath</span>
+                </div>
+
+                {/* Center: Desktop Navigation Tabs (Centered on desktop) */}
+                <div className="hidden md:flex items-center justify-center gap-1 flex-1 mx-4">
+                  <button
+                    id="nav-tab-dashboard"
+                    type="button"
                     onClick={() => {
                       setActiveTab('dashboard');
                       setSelectedSubjectId(null);
                     }}
-                    className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
-                    title="Go to Dashboard"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      activeTab === 'dashboard' && !selectedSubjectId
+                        ? 'bg-slate-100 text-slate-900 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
                   >
-                    <SystemLogo size="sm" />
-                    <span className="font-semibold text-slate-900 tracking-tight text-sm sm:text-base">ProgressPath</span>
-                  </div>
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    <span>Dashboard</span>
+                  </button>
 
-                  {/* Desktop Navigation Tabs */}
-                  <div className="hidden md:flex items-center gap-1">
+                  <button
+                    id="nav-tab-subjects"
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('subjects');
+                      setSelectedSubjectId(null);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      activeTab === 'subjects' || selectedSubjectId
+                        ? 'bg-slate-100 text-slate-900 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Subjects</span>
+                  </button>
+
+                  <button
+                    id="nav-tab-coding"
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('coding');
+                      setSelectedSubjectId(null);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      activeTab === 'coding' && !selectedSubjectId
+                        ? 'bg-slate-100 text-slate-900 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Code className="w-3.5 h-3.5" />
+                    <span>Coding Repo</span>
+                  </button>
+
+                  <button
+                    id="nav-tab-calendar"
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('calendar');
+                      setSelectedSubjectId(null);
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      activeTab === 'calendar' && !selectedSubjectId
+                        ? 'bg-slate-100 text-slate-900 font-semibold'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Calendar</span>
+                  </button>
+
+                  {/* Admin-only Navigation Tab */}
+                  {user.role === 'admin' && (
                     <button
-                      id="nav-tab-dashboard"
+                      id="nav-tab-admin"
                       type="button"
                       onClick={() => {
-                        setActiveTab('dashboard');
+                        setActiveTab('admin');
                         setSelectedSubjectId(null);
                       }}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === 'dashboard' && !selectedSubjectId
+                        activeTab === 'admin' && !selectedSubjectId
                           ? 'bg-slate-100 text-slate-900 font-semibold'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                     >
-                      <LayoutDashboard className="w-3.5 h-3.5" />
-                      <span>Dashboard</span>
+                      <Shield className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Admin</span>
                     </button>
-
-                    <button
-                      id="nav-tab-subjects"
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('subjects');
-                        setSelectedSubjectId(null);
-                      }}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === 'subjects' || selectedSubjectId
-                          ? 'bg-slate-100 text-slate-900 font-semibold'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>Subjects</span>
-                    </button>
-
-                    <button
-                      id="nav-tab-import"
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('import');
-                        setSelectedSubjectId(null);
-                      }}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === 'import' && !selectedSubjectId
-                          ? 'bg-red-50 text-red-700 font-semibold border border-red-200/60 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <UploadCloud className="w-3.5 h-3.5 text-red-600" />
-                      <span>Import</span>
-                    </button>
-
-                    <button
-                      id="nav-tab-coding"
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('coding');
-                        setSelectedSubjectId(null);
-                      }}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === 'coding' && !selectedSubjectId
-                          ? 'bg-slate-100 text-slate-900 font-semibold'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Code className="w-3.5 h-3.5" />
-                      <span>Coding Repo</span>
-                    </button>
-
-                    <button
-                      id="nav-tab-calendar"
-                      type="button"
-                      onClick={() => {
-                        setActiveTab('calendar');
-                        setSelectedSubjectId(null);
-                      }}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === 'calendar' && !selectedSubjectId
-                          ? 'bg-slate-100 text-slate-900 font-semibold'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span>Calendar</span>
-                    </button>
-
-                    {/* Admin-only Navigation Tab */}
-                    {user.role === 'admin' && (
-                      <button
-                        id="nav-tab-admin"
-                        type="button"
-                        onClick={() => {
-                          setActiveTab('admin');
-                          setSelectedSubjectId(null);
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                          activeTab === 'admin' && !selectedSubjectId
-                            ? 'bg-slate-100 text-slate-900 font-semibold'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Shield className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Admin</span>
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 {/* Profile Navigation: Circular Avatar Button at Right Side */}
@@ -687,25 +669,7 @@ export default function App() {
               <span>Subjects</span>
             </button>
 
-            {/* 3. Import (YouTube Playlist Importer) */}
-            <button
-              type="button"
-              id="mobile-bottom-nav-import"
-              onClick={() => {
-                setActiveTab('import');
-                setSelectedSubjectId(null);
-              }}
-              className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                activeTab === 'import' && !selectedSubjectId
-                  ? 'text-red-600 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <UploadCloud className={`w-5 h-5 mb-0.5 ${activeTab === 'import' && !selectedSubjectId ? 'text-red-600' : 'text-slate-500'}`} />
-              <span>Import</span>
-            </button>
-
-            {/* 4. Coding */}
+            {/* 3. Coding */}
             <button
               type="button"
               id="mobile-bottom-nav-coding"

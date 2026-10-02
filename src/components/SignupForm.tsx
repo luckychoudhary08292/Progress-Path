@@ -85,7 +85,15 @@ export function SignupForm({
         body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = {};
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('[Signup non-JSON response]:', response.status, text.slice(0, 300));
+        data = { message: `Backend service returned status ${response.status}. Please check Vercel deployment logs.` };
+      }
 
       if (!response.ok) {
         if (data.fieldErrors) {
@@ -97,8 +105,9 @@ export function SignupForm({
       }
 
       onSuccess(data.user, data.token);
-    } catch {
-      setErrors({ email: 'Network error. Please verify your connection and try again.' });
+    } catch (err) {
+      console.error('[Signup Network Exception]:', err);
+      setErrors({ email: 'Network error: Failed to reach the server. Please check your internet connection or deployment status.' });
     } finally {
       setIsLoading(false);
     }

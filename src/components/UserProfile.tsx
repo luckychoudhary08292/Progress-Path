@@ -25,7 +25,6 @@ import {
   Eye,
   EyeOff,
   RotateCcw,
-  Sparkles,
   X,
   ArrowLeft,
   Settings,
@@ -46,7 +45,7 @@ interface UserProfileProps {
   onCloseSettings?: () => void;
 }
 
-type ProfileTab = 'all' | 'profile' | 'security' | 'danger' | 'permissions';
+type ProfileTab = 'profile' | 'security' | 'danger' | 'permissions';
 
 export function UserProfile({
   user,
@@ -62,8 +61,8 @@ export function UserProfile({
   const [stats, setStats] = useState<UserProfileStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<ProfileTab>('all');
+  // Active Navigation Tab (Defaults to individual 'profile' tab)
+  const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
 
   // Mobile Dynamic Sub-page state ('overview' | 'profile' | 'security' | 'permissions' | 'danger')
   // On mobile: default is 'overview' (only profile info card + dashboard). Clicking setting options opens dynamic sub-page.
@@ -610,20 +609,6 @@ export function UserProfile({
         className="hidden md:flex items-center gap-1.5 border-b border-slate-200 pb-3 overflow-x-auto scrollbar-none shrink-0"
       >
         <button
-          id="profile-subtab-all"
-          type="button"
-          onClick={() => setActiveTab('all')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
-            activeTab === 'all'
-              ? 'bg-slate-900 text-white font-semibold'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>All Settings</span>
-        </button>
-
-        <button
           id="profile-subtab-overview"
           type="button"
           onClick={() => setActiveTab('profile')}
@@ -688,7 +673,7 @@ export function UserProfile({
             id="mobile-back-to-profile-btn"
             onClick={() => {
               setMobileSubPage('overview');
-              setActiveTab('all');
+              setActiveTab('profile');
             }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 active:scale-95 transition-all cursor-pointer"
           >
@@ -710,7 +695,6 @@ export function UserProfile({
       {/* SECTION 1: Personal Information (Name editable with Save button, Email read-only) */}
       {(
         mobileSubPage === 'profile' ||
-        activeTab === 'all' ||
         activeTab === 'profile'
       ) && (
         <section
@@ -856,7 +840,6 @@ export function UserProfile({
       {/* SECTION 2: Change Password */}
       {(
         mobileSubPage === 'security' ||
-        activeTab === 'all' ||
         activeTab === 'security'
       ) && (
         <section
@@ -1058,7 +1041,6 @@ export function UserProfile({
       {/* SECTION 3: Delete Account (Danger Zone) */}
       {(
         mobileSubPage === 'danger' ||
-        activeTab === 'all' ||
         activeTab === 'danger'
       ) && (
         <section
@@ -1263,54 +1245,6 @@ export function UserProfile({
           </div>
         </section>
       )}
-
-      {/* Quick Hub Navigation Cards */}
-      <div className={`${mobileSubPage !== 'overview' ? 'hidden md:grid' : 'grid'} grid-cols-1 sm:grid-cols-3 gap-4 pt-2`}>
-        <button
-          type="button"
-          onClick={() => onNavigateToTab('subjects')}
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors text-left group cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
-              <BookOpen className="w-4 h-4" />
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-transform" />
-          </div>
-          <h3 className="font-semibold text-sm text-slate-900 mt-3">Subjects & Lectures</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Explore structured curricula and track session progress.</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateToTab('coding')}
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors text-left group cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
-              <Code className="w-4 h-4" />
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-transform" />
-          </div>
-          <h3 className="font-semibold text-sm text-slate-900 mt-3">Coding Repository</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Solve algorithmic problems sorted by topic & difficulty.</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => onNavigateToTab('calendar')}
-          className="p-4 rounded-xl bg-white border border-slate-200 hover:border-slate-300 transition-colors text-left group cursor-pointer shadow-xs"
-        >
-          <div className="flex items-center justify-between">
-            <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
-              <Calendar className="w-4 h-4" />
-            </div>
-            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 group-hover:translate-x-0.5 transition-transform" />
-          </div>
-          <h3 className="font-semibold text-sm text-slate-900 mt-3">Academic Calendar</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Plan study milestones and view scheduled tasks.</p>
-        </button>
-      </div>
 
       {/* Profile Footer with Legal Links */}
       <footer className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
