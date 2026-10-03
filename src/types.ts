@@ -162,7 +162,7 @@ export type AdminSortColumn =
   | 'problemsSolvedPercent'
   | 'overallReadinessPercent';
 
-export type AdminSection = 'overview' | 'users' | 'content' | 'activity';
+export type AdminSection = 'overview' | 'users' | 'content' | 'import' | 'activity';
 
 export interface AdminOverviewMetrics {
   totalUsers: number;

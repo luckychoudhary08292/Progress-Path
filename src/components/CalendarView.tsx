@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { CalendarEvent, EventType } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
+import { apiCache } from '../services/apiCache.ts';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -72,13 +73,21 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
     return `${currentYear}-${m}`;
   }, [currentYear, currentMonth]);
 
-  // Fetch events for current month
+  // Fetch events for current month with instant SWR cache
   const fetchMonthEvents = async (monthKey: string) => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
-    try {
+    const cached = apiCache.get<{ events: CalendarEvent[]; datesWithEvents: string[] }>(`calendar_${monthKey}`);
+    if (cached) {
+      setMonthEvents(cached.events || []);
+      setDatesWithEvents(cached.datesWithEvents || []);
+      setIsLoadingMonth(false);
+    } else {
       setIsLoadingMonth(true);
+    }
+
+    try {
       const res = await fetch(`/api/calendar?month=${monthKey}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -87,8 +96,11 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
 
       if (res.ok) {
         const data = await res.json();
-        setMonthEvents(data.events || []);
-        setDatesWithEvents(data.datesWithEvents || []);
+        const evts = data.events || [];
+        const dwe = data.datesWithEvents || [];
+        setMonthEvents(evts);
+        setDatesWithEvents(dwe);
+        apiCache.set(`calendar_${monthKey}`, { events: evts, datesWithEvents: dwe });
       }
     } catch (err) {
       console.error('Failed to load month events', err);
@@ -236,6 +248,8 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
         setMonthEvents((prev) => [...prev, createdEvent]);
         setDatesWithEvents((prev) => (prev.includes(selectedDate) ? prev : [...prev, selectedDate]));
         setNewTitle('');
+        apiCache.invalidate('calendar');
+        apiCache.invalidate('dashboard');
       } else {
         const err = await res.json();
         setFormError(err.message || 'Failed to add event');
@@ -273,6 +287,9 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
         setMonthEvents((prev) =>
           prev.map((item) => (item.id === event.id ? { ...item, completed: event.completed } : item))
         );
+      } else {
+        apiCache.invalidate('calendar');
+        apiCache.invalidate('dashboard');
       }
     } catch {
       setMonthEvents((prev) =>
@@ -318,6 +335,9 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
         // Revert on error
         setMonthEvents(previousEvents);
         setDatesWithEvents((prev) => (prev.includes(eventDate) ? prev : [...prev, eventDate]));
+      } else {
+        apiCache.invalidate('calendar');
+        apiCache.invalidate('dashboard');
       }
     } catch {
       setMonthEvents(previousEvents);

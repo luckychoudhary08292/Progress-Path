@@ -14,10 +14,12 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Play,
 } from 'lucide-react';
 import { SubjectDetail as ISubjectDetail, LectureItem } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
 import { VideoPlayerModal } from './VideoPlayerModal.tsx';
+import { LazyVideoPlayer } from './LazyVideoPlayer.tsx';
 import { apiCache } from '../services/apiCache.ts';
 
 interface SubjectDetailProps {
@@ -36,6 +38,9 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   const [isSubmittingTopic, setIsSubmittingTopic] = useState(false);
   const [topicError, setTopicError] = useState('');
   const [isAddLectureModalOpen, setIsAddLectureModalOpen] = useState(false);
+
+  // Inline Lazy Video Player preview state
+  const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
 
   // Editing notes state: mapping lectureId -> notes
   const [notesState, setNotesState] = useState<Record<string, string>>({});
@@ -270,6 +275,9 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
       });
 
       if (res.ok) {
+        apiCache.invalidate('subjects_list');
+        apiCache.invalidate('dashboard');
+        apiCache.invalidate(`subject_${subjectId}`);
         setData((prev) => {
           if (!prev) return prev;
           const filtered = prev.lectures.filter((l) => l.id !== lectureId);
@@ -820,19 +828,39 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
 
                     {/* Right Action Icons */}
                     <div className="flex items-center gap-1 shrink-0">
-                      {/* Video Player Button - Plays inside website without redirecting */}
+                      {/* Video Player Buttons - Lazy Inline Preview & Full Theater Modal */}
                       {lec.videoUrl && (
-                        <button
-                          type="button"
-                          id={`video-link-${lec.id}`}
-                          onClick={() => setActiveVideoLecture(lec)}
-                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50/80 active:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1.5 text-xs font-semibold cursor-pointer group/vid border border-transparent hover:border-blue-200"
-                          title="Watch video lecture in website"
-                          aria-label={`Watch video lecture for #${lec.session} ${lec.title}`}
-                        >
-                          <Video className="w-3.5 h-3.5 text-blue-600 group-hover/vid:scale-110 transition-transform" />
-                          <span className="hidden sm:inline text-[11px] text-blue-700">Watch</span>
-                        </button>
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            id={`video-preview-btn-${lec.id}`}
+                            onClick={() => setPreviewVideoId(previewVideoId === lec.id ? null : lec.id)}
+                            className={`p-1.5 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold cursor-pointer border ${
+                              previewVideoId === lec.id
+                                ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                : 'text-slate-600 hover:text-blue-700 hover:bg-blue-50/80 border-transparent'
+                            }`}
+                            title={previewVideoId === lec.id ? 'Close inline preview' : 'Quick lazy video preview'}
+                            aria-label={`Toggle inline video preview for #${lec.session} ${lec.title}`}
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            <span className="text-[11px] hidden sm:inline">
+                              {previewVideoId === lec.id ? 'Close' : 'Preview'}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            id={`video-link-${lec.id}`}
+                            onClick={() => setActiveVideoLecture(lec)}
+                            className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50/80 active:bg-blue-100 rounded-lg transition-colors inline-flex items-center gap-1 text-xs font-semibold cursor-pointer group/vid border border-transparent hover:border-blue-200"
+                            title="Watch in full theater mode with notes"
+                            aria-label={`Watch video lecture in theater mode for #${lec.session} ${lec.title}`}
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current text-blue-600 group-hover/vid:scale-110 transition-transform" />
+                            <span className="hidden sm:inline text-[11px] text-blue-700">Theater</span>
+                          </button>
+                        </div>
                       )}
 
                       {/* Notes Toggle Button */}
@@ -870,6 +898,42 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
                       )}
                     </div>
                   </div>
+
+                  {/* Inline Lazy Video Player Preview using IntersectionObserver */}
+                  {previewVideoId === lec.id && lec.videoUrl && (
+                    <div className="mt-3 pl-11 pr-2">
+                      <div className="rounded-xl overflow-hidden border border-slate-200 shadow-md bg-black max-w-2xl">
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 text-white text-xs">
+                          <span className="font-medium truncate">
+                            #{lec.session}: {lec.title}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveVideoLecture(lec)}
+                              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              Theater Mode →
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewVideoId(null)}
+                              className="text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                              title="Close preview"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <LazyVideoPlayer
+                          videoUrl={lec.videoUrl}
+                          title={`Session #${lec.session}: ${lec.title}`}
+                          aspectRatio="aspect-video"
+                          autoPlay={true}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Expandable Notes Section */}
                   {isNotesOpen && (

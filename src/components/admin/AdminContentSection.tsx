@@ -16,6 +16,7 @@ import {
   X,
   FileText,
   Filter,
+  UploadCloud,
 } from 'lucide-react';
 import {
   GlobalSubjectItem,
@@ -31,6 +32,7 @@ interface AdminContentSectionProps {
   problems: GlobalProblemItem[];
   isLoading: boolean;
   onRefresh: () => void;
+  onNavigateToImport?: () => void;
   // Subject operations
   onCreateSubject: (name: string) => Promise<boolean>;
   onUpdateSubject: (id: string, name: string) => Promise<boolean>;
@@ -69,6 +71,7 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
   problems,
   isLoading,
   onRefresh,
+  onNavigateToImport,
   onCreateSubject,
   onUpdateSubject,
   onDeleteSubject,
@@ -387,6 +390,18 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onNavigateToImport && (
+              <button
+                type="button"
+                onClick={onNavigateToImport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-colors cursor-pointer"
+                title="Open Global Importer to deploy playlists or problems"
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-red-600" />
+                <span>Launch Global Import</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onRefresh}

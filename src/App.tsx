@@ -17,11 +17,15 @@ import { LandingPage } from './components/LandingPage.tsx';
 import { SystemLogo } from './components/SystemLogo.tsx';
 import { TermsOfService } from './components/TermsOfService.tsx';
 import { PrivacyPolicy } from './components/PrivacyPolicy.tsx';
+import { useDesktopNativeInstallPrompt } from './hooks/useDesktopNativeInstallPrompt.ts';
 
 type AuthView = 'landing' | 'login' | 'signup' | 'terms' | 'privacy';
 type AppView = 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'admin' | 'import' | 'profile';
 
 export default function App() {
+  // Triggers native browser install pop up dialog on desktop (not mobile, no custom HTML popup)
+  useDesktopNativeInstallPrompt();
+
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<AuthView>('landing');
   const [previousAuthView, setPreviousAuthView] = useState<AuthView>('landing');
@@ -396,36 +400,38 @@ export default function App() {
 
                       {/* Navigation Links Group */}
                       <div className="mt-2 space-y-1">
-                        {/* Admin Access Tab */}
-                        <button
-                          id="dropdown-nav-admin-link"
-                          type="button"
-                          onClick={() => {
-                            setActiveTab('admin');
-                            setSelectedSubjectId(null);
-                            setIsProfileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                            activeTab === 'admin'
-                              ? 'bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200/60 shadow-2xs'
-                              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'
-                            }`}>
-                              <Shield className="w-3.5 h-3.5" />
+                        {/* Admin Access Tab - strictly visible to admins only */}
+                        {user.role === 'admin' && (
+                          <button
+                            id="dropdown-nav-admin-link"
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('admin');
+                              setSelectedSubjectId(null);
+                              setIsProfileMenuOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                              activeTab === 'admin'
+                                ? 'bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200/60 shadow-2xs'
+                                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'
+                              }`}>
+                                <Shield className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="text-left">
+                                <span className="block text-xs font-semibold leading-tight">Admin Access</span>
+                                <span className="block text-[10px] text-slate-400">Controls & monitoring</span>
+                              </div>
                             </div>
-                            <div className="text-left">
-                              <span className="block text-xs font-semibold leading-tight">Admin Access</span>
-                              <span className="block text-[10px] text-slate-400">Controls & monitoring</span>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                            Access
-                          </span>
-                        </button>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                              Access
+                            </span>
+                          </button>
+                        )}
 
                         {/* Profile & Settings Tab */}
                         <button
@@ -482,8 +488,8 @@ export default function App() {
                               <UploadCloud className="w-3.5 h-3.5" />
                             </div>
                             <div className="text-left">
-                              <span className="block text-xs font-semibold leading-tight">Import Playlist</span>
-                              <span className="block text-[10px] text-slate-400">YouTube auto-extract</span>
+                              <span className="block text-xs font-semibold leading-tight">YouTube Playlist Importer</span>
+                              <span className="block text-[10px] text-slate-400">youtube playlist importer</span>
                             </div>
                           </div>
                           {activeTab === 'import' && (
@@ -597,7 +603,7 @@ export default function App() {
                   onOpenSettings={() => setIsProfileSettingsOpen(true)}
                   onCloseSettings={() => setIsProfileSettingsOpen(false)}
                 />
-              ) : activeTab === 'admin' ? (
+              ) : activeTab === 'admin' && user.role === 'admin' ? (
                 <AdminMonitor
                   currentUser={user}
                   onNavigateToDashboard={() => setActiveTab('dashboard')}

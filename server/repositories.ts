@@ -840,6 +840,75 @@ export const LectureRepository = {
     return newLec;
   },
 
+  async createBulkGlobal(
+    subjectId: string,
+    items: Array<{ title: string; videoUrl?: string; session?: number }>
+  ) {
+    if (isDbConnected()) {
+      const sub = await SubjectModel.findOne({ _id: toMongoId(subjectId), isGlobal: true });
+      if (!sub) throw new Error('Global parent subject not found');
+
+      let currentSession = sub.nextSessionNumber || 1;
+      const docsToInsert: any[] = [];
+
+      for (const item of items) {
+        const sessionNum =
+          typeof item.session === 'number' && item.session > 0 ? item.session : currentSession++;
+        docsToInsert.push({
+          subjectId: sub._id,
+          session: sessionNum,
+          title: item.title.trim(),
+          videoUrl: (item.videoUrl || '').trim(),
+          createdBy: null,
+        });
+        if (sessionNum >= currentSession) {
+          currentSession = sessionNum + 1;
+        }
+      }
+
+      sub.nextSessionNumber = currentSession;
+      await sub.save();
+
+      const created = await LectureModel.insertMany(docsToInsert);
+      return created.map((lec) => ({
+        id: lec._id ? lec._id.toString() : '',
+        subjectId: lec.subjectId ? lec.subjectId.toString() : '',
+        session: lec.session,
+        title: lec.title,
+        videoUrl: lec.videoUrl || '',
+        createdAt: lec.createdAt,
+      }));
+    }
+
+    const sub = inMemorySubjects.find((s) => s.id === subjectId && s.isGlobal);
+    if (!sub) throw new Error('Global parent subject not found');
+
+    let currentSession = sub.nextSessionNumber || 1;
+    const inserted: InMemoryLecture[] = [];
+
+    for (const item of items) {
+      const sessionNum =
+        typeof item.session === 'number' && item.session > 0 ? item.session : currentSession++;
+      const newLec: InMemoryLecture = {
+        id: 'lec_' + Math.random().toString(36).substring(2, 9),
+        subjectId,
+        session: sessionNum,
+        title: item.title.trim(),
+        videoUrl: (item.videoUrl || '').trim(),
+        createdBy: 'admin',
+        createdAt: new Date(),
+      };
+      inMemoryLectures.push(newLec);
+      inserted.push(newLec);
+      if (sessionNum >= currentSession) {
+        currentSession = sessionNum + 1;
+      }
+    }
+
+    sub.nextSessionNumber = currentSession;
+    return inserted;
+  },
+
   async updateGlobal(lectureId: string, data: { title?: string; session?: number; videoUrl?: string }) {
     if (isDbConnected()) {
       if (!mongoose.isValidObjectId(lectureId)) return null;
@@ -1077,6 +1146,53 @@ export const ProblemRepository = {
     };
     inMemoryProblems.push(newProb);
     return newProb;
+  },
+
+  async createBulkGlobal(
+    problems: Array<{
+      name: string;
+      difficulty: ProblemDifficulty;
+      category: string;
+      link?: string;
+    }>
+  ) {
+    if (isDbConnected()) {
+      const docsToInsert = problems.map((p) => ({
+        name: p.name.trim(),
+        difficulty: p.difficulty,
+        category: (p.category || 'General').trim(),
+        link: (p.link || '').trim(),
+        isGlobal: true,
+        createdBy: null,
+      }));
+      const docs = await ProblemModel.insertMany(docsToInsert);
+      return docs.map((doc) => ({
+        id: doc._id ? doc._id.toString() : '',
+        name: doc.name,
+        difficulty: doc.difficulty as ProblemDifficulty,
+        category: doc.category,
+        link: doc.link || '',
+        isGlobal: true,
+        createdAt: doc.createdAt,
+      }));
+    }
+
+    const inserted: InMemoryProblem[] = [];
+    for (const p of problems) {
+      const newProb: InMemoryProblem = {
+        id: 'prob_' + Math.random().toString(36).substring(2, 9),
+        name: p.name.trim(),
+        difficulty: p.difficulty,
+        category: (p.category || 'General').trim(),
+        link: (p.link || '').trim(),
+        isGlobal: true,
+        createdBy: null,
+        createdAt: new Date(),
+      };
+      inMemoryProblems.push(newProb);
+      inserted.push(newProb);
+    }
+    return inserted;
   },
 
   async updateGlobal(

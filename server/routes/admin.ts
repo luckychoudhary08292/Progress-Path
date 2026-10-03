@@ -263,6 +263,119 @@ router.delete('/content/lectures/:id', authenticateToken, authenticateAdmin, asy
   }
 });
 
+// ======================================================================
+// GLOBAL IMPORTER ROUTES (Launch Curricula & Problems Globally)
+// ======================================================================
+
+// POST /api/admin/content/import/playlist - Import YouTube playlist into a global subject
+router.post('/content/import/playlist', authenticateToken, authenticateAdmin, async (req: Request, res: Response) => {
+  try {
+    const currentAdmin = (req as any).user;
+    const { subjectId, newSubjectName, items } = req.body || {};
+
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ message: 'Items array is required with at least one lecture' });
+      return;
+    }
+
+    let targetSubjectId = subjectId;
+    let targetSubjectName = '';
+
+    if (newSubjectName && typeof newSubjectName === 'string' && newSubjectName.trim()) {
+      const createdSub = await SubjectRepository.createGlobal(newSubjectName.trim());
+      targetSubjectId = createdSub.id;
+      targetSubjectName = createdSub.name;
+    } else if (subjectId) {
+      const globalSubs = await SubjectRepository.listGlobal();
+      const existing = globalSubs.find((s) => s.id === subjectId);
+      if (!existing) {
+        res.status(404).json({ message: 'Selected global subject not found' });
+        return;
+      }
+      targetSubjectName = existing.name;
+    } else {
+      res.status(400).json({ message: 'Please select an existing global subject or provide a new global subject name' });
+      return;
+    }
+
+    const inserted = await LectureRepository.createBulkGlobal(
+      targetSubjectId,
+      items.map((it: any) => ({
+        title: it.title,
+        videoUrl: it.videoUrl,
+        session: it.session,
+      }))
+    );
+
+    await AuditLogRepository.log({
+      actorId: currentAdmin.id,
+      actorName: currentAdmin.name,
+      actorEmail: currentAdmin.email,
+      action: 'create_global_content',
+      details: `Admin ${currentAdmin.name} imported and launched ${inserted.length} global lectures to subject "${targetSubjectName}"`,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully launched ${inserted.length} global lectures into "${targetSubjectName}" for all students!`,
+      subjectId: targetSubjectId,
+      subjectName: targetSubjectName,
+      insertedCount: inserted.length,
+      lectures: inserted,
+    });
+  } catch (error) {
+    console.error('[Admin import playlist error]:', error);
+    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to import global playlist' });
+  }
+});
+
+// POST /api/admin/content/import/problems - Bulk import global coding problems
+router.post('/content/import/problems', authenticateToken, authenticateAdmin, async (req: Request, res: Response) => {
+  try {
+    const currentAdmin = (req as any).user;
+    const { problems } = req.body || {};
+
+    if (!Array.isArray(problems) || problems.length === 0) {
+      res.status(400).json({ message: 'Problems array is required with at least one problem' });
+      return;
+    }
+
+    const validProblems = problems
+      .filter((p: any) => p && typeof p.name === 'string' && p.name.trim())
+      .map((p: any) => ({
+        name: p.name.trim(),
+        difficulty: (['Easy', 'Medium', 'Hard'].includes(p.difficulty) ? p.difficulty : 'Medium') as any,
+        category: typeof p.category === 'string' && p.category.trim() ? p.category.trim() : 'General',
+        link: typeof p.link === 'string' ? p.link.trim() : '',
+      }));
+
+    if (validProblems.length === 0) {
+      res.status(400).json({ message: 'No valid problems found with required names' });
+      return;
+    }
+
+    const inserted = await ProblemRepository.createBulkGlobal(validProblems);
+
+    await AuditLogRepository.log({
+      actorId: currentAdmin.id,
+      actorName: currentAdmin.name,
+      actorEmail: currentAdmin.email,
+      action: 'create_global_content',
+      details: `Admin ${currentAdmin.name} imported and launched ${inserted.length} global coding problems`,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully launched ${inserted.length} global coding problems for all students!`,
+      insertedCount: inserted.length,
+      problems: inserted,
+    });
+  } catch (error) {
+    console.error('[Admin import problems error]:', error);
+    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to import global problems' });
+  }
+});
+
 // Global Problems CRUD
 router.post('/content/problems', authenticateToken, authenticateAdmin, async (req: Request, res: Response) => {
   try {

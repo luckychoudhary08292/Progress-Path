@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ArrowLeft,
   GraduationCap,
+  UploadCloud,
 } from 'lucide-react';
 import {
   User,
@@ -28,6 +29,7 @@ import { AdminOverviewSection } from './admin/AdminOverviewSection.tsx';
 import { AdminUsersSection } from './admin/AdminUsersSection.tsx';
 import { AdminContentSection } from './admin/AdminContentSection.tsx';
 import { AdminActivityLogSection } from './admin/AdminActivityLogSection.tsx';
+import { AdminGlobalImporterSection } from './admin/AdminGlobalImporterSection.tsx';
 
 interface AdminMonitorProps {
   currentUser?: User | null;
@@ -47,6 +49,7 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
     overview: false,
     users: false,
     content: false,
+    import: false,
     activity: false,
   });
 
@@ -220,7 +223,7 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
       fetchOverviewData();
     } else if (activeSection === 'users') {
       fetchUsersData();
-    } else if (activeSection === 'content') {
+    } else if (activeSection === 'content' || activeSection === 'import') {
       fetchContentData();
     } else if (activeSection === 'activity') {
       fetchActivityLogs();
@@ -534,7 +537,25 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
               )}
             </button>
 
-            {/* 4. Activity Log Tab */}
+            {/* 4. Global Importer Tab */}
+            <button
+              id="admin-tab-import"
+              type="button"
+              onClick={() => setActiveSection('import')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeSection === 'import'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-red-600" />
+              <span>Global Importer</span>
+              <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-red-100 text-red-700">
+                Launch
+              </span>
+            </button>
+
+            {/* 5. Activity Log Tab */}
             <button
               id="admin-tab-activity"
               type="button"
@@ -595,6 +616,15 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
             onCreateProblem={handleCreateProblem}
             onUpdateProblem={handleUpdateProblem}
             onDeleteProblem={handleDeleteProblem}
+            onNavigateToImport={() => setActiveSection('import')}
+          />
+        )}
+
+        {activeSection === 'import' && (
+          <AdminGlobalImporterSection
+            globalSubjects={globalSubjects}
+            onRefreshContent={fetchContentData}
+            onNavigateToContent={() => setActiveSection('content')}
           />
         )}
 
