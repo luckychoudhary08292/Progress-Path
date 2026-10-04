@@ -1,5 +1,114 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light;
+}
+
+/* =========================================================================
+   BLACK THEME SYSTEM
+   - White theme: untouched, original styling preserved 100%
+   - Black theme (.dark): pure black UI (#000000 / #09090b) and white text (#ffffff)
+   ========================================================================= */
+
+html.dark {
+  color-scheme: dark;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.dark body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.dark #root {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Containers, cards & navigation in pure black */
+html.dark .bg-slate-50,
+html.dark .bg-slate-100 {
+  background-color: #09090b !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #18181b !important;
+}
+
+html.dark .bg-white {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* High contrast white text in black theme */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 {
+  color: #ffffff !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #e4e4e7 !important;
+}
+
+html.dark .text-slate-400 {
+  color: #a1a1aa !important;
+}
+
+/* Crisp dark borders */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/90 {
+  border-color: #27272a !important;
+}
+
+/* Form inputs & textareas in black theme */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #71717a !important;
+}
+
+/* Modals, floating dropdowns & drawers in black theme */
+html.dark [role="dialog"],
+html.dark [id*="dropdown"],
+html.dark [id*="modal"] {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}
+
+/* Table headers & cells in black theme */
+html.dark table th {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}
+
+html.dark table td {
+  border-color: #27272a !important;
+}
+
+/* Explicit subjects hub header card in black theme */
+html.dark #subjects-hub-container > div:first-child {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}
+
 /* =========================================================================
    Globally hide all scrollbar tracks, thumbs, and side scrolling lines
    across the entire website while preserving full, smooth scroll behavior.

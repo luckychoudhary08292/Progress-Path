@@ -8,9 +8,25 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="ProgressPath" />
-    <link rel="icon" type="image/png" href="/pwa-192x192.png" />
+    <link rel="icon" type="image/svg+xml" href="/system_logo.svg" />
+    <link rel="alternate icon" type="image/png" href="/pwa-192x192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Progress Path</title>
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('theme_preference') || 'system';
+          var isDark = stored === 'dark' || (stored === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta name="description" content="Full-stack LMS platform with secure Admin Roles & Access Control, Audit Logs, Subjects & Lectures, Coding Repository, Academic Calendar, User Profile, and System Performance Benchmarks." />
     <meta property="og:title" content="Progress Path" />
     <meta property="og:description" content="Full-stack LMS platform with secure Admin Roles & Access Control, Audit Logs, Subjects & Lectures, Coding Repository, Academic Calendar, User Profile, and System Performance Benchmarks." />

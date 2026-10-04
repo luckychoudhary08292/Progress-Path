@@ -18,6 +18,7 @@ import { SystemLogo } from './components/SystemLogo.tsx';
 import { TermsOfService } from './components/TermsOfService.tsx';
 import { PrivacyPolicy } from './components/PrivacyPolicy.tsx';
 import { useDesktopNativeInstallPrompt } from './hooks/useDesktopNativeInstallPrompt.ts';
+import { ThemeToggle } from './components/ThemeToggle.tsx';
 
 type AuthView = 'landing' | 'login' | 'signup' | 'terms' | 'privacy';
 type AppView = 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'admin' | 'import' | 'profile';
@@ -179,7 +180,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen bg-slate-50 flex flex-col overflow-x-hidden w-full ${
+      className={`min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-x-hidden w-full transition-colors duration-150 ${
         user
           ? 'pb-12'
           : isAuthFormView
@@ -190,7 +191,7 @@ export default function App() {
       {user ? (
         <>
           {/* Top Global Navigation Bar */}
-          <nav id="app-top-nav" className="sticky top-0 z-30 bg-white border-b border-slate-200 mb-6 w-full shadow-xs">
+          <nav id="app-top-nav" className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 mb-6 w-full shadow-xs transition-colors">
             <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
               {/* Main Nav Header */}
               <div className="flex items-center justify-between h-14 md:h-15">
@@ -204,7 +205,7 @@ export default function App() {
                   title="Go to Dashboard"
                 >
                   <SystemLogo size="sm" />
-                  <span className="font-semibold text-slate-900 tracking-tight text-sm sm:text-base">ProgressPath</span>
+                  <span className="font-semibold text-slate-900 dark:text-white tracking-tight text-sm sm:text-base">ProgressPath</span>
                 </div>
 
                 {/* Center: Desktop Navigation Tabs (Centered on desktop) */}
@@ -218,8 +219,8 @@ export default function App() {
                     }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       activeTab === 'dashboard' && !selectedSubjectId
-                        ? 'bg-slate-100 text-slate-900 font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
                     <LayoutDashboard className="w-3.5 h-3.5" />
@@ -235,8 +236,8 @@ export default function App() {
                     }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       activeTab === 'subjects' || selectedSubjectId
-                        ? 'bg-slate-100 text-slate-900 font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
                     <BookOpen className="w-3.5 h-3.5" />
@@ -252,8 +253,8 @@ export default function App() {
                     }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       activeTab === 'coding' && !selectedSubjectId
-                        ? 'bg-slate-100 text-slate-900 font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
                     <Code className="w-3.5 h-3.5" />
@@ -269,8 +270,8 @@ export default function App() {
                     }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       activeTab === 'calendar' && !selectedSubjectId
-                        ? 'bg-slate-100 text-slate-900 font-semibold'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
                     <Calendar className="w-3.5 h-3.5" />
@@ -288,8 +289,8 @@ export default function App() {
                       }}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                         activeTab === 'admin' && !selectedSubjectId
-                          ? 'bg-slate-100 text-slate-900 font-semibold'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                       }`}
                     >
                       <Shield className="w-3.5 h-3.5 text-slate-500" />
@@ -308,10 +309,10 @@ export default function App() {
                       setActiveTab('calendar');
                       setSelectedSubjectId(null);
                     }}
-                    className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-[11px] font-medium transition-colors cursor-pointer border border-slate-200/80 shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 text-[11px] font-medium transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700/80 shadow-2xs"
                     title="Today's date (Click to open Calendar)"
                   >
-                    <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
                     <span className="capitalize">{formattedTodayShort}</span>
                   </button>
 
@@ -321,18 +322,18 @@ export default function App() {
                       id="nav-profile-circle-btn"
                       type="button"
                       onClick={() => setIsProfileSettingsOpen(true)}
-                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer select-none bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-2xs active:scale-95"
+                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer select-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95"
                       title="Settings & Services"
                       aria-label="Settings and Services"
                     >
-                      <Settings className="w-4 h-4 text-slate-700" />
+                      <Settings className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                     </button>
                   ) : (
                     <button
                       id="nav-profile-circle-btn"
                       type="button"
                       onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full font-semibold text-xs transition-colors cursor-pointer select-none bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200"
+                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full font-semibold text-xs transition-colors cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                       title={`Profile: ${user.name} (${user.email})`}
                       aria-label="User Profile Navigation"
                       aria-expanded={isProfileMenuOpen}
@@ -340,7 +341,7 @@ export default function App() {
                     >
                       {user.name.charAt(0).toUpperCase()}
                       {/* Active online indicator dot */}
-                      <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+                      <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
                     </button>
                   )}
 
@@ -348,7 +349,7 @@ export default function App() {
                   {isProfileMenuOpen && (
                     <div
                       id="nav-profile-dropdown-menu"
-                      className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200/90 p-2 z-50 text-slate-800"
+                      className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/90 dark:border-slate-800 p-2 z-50 text-slate-800 dark:text-slate-100"
                     >
                       {/* Interactive Profile Header Card */}
                       <button
@@ -528,7 +529,30 @@ export default function App() {
                         </button>
                       </div>
 
-                      <div className="my-1.5 border-t border-slate-100" />
+                      {/* Settings Button (Opens Settings & Theme Modal) */}
+                      <button
+                        id="dropdown-nav-settings-link"
+                        type="button"
+                        onClick={() => {
+                          setIsProfileMenuOpen(false);
+                          setActiveTab('profile');
+                          setIsProfileSettingsOpen(true);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+                            <Settings className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="text-left">
+                            <span className="block text-xs font-semibold leading-tight">Settings</span>
+                            <span className="block text-[10px] text-slate-400">Theme mode, security & preferences</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-medium">Open &rarr;</span>
+                      </button>
+
+                      <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
 
                       {/* Logout Action */}
                       <button
@@ -538,7 +562,7 @@ export default function App() {
                           setIsProfileMenuOpen(false);
                           handleLogout();
                         }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                       >
                         <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
                           <LogOut className="w-3.5 h-3.5" />

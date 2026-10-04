@@ -201,16 +201,16 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
   return (
     <div id="subjects-hub-container" className="w-full space-y-2 sm:space-y-6">
       {/* Header with Add Subject action */}
-      <div className="flex items-center justify-between gap-3 bg-transparent sm:bg-white border-0 sm:border border-slate-200 p-0 sm:p-6 rounded-none sm:rounded-xl">
+      <div className="flex items-center justify-between gap-3 bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 p-3.5 sm:p-6 rounded-xl shadow-xs transition-colors">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="sm:hidden w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+          <div className="sm:hidden w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
             <BookOpen className="w-4 h-4" />
           </div>
           <div>
-            <h1 id="subjects-hub-title" className="text-sm sm:text-2xl font-bold tracking-tight text-slate-900 truncate">
+            <h1 id="subjects-hub-title" className="text-sm sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
               Subject & Curriculum
             </h1>
-            <p className="hidden sm:block text-xs sm:text-sm text-slate-500 mt-0.5">
+            <p className="hidden sm:block text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
               Select a subject to view topic checklists, lecture links, and session trackers.
             </p>
           </div>
@@ -225,7 +225,7 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
               setErrorMsg('');
               setIsAdding(true);
             }}
-            className="sm:hidden inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 text-white hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+            className="sm:hidden inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black hover:bg-slate-800 dark:hover:bg-slate-200 active:scale-95 transition-all shadow-xs"
             aria-label="Add Subject"
             title="Add Subject"
           >
@@ -240,7 +240,7 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
               setErrorMsg('');
               setIsAdding(true);
             }}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition-colors cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-black text-xs font-semibold rounded-lg transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Subject</span>

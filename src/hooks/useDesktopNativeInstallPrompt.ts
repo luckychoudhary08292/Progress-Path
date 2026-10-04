@@ -33,7 +33,7 @@ export function useDesktopNativeInstallPrompt() {
     let deferredPrompt: any = null;
 
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevent automatic silent suppression so we can trigger the native browser dialog
+      // Prevent browser default silent banner
       e.preventDefault();
       deferredPrompt = e;
 
@@ -43,21 +43,23 @@ export function useDesktopNativeInstallPrompt() {
         return;
       }
 
-      sessionStorage.setItem('desktop_native_prompt_shown', 'true');
-
-      // Trigger the browser's own native dialog after a brief moment on the website
-      setTimeout(async () => {
+      const handleUserGesture = async () => {
+        window.removeEventListener('click', handleUserGesture);
         if (deferredPrompt && typeof deferredPrompt.prompt === 'function') {
           try {
+            sessionStorage.setItem('desktop_native_prompt_shown', 'true');
             await deferredPrompt.prompt();
-            const choiceResult = await deferredPrompt.userChoice;
+            await deferredPrompt.userChoice;
+          } catch {
+            // Silently ignore if already dismissed or unsupported
+          } finally {
             deferredPrompt = null;
-          } catch (err) {
-            // Silently catch if browser requires user gesture
-            console.debug('Native browser install prompt status:', err);
           }
         }
-      }, 1000);
+      };
+
+      // In modern browsers, calling .prompt() requires a user gesture (click)
+      window.addEventListener('click', handleUserGesture, { once: true });
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 interface SystemLogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
-  variant?: 'image' | 'vector';
+  variant?: 'svg' | 'image' | 'vector';
   showWordmark?: boolean;
   wordmarkClassName?: string;
 }
@@ -11,39 +11,36 @@ interface SystemLogoProps {
 export function SystemLogo({
   className = '',
   size = 'md',
-  variant = 'image',
+  variant = 'svg',
   showWordmark = false,
-  wordmarkClassName = 'font-bold text-white tracking-tight text-xl',
+  wordmarkClassName = 'font-bold text-slate-900 dark:text-white tracking-tight text-xl',
 }: SystemLogoProps) {
-  const [imgError, setImgError] = useState(false);
-
   // Preset dimension classes
   const sizeClasses = {
-    sm: 'w-7 h-7 rounded-lg',
-    md: 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl',
-    lg: 'w-12 h-12 rounded-2xl',
-    xl: 'w-16 h-16 rounded-3xl',
+    sm: 'w-7 h-7',
+    md: 'w-9 h-9 sm:w-10 sm:h-10',
+    lg: 'w-12 h-12',
+    xl: 'w-16 h-16',
   }[size];
 
   return (
-    <div className="inline-flex items-center gap-3 select-none">
+    <div className="inline-flex items-center gap-2.5 select-none">
       <div
-        className={`relative overflow-hidden bg-white shadow-xs flex items-center justify-center shrink-0 border border-slate-200/50 p-0.5 ${sizeClasses} ${className}`}
+        className={`relative overflow-hidden flex items-center justify-center shrink-0 transition-transform ${sizeClasses} ${className}`}
         title="ProgressPath"
       >
-        {!imgError && variant !== 'vector' ? (
+        {variant === 'image' ? (
           <img
-            src="/Gemini_Generated_Image_szcymaszcymaszcy.png"
+            src="/system_logo.svg"
             alt="ProgressPath System Logo"
             className="w-full h-full object-contain select-none"
-            onError={() => setImgError(true)}
           />
         ) : (
           <svg
             viewBox="0 0 500 500"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className="w-full h-full p-0.5"
+            className="w-full h-full select-none"
           >
             <defs>
               <linearGradient id="sys-blue" x1="120" y1="360" x2="260" y2="240" gradientUnits="userSpaceOnUse">
