@@ -13,7 +13,7 @@ This application is 100% deployment-ready for **Render (Web Service)**.
 4. Connect this repository. Render will automatically read `render.yaml` and configure:
    - **Service Name**: `progresspath-platform`
    - **Environment**: Node.js (v20+)
-   - **Build Command**: `npm install && npm run build`
+   - **Build Command**: `npm install --include=dev && npm run build`
    - **Start Command**: `npm start`
    - **Health Check Path**: `/api/health`
 
@@ -26,7 +26,7 @@ This application is 100% deployment-ready for **Render (Web Service)**.
    - **Name**: `progresspath` (or your preferred name)
    - **Language**: `Node`
    - **Branch**: `main`
-   - **Build Command**: `npm install && npm run build`
+   - **Build Command**: `npm install --include=dev && npm run build`
    - **Start Command**: `npm start`
    - **Health Check Path**: `/api/health`
 
