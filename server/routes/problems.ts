@@ -1,10 +1,12 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
+const { Router } = express;
 import { authenticateToken } from './auth.ts';
 import {
   ProblemRepository,
   ProgressRepository,
 } from '../repositories.ts';
-import { ProblemDifficulty } from '../models/index.ts';
+import type { ProblemDifficulty } from '../models/index.ts';
 import { sanitizeHtml } from '../middleware/security.ts';
 
 const router = Router();
@@ -66,31 +68,28 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const userId = user.id;
-    const { name, difficulty, category, link } = req.body || {};
+    const { name, title, difficulty, category, link, tags } = req.body || {};
 
-    if (!name || typeof name !== 'string' || !name.trim()) {
+    const rawName = (name || title || '').toString();
+    if (!rawName.trim()) {
       res.status(400).json({ message: 'Problem name is required' });
       return;
     }
 
     const validDifficulties: ProblemDifficulty[] = ['Easy', 'Medium', 'Hard'];
-    if (!difficulty || !validDifficulties.includes(difficulty)) {
-      res.status(400).json({ message: 'Difficulty must be Easy, Medium, or Hard' });
-      return;
-    }
+    const resolvedDifficulty: ProblemDifficulty = validDifficulties.includes(difficulty)
+      ? difficulty
+      : 'Medium';
 
-    if (!category || typeof category !== 'string' || !category.trim()) {
-      res.status(400).json({ message: 'Category is required' });
-      return;
-    }
+    const rawCategory = (category || (Array.isArray(tags) && tags[0]) || 'General').toString();
 
-    const cleanName = sanitizeHtml(name.trim());
-    const cleanCategory = sanitizeHtml(category.trim());
+    const cleanName = sanitizeHtml(rawName.trim());
+    const cleanCategory = sanitizeHtml(rawCategory.trim() || 'General');
     const cleanLink = typeof link === 'string' ? link.trim() : '';
 
     const newProblem = await ProblemRepository.create({
       name: cleanName,
-      difficulty,
+      difficulty: resolvedDifficulty,
       category: cleanCategory,
       link: cleanLink,
       createdBy: userId,

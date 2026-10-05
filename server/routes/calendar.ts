@@ -1,12 +1,14 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
+const { Router } = express;
 import { authenticateToken } from './auth.ts';
 import { EventRepository } from '../repositories.ts';
 import { sanitizeHtml } from '../middleware/security.ts';
 
 const router = Router();
 
-// GET /api/calendar?month=YYYY-MM&date=YYYY-MM-DD
-router.get('/', authenticateToken, async (req: Request, res: Response) => {
+// GET /api/calendar or /api/calendar/events?month=YYYY-MM&date=YYYY-MM-DD
+router.get(['/', '/events'], authenticateToken, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const userId = user.id;
@@ -36,7 +38,13 @@ router.post(['/events', '/'], authenticateToken, async (req: Request, res: Respo
     const userId = user.id;
     const { date, title, type } = req.body || {};
 
-    if (!date || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    // Normalize date to YYYY-MM-DD if ISO string or standard format
+    let cleanDate = typeof date === 'string' ? date.trim() : '';
+    if (cleanDate.includes('T')) {
+      cleanDate = cleanDate.split('T')[0];
+    }
+
+    if (!cleanDate || !/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
       res.status(400).json({ message: 'Valid date (YYYY-MM-DD) is required' });
       return;
     }
@@ -51,7 +59,7 @@ router.post(['/events', '/'], authenticateToken, async (req: Request, res: Respo
 
     const newEvent = await EventRepository.create({
       userId,
-      date,
+      date: cleanDate,
       title: cleanTitle,
       type: eventType,
     });

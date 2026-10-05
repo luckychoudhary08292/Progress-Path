@@ -1,4 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
+const { Router } = express;
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
@@ -311,8 +313,8 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
   }
 });
 
-// PUT /api/auth/profile (Update Name and/or Password)
-router.put('/profile', authenticateToken, async (req: Request, res: Response) => {
+// PUT /api/auth/profile or /api/auth/me (Update Name and/or Password)
+router.put(['/profile', '/me'], authenticateToken, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const { name, currentPassword, newPassword, confirmPassword } = req.body || {};

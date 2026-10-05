@@ -1,4 +1,6 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
+const { Router } = express;
 import { authenticateToken } from './auth.ts';
 import {
   SubjectRepository,

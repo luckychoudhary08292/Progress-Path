@@ -4,12 +4,7 @@ import app, { ensureDbInitialized } from './server/app.ts';
 import { createServer as createViteServer } from 'vite';
 
 async function startServer() {
-  const PORT = process.env.NODE_ENV === 'production' && process.env.PORT
-    ? parseInt(process.env.PORT, 10)
-    : 3000;
-
-  // Initialize database and bootstrap initial admin
-  await ensureDbInitialized();
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // Serve static files from public directory
   app.use(express.static(path.join(process.cwd(), 'public')));
@@ -32,8 +27,14 @@ async function startServer() {
     });
   }
 
+  // Bind port immediately so Render health checks succeed instantaneously
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${PORT}`);
+  });
+
+  // Initialize database and bootstrap initial admin asynchronously
+  ensureDbInitialized().catch((err) => {
+    console.error('Async DB initialization warning:', err);
   });
 }
 

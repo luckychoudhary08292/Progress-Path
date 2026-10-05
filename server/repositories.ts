@@ -399,6 +399,45 @@ export const SubjectRepository = {
     };
   },
 
+  async update(subjectId: string, updates: { name?: string }, userId: string, isAdmin: boolean) {
+    const trimmedName = updates.name ? updates.name.trim() : undefined;
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(subjectId)) return false;
+      const sub = await SubjectModel.findById(subjectId);
+      if (!sub) return false;
+      const isOwner = Boolean(userId) && (sub.createdBy ? sub.createdBy.toString() === String(userId) : false);
+      if (!isOwner && !isAdmin) return null; // unauthorized
+
+      if (trimmedName) {
+        sub.name = trimmedName;
+      }
+      await sub.save();
+      return {
+        id: sub._id.toString(),
+        name: sub.name,
+        isGlobal: !!sub.isGlobal,
+        isOwner,
+        nextSessionNumber: sub.nextSessionNumber || 1,
+      };
+    }
+
+    const sub = inMemorySubjects.find((s) => s.id === subjectId);
+    if (!sub) return false;
+    const isOwner = sub.createdBy === userId;
+    if (!isOwner && !isAdmin) return null;
+
+    if (trimmedName) {
+      sub.name = trimmedName;
+    }
+    return {
+      id: sub.id,
+      name: sub.name,
+      isGlobal: sub.isGlobal,
+      isOwner,
+      nextSessionNumber: sub.nextSessionNumber || 1,
+    };
+  },
+
   async delete(subjectId: string, userId: string, isAdmin: boolean) {
     if (isDbConnected()) {
       if (!mongoose.isValidObjectId(subjectId)) return false;

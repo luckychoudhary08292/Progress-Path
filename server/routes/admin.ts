@@ -1,7 +1,10 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
+const { Router } = express;
 import bcrypt from 'bcryptjs';
 import { authenticateToken, authenticateAdmin } from './auth.ts';
-import { UserRepository, UserRole } from '../models/User.ts';
+import { UserRepository } from '../models/User.ts';
+import type { UserRole } from '../models/User.ts';
 import { AuditLogRepository } from '../models/AuditLog.ts';
 import {
   SubjectRepository,
@@ -19,7 +22,7 @@ router.use(authenticateToken, authenticateAdmin);
 // ======================================================================
 // 1. OVERVIEW DASHBOARD ROUTE (Default Tab)
 // ======================================================================
-router.get('/overview', authenticateToken, authenticateAdmin, async (_req: Request, res: Response) => {
+router.get(['/overview', '/system-stats'], authenticateToken, authenticateAdmin, async (_req: Request, res: Response) => {
   try {
     const allUsers = await UserRepository.listAllUsers();
     const globalSubjects = await SubjectRepository.listGlobal();
