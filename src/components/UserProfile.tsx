@@ -12,7 +12,6 @@ import {
   Code,
   Award,
   ArrowRight,
-  Copy,
   Check,
   LogOut,
   Lock,
@@ -118,9 +117,6 @@ export function UserProfile({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
-  // Copy ID State
-  const [copiedId, setCopiedId] = useState(false);
-
   // Sync state if user prop changes
   useEffect(() => {
     setNameInput(user.name);
@@ -158,16 +154,6 @@ export function UserProfile({
 
     fetchProfile();
   }, []);
-
-  const handleCopyId = async () => {
-    try {
-      await navigator.clipboard.writeText(user.id);
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 2000);
-    } catch {
-      setCopiedId(false);
-    }
-  };
 
   // 1. Save Name
   const handleSaveName = async (e: React.FormEvent) => {
@@ -447,53 +433,7 @@ export function UserProfile({
                 {formatDate(user.createdAt)}
               </span>
             </div>
-
-            <div className="pt-1 flex items-center gap-2">
-              <button
-                id="copy-user-id-btn"
-                type="button"
-                onClick={handleCopyId}
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
-                title="Copy User ID"
-              >
-                {copiedId ? (
-                  <>
-                    <Check className="w-3 h-3 text-emerald-600" />
-                    <span className="text-emerald-700 font-medium">Copied UID</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3 text-slate-400" />
-                    <span>UID: {user.id ? `${user.id.substring(0, 10)}...` : 'User'}</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
-        </div>
-
-        {/* Header Action Buttons */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800">
-          <button
-            id="profile-header-settings-btn"
-            type="button"
-            onClick={() => setIsSettingsModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors cursor-pointer"
-            title="Open Settings & Theme Modes"
-          >
-            <Settings className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
-            <span>Settings</span>
-          </button>
-
-          <button
-            id="profile-sign-out-btn"
-            type="button"
-            onClick={onLogout}
-            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-700 hover:border-rose-200 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
-          </button>
         </div>
       </div>
 
@@ -1310,7 +1250,7 @@ export function UserProfile({
       {isSettingsModalOpen && (
         <div
           id="profile-settings-modal-overlay"
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 p-0 sm:p-4 transition-opacity animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-stretch justify-start bg-slate-900/50 dark:bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
           role="dialog"
           aria-modal="true"
           aria-labelledby="profile-settings-modal-title"
@@ -1319,20 +1259,20 @@ export function UserProfile({
           }}
         >
           <div
-            className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl border-t sm:border border-slate-200 max-h-[85vh] overflow-y-auto space-y-4"
+            className="w-full max-w-sm sm:max-w-md h-full min-h-screen bg-white dark:bg-slate-900 shadow-2xl border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 overflow-y-auto space-y-3.5 animate-slide-in-left z-10 flex flex-col justify-start"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 shadow-2xs">
-                  <Settings className="w-4 h-4 text-slate-700" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-800 dark:text-slate-200 shadow-2xs">
+                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
-                  <h3 id="profile-settings-modal-title" className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+                  <h3 id="profile-settings-modal-title" className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
                     Settings & Services
                   </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
                     Account management, privacy & security
                   </p>
                 </div>
@@ -1341,7 +1281,7 @@ export function UserProfile({
                 type="button"
                 id="close-profile-settings-btn"
                 onClick={() => setIsSettingsModalOpen(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 aria-label="Close settings"
               >
                 <X className="w-4 h-4" />
@@ -1349,21 +1289,21 @@ export function UserProfile({
             </div>
 
             {/* List of Settings Service Cards */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-2.5">
               {/* Appearance & Theme Preference Toggle */}
               <div
                 id="settings-theme-preference-card"
-                className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2.5"
+                className="p-2.5 sm:p-3 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2 transition-all"
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <Sun className="w-4 h-4" />
+                <div className="flex items-center gap-2 sm:gap-2.5">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                    <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">
                       Theme Preference
                     </h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       Choose between Light, Dark, or System mode
                     </p>
                   </div>
@@ -1381,22 +1321,22 @@ export function UserProfile({
                   setMobileSubPage('profile');
                   setIsSettingsModalOpen(false);
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                     <Edit3 className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       Edit Personal Information
                     </h4>
-                    <p className="text-[11px] text-slate-500 truncate">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       Display name, email & profile details
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
 
               {/* 2. Change Password */}
@@ -1408,22 +1348,22 @@ export function UserProfile({
                   setMobileSubPage('security');
                   setIsSettingsModalOpen(false);
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                     <Key className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                       Change Password
                     </h4>
-                    <p className="text-[11px] text-slate-500 truncate">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       Update your account security password
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
 
               {/* 3. Roles & Permissions */}
@@ -1435,22 +1375,22 @@ export function UserProfile({
                   setMobileSubPage('permissions');
                   setIsSettingsModalOpen(false);
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-purple-400 hover:bg-purple-50/40 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50/40 dark:hover:bg-purple-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                       Roles & Permissions
                     </h4>
-                    <p className="text-[11px] text-slate-500 truncate">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       View role privileges & system access
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:translate-x-0.5 transition-all shrink-0" />
               </button>
 
               {/* 4. Privacy Guidelines */}
@@ -1462,17 +1402,17 @@ export function UserProfile({
                     setIsSettingsModalOpen(false);
                     onNavigateToPrivacy();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-left transition-all group cursor-pointer"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left transition-all group cursor-pointer"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
                       <Shield className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-slate-900 transition-colors">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                         Privacy Guidelines
                       </h4>
-                      <p className="text-[11px] text-slate-500 truncate">
+                      <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                         Data privacy policy & GDPR compliance
                       </p>
                     </div>
@@ -1490,17 +1430,17 @@ export function UserProfile({
                     setIsSettingsModalOpen(false);
                     onNavigateToTerms();
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-left transition-all group cursor-pointer"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left transition-all group cursor-pointer"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
                       <FileText className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-slate-900 transition-colors">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                         Terms of Service
                       </h4>
-                      <p className="text-[11px] text-slate-500 truncate">
+                      <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                         Platform usage rules & academic agreements
                       </p>
                     </div>
@@ -1518,17 +1458,17 @@ export function UserProfile({
                   setMobileSubPage('danger');
                   setIsSettingsModalOpen(false);
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-rose-200/80 hover:border-rose-400 hover:bg-rose-50/40 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-rose-200/80 dark:border-rose-900/50 hover:border-rose-400 hover:bg-rose-50/40 dark:hover:bg-rose-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                     <Trash2 className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-rose-700 group-hover:text-rose-800 transition-colors">
+                    <h4 className="text-xs font-bold text-rose-700 dark:text-rose-400 group-hover:text-rose-800 dark:group-hover:text-rose-300 transition-colors">
                       Delete Account
                     </h4>
-                    <p className="text-[11px] text-rose-500 truncate">
+                    <p className="text-[10px] sm:text-[11px] text-rose-500 dark:text-rose-400/80 truncate">
                       Permanent account removal & data purge
                     </p>
                   </div>

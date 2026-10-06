@@ -141,10 +141,39 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <p className="text-sm font-medium text-slate-500">Checking session...</p>
+      <div className="min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center p-6 select-none transition-colors">
+        <div className="flex flex-col items-center max-w-xs text-center space-y-6">
+          {/* Animated Branded SVG Logo */}
+          <div className="relative flex items-center justify-center">
+            <div className="absolute inset-0 rounded-3xl bg-blue-500/10 dark:bg-blue-500/20 blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xl flex items-center justify-center">
+              <img
+                src="/system_logo.svg"
+                alt="ProgressPath"
+                className="w-full h-full object-contain pointer-events-none drop-shadow-sm"
+              />
+            </div>
+          </div>
+
+          {/* Platform Title */}
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              ProgressPath
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              Study &amp; Coding Tracker
+            </p>
+          </div>
+
+          {/* Smooth Loading Indicator */}
+          <div className="w-48 space-y-2">
+            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 rounded-full animate-pulse w-full" />
+            </div>
+            <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
+              Initializing workspace...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -321,7 +350,7 @@ export default function App() {
                       id="nav-profile-circle-btn"
                       type="button"
                       onClick={() => setIsProfileSettingsOpen(true)}
-                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer select-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95"
+                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer select-none bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95 hover:scale-105"
                       title="Settings & Services"
                       aria-label="Settings and Services"
                     >
@@ -331,8 +360,16 @@ export default function App() {
                     <button
                       id="nav-profile-circle-btn"
                       type="button"
-                      onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full font-semibold text-xs transition-colors cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                      onClick={() => {
+                        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+                          setActiveTab('profile');
+                          setSelectedSubjectId(null);
+                          setIsProfileMenuOpen(false);
+                        } else {
+                          setIsProfileMenuOpen((prev) => !prev);
+                        }
+                      }}
+                      className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full font-semibold text-xs transition-colors cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 active:scale-95"
                       title={`Profile: ${user.name} (${user.email})`}
                       aria-label="User Profile Navigation"
                       aria-expanded={isProfileMenuOpen}
@@ -344,11 +381,11 @@ export default function App() {
                     </button>
                   )}
 
-                  {/* Professional Floating Profile Dropdown */}
+                  {/* Professional Floating Profile Dropdown (Mobile-only, hidden on desktop) */}
                   {isProfileMenuOpen && (
                     <div
                       id="nav-profile-dropdown-menu"
-                      className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/90 dark:border-slate-800 p-2 z-50 text-slate-800 dark:text-slate-100"
+                      className="md:hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200/90 dark:border-slate-800 p-2 z-50 text-slate-800 dark:text-slate-100"
                     >
                       {/* Interactive Profile Header Card */}
                       <button
