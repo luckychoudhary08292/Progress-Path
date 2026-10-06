@@ -64,7 +64,7 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
   const [formError, setFormError] = useState('');
 
   // Toggling or deleting tracking
-  const [actionInProgressId, setActionInProgressId] = useState<string | null>(null);
+  const [actionInProgressIds, setActionInProgressIds] = useState<Set<string>>(new Set());
   const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
 
   // Helper to construct "YYYY-MM"
@@ -264,7 +264,7 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
   // Handle Toggle Event status
   const handleToggleEvent = async (event: CalendarEvent) => {
     const token = localStorage.getItem('auth_token');
-    if (!token || actionInProgressId) return;
+    if (!token || actionInProgressIds.has(event.id)) return;
 
     const newCompleted = !event.completed;
 
@@ -273,7 +273,7 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
       prev.map((item) => (item.id === event.id ? { ...item, completed: newCompleted } : item))
     );
 
-    setActionInProgressId(event.id);
+    setActionInProgressIds((prev) => new Set(prev).add(event.id));
     try {
       const res = await fetch(`/api/calendar/events/${event.id}/toggle`, {
         method: 'PATCH',
@@ -296,7 +296,11 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
         prev.map((item) => (item.id === event.id ? { ...item, completed: event.completed } : item))
       );
     } finally {
-      setActionInProgressId(null);
+      setActionInProgressIds((prev) => {
+        const next = new Set(prev);
+        next.delete(event.id);
+        return next;
+      });
     }
   };
 
@@ -320,7 +324,7 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
       setDatesWithEvents((prev) => prev.filter((d) => d !== eventDate));
     }
 
-    setActionInProgressId(eventId);
+    setActionInProgressIds((prev) => new Set(prev).add(eventId));
     setEventToDelete(null);
 
     try {
@@ -343,7 +347,11 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
       setMonthEvents(previousEvents);
       setDatesWithEvents((prev) => (prev.includes(eventDate) ? prev : [...prev, eventDate]));
     } finally {
-      setActionInProgressId(null);
+      setActionInProgressIds((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
     }
   };
 
@@ -659,7 +667,7 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
             ) : (
               <div id="calendar-events-list" className="space-y-2">
                 {selectedDateEvents.map((evt) => {
-                  const isBusy = actionInProgressId === evt.id;
+                  const isBusy = actionInProgressIds.has(evt.id);
 
                   return (
                     <div

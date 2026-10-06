@@ -20,16 +20,27 @@ setInterval(() => {
   }
 }, 60000);
 
+function getClientIp(req: Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return forwarded[0].trim();
+  }
+  return req.ip || req.socket.remoteAddress || 'unknown';
+}
+
 /**
  * Rate limiter for Authentication (Login / Signup)
  * Protects against brute-force attacks and credential stuffing
- * Limit: 25 attempts per 15 minutes per IP
+ * Limit: 100 attempts per 15 minutes per client IP
  */
 export function authRateLimiter(req: Request, res: Response, next: NextFunction): void {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const ip = getClientIp(req);
   const now = Date.now();
   const windowMs = 15 * 60 * 1000; // 15 minutes
-  const maxAttempts = 25;
+  const maxAttempts = 100;
 
   let record = authIpRecords.get(ip);
   if (!record || record.resetTime < now) {
@@ -55,13 +66,17 @@ export function authRateLimiter(req: Request, res: Response, next: NextFunction)
 /**
  * General API Rate Limiter
  * Protects against Denial of Service (DoS) and API abuse
- * Limit: 300 requests per minute per IP
+ * Limit: 1000 requests per minute per client IP
  */
 export function apiRateLimiter(req: Request, res: Response, next: NextFunction): void {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (req.method === 'OPTIONS' || req.path === '/health' || req.path === '/api/health') {
+    return next();
+  }
+
+  const ip = getClientIp(req);
   const now = Date.now();
   const windowMs = 60 * 1000; // 1 minute
-  const maxRequests = 350;
+  const maxRequests = 1000;
 
   let record = generalIpRecords.get(ip);
   if (!record || record.resetTime < now) {
@@ -109,14 +124,13 @@ export function corsHandler(req: Request, res: Response, next: NextFunction): vo
   const allowedOrigin = process.env.CORS_ORIGIN;
   const origin = req.headers.origin;
 
-  if (allowedOrigin) {
-    if (origin === allowedOrigin) {
+  if (origin) {
+    if (!allowedOrigin || origin === allowedOrigin || origin.endsWith('.onrender.com') || origin.endsWith('.run.app') || origin.includes('localhost')) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', origin);
     }
-  } else if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
 
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');

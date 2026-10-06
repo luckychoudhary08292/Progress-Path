@@ -38,7 +38,7 @@ export function Dashboard({
   const cachedStats = apiCache.get<DashboardStats>(`dashboard_${dateStr}`);
   const [stats, setStats] = useState<DashboardStats | null>(cachedStats || null);
   const [isLoading, setIsLoading] = useState(!cachedStats);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskType, setTaskType] = useState<'task' | 'academic'>('task');
@@ -74,9 +74,9 @@ export function Dashboard({
 
   const handleToggleEvent = async (event: TodayEvent) => {
     const token = localStorage.getItem('auth_token');
-    if (!token || togglingId) return;
+    if (!token || togglingIds.has(event.id)) return;
 
-    setTogglingId(event.id);
+    setTogglingIds((prev) => new Set(prev).add(event.id));
 
     // Optimistic UI update
     const newCompleted = !event.completed;
@@ -111,7 +111,11 @@ export function Dashboard({
     } catch {
       fetchDashboardData();
     } finally {
-      setTogglingId(null);
+      setTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(event.id);
+        return next;
+      });
     }
   };
 
@@ -418,7 +422,7 @@ export function Dashboard({
                     id={`toggle-event-btn-${event.id}`}
                     type="button"
                     onClick={() => handleToggleEvent(event)}
-                    disabled={togglingId === event.id}
+                    disabled={togglingIds.has(event.id)}
                     className="shrink-0 text-slate-400 hover:text-blue-600 focus:outline-none cursor-pointer transition-colors"
                     aria-label={`Mark "${event.title}" as ${event.completed ? 'incomplete' : 'complete'}`}
                   >

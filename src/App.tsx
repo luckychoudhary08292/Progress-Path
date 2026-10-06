@@ -90,13 +90,12 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           setUser(data.user);
-        } else {
+        } else if (res.status === 401) {
           localStorage.removeItem('auth_token');
           setUser(null);
         }
-      } catch {
-        localStorage.removeItem('auth_token');
-        setUser(null);
+      } catch (err) {
+        console.warn('Network issue checking auth status:', err);
       } finally {
         setIsInitializing(false);
       }

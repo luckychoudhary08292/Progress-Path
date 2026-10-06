@@ -120,7 +120,7 @@ export function CodingRepository() {
   const [problemToDelete, setProblemToDelete] = useState<ProblemItem | null>(null);
 
   // Toggling status indicator
-  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   // Fetch problems - CRITICAL: server guarantees createdAt ascending order
   const fetchProblems = async () => {
@@ -156,9 +156,9 @@ export function CodingRepository() {
   // Cycle status: todo -> in_progress -> completed -> revision -> todo
   const handleCycleStatus = async (problem: ProblemItem) => {
     const token = localStorage.getItem('auth_token');
-    if (!token || togglingId) return;
+    if (!token || togglingIds.has(problem.id)) return;
 
-    setTogglingId(problem.id);
+    setTogglingIds((prev) => new Set(prev).add(problem.id));
     const nextStatus = STATUS_CYCLE_NEXT[problem.status];
 
     // Optimistic update
@@ -191,7 +191,11 @@ export function CodingRepository() {
     } catch {
       fetchProblems();
     } finally {
-      setTogglingId(null);
+      setTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(problem.id);
+        return next;
+      });
     }
   };
 
@@ -746,12 +750,12 @@ export function CodingRepository() {
                       id={`cycle-status-btn-${prob.id}`}
                       type="button"
                       onClick={() => handleCycleStatus(prob)}
-                      disabled={togglingId === prob.id}
+                      disabled={togglingIds.has(prob.id)}
                       className={`inline-flex items-center justify-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md border text-[11px] sm:text-xs font-medium transition-colors shrink-0 cursor-pointer ${statConfig.bg} ${statConfig.text} ${statConfig.border}`}
                       title={`Current status: ${statConfig.label}. Click to cycle: To Do → In Progress → Completed → Revision`}
                       aria-label={`Cycle status for ${prob.name}, currently ${statConfig.label}`}
                     >
-                      {togglingId === prob.id ? (
+                      {togglingIds.has(prob.id) ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
                         <StatusIcon className="w-3 h-3 shrink-0" />

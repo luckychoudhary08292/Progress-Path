@@ -45,7 +45,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   // Editing notes state: mapping lectureId -> notes
   const [notesState, setNotesState] = useState<Record<string, string>>({});
   const [openNotesId, setOpenNotesId] = useState<string | null>(null);
-  const [togglingLectureId, setTogglingLectureId] = useState<string | null>(null);
+  const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   // Video Player state: opens in-website without redirecting to external apps/websites
   const [activeVideoLecture, setActiveVideoLecture] = useState<LectureItem | null>(null);
@@ -106,9 +106,9 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   // Toggle lecture completed status with instantaneous live count update
   const handleToggleLecture = async (lecture: LectureItem) => {
     const token = localStorage.getItem('auth_token');
-    if (!token || togglingLectureId) return;
+    if (!token || togglingIds.has(lecture.id)) return;
 
-    setTogglingLectureId(lecture.id);
+    setTogglingIds((prev) => new Set(prev).add(lecture.id));
 
     const newCompleted = !lecture.completed;
 
@@ -174,7 +174,11 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
         prev && prev.id === lecture.id ? { ...prev, completed: lecture.completed } : prev
       );
     } finally {
-      setTogglingLectureId(null);
+      setTogglingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(lecture.id);
+        return next;
+      });
     }
   };
 
@@ -776,7 +780,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
                         id={`checkbox-lecture-${lec.id}`}
                         type="button"
                         onClick={() => handleToggleLecture(lec)}
-                        disabled={togglingLectureId === lec.id}
+                        disabled={togglingIds.has(lec.id)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 focus:outline-none cursor-pointer transition-colors shrink-0"
                         aria-label={`Mark #${lec.session} ${lec.title} as ${
                           lec.completed ? 'incomplete' : 'complete'

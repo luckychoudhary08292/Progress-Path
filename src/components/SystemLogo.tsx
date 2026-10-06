@@ -31,7 +31,7 @@ export function SystemLogo({
       >
         {variant === 'image' ? (
           <img
-            src="/system_logo.svg"
+            src="/logo.png"
             alt="ProgressPath System Logo"
             className="w-full h-full object-contain select-none"
           />

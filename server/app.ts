@@ -45,6 +45,9 @@ export async function ensureDbInitialized(): Promise<boolean> {
 
 export const app = express();
 
+// Trust reverse proxies (Render, Cloudflare, load balancers) for accurate client IP
+app.set('trust proxy', 1);
+
 // 1. Security Headers & Hardening
 app.use(securityHeaders);
 
@@ -126,7 +129,7 @@ app.get('/api/public-stats', async (_req, res) => {
 
 // 8. Rate Limiters & Core API Routes
 app.use('/api', apiRateLimiter);
-app.use('/api/auth', authRateLimiter, authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/subjects', subjectsRoutes);
 app.use('/api/problems', problemsRoutes);

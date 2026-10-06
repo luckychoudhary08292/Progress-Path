@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { UserRepository } from '../models/User.ts';
 import { AuditLogRepository } from '../models/AuditLog.ts';
 import { isDbConnected, getConnectedDbName } from '../db.ts';
+import { authRateLimiter } from '../middleware/security.ts';
 import {
   SubjectRepository,
   LectureRepository,
@@ -76,7 +77,7 @@ export function authenticateAdmin(req: Request, res: Response, next: NextFunctio
 }
 
 // POST /api/auth/signup
-router.post('/signup', async (req: Request, res: Response) => {
+router.post('/signup', authRateLimiter, async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body || {};
     const fieldErrors: Record<string, string> = {};
@@ -156,7 +157,7 @@ router.post('/signup', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body || {};
     const fieldErrors: Record<string, string> = {};
