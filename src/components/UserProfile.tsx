@@ -1246,20 +1246,21 @@ export function UserProfile({
         </div>
       </footer>
 
-      {/* Settings & Services Modal / Drawer */}
+      {/* Settings & Services Floating Drawer on Right Side */}
       {isSettingsModalOpen && (
         <div
           id="profile-settings-modal-overlay"
-          className="fixed inset-0 z-50 flex items-stretch justify-start bg-slate-900/50 dark:bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="profile-settings-modal-title"
+          className="fixed inset-0 z-50 flex items-stretch justify-end bg-black/20 dark:bg-black/35 backdrop-blur-[0.5px] transition-opacity animate-in fade-in duration-200"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsSettingsModalOpen(false);
           }}
         >
           <div
-            className="w-full max-w-sm sm:max-w-md h-full min-h-screen bg-white dark:bg-slate-900 shadow-2xl border-r border-slate-200 dark:border-slate-800 p-4 sm:p-6 overflow-y-auto space-y-3.5 animate-slide-in-left z-10 flex flex-col justify-start"
+            id="profile-settings-drawer-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-settings-modal-title"
+            className="w-[84%] max-w-[340px] sm:w-full sm:max-w-md h-full sm:h-[calc(100vh-1.5rem)] sm:my-3 sm:mr-3 bg-white dark:bg-slate-900 shadow-2xl border-l sm:border border-slate-200/90 dark:border-slate-800 rounded-l-2xl sm:rounded-2xl p-3.5 sm:p-5 overflow-y-auto space-y-3 sm:space-y-3.5 animate-slide-in-right z-10 flex flex-col justify-start"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}

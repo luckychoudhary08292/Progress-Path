@@ -141,39 +141,47 @@ export default function App() {
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center p-6 select-none transition-colors">
-        <div className="flex flex-col items-center max-w-xs text-center space-y-6">
-          {/* Animated Branded SVG Logo */}
-          <div className="relative flex items-center justify-center">
-            <div className="absolute inset-0 rounded-3xl bg-blue-500/10 dark:bg-blue-500/20 blur-xl animate-pulse" />
-            <div className="relative w-20 h-20 sm:w-24 sm:h-24 p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xl flex items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-white dark:bg-black flex flex-col items-center justify-between p-8 select-none transition-colors duration-200">
+        <div className="w-full flex-1 flex flex-col items-center justify-center max-w-sm text-center space-y-7">
+          {/* Animated Branded SVG Logo with Ambient Glow & Float */}
+          <div className="relative group cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95">
+            {/* Ambient Pulsing Aura */}
+            <div className="absolute -inset-2 rounded-3xl bg-gradient-to-tr from-blue-500/20 via-indigo-500/20 to-teal-400/20 blur-xl animate-pulse" />
+            
+            {/* Logo Emblem Card with Floating Animation */}
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 p-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 shadow-xl shadow-blue-500/5 dark:shadow-blue-500/15 flex items-center justify-center animate-float">
               <img
                 src="/system_logo.svg"
                 alt="ProgressPath"
-                className="w-full h-full object-contain pointer-events-none drop-shadow-sm"
+                className="w-full h-full object-contain pointer-events-none drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
               />
             </div>
           </div>
 
-          {/* Platform Title */}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          {/* Platform Title & Tagline */}
+          <div className="space-y-1.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               ProgressPath
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
+            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-zinc-400">
               Study &amp; Coding Tracker
             </p>
           </div>
 
-          {/* Smooth Loading Indicator */}
-          <div className="w-48 space-y-2">
-            <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 rounded-full animate-pulse w-full" />
+          {/* Sleek Progress Track with Shimmer Beam */}
+          <div className="w-48 sm:w-56 space-y-2 pt-2">
+            <div className="relative w-full h-1.5 bg-slate-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+              <div className="absolute inset-y-0 w-28 bg-gradient-to-r from-transparent via-blue-600 to-transparent rounded-full animate-shimmer" />
             </div>
-            <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500">
-              Initializing workspace...
+            <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 tracking-wide">
+              Loading your workspace...
             </p>
           </div>
+        </div>
+
+        {/* Footer Brand Note */}
+        <div className="text-[10px] font-medium text-slate-400 dark:text-zinc-600 tracking-wider uppercase">
+          Empowering Engineering Mastery
         </div>
       </div>
     );

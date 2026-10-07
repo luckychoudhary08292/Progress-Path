@@ -83,12 +83,18 @@ html.dark textarea::placeholder {
 }
 
 /* Modals, floating dropdowns & drawers in black theme */
-html.dark [role="dialog"],
+html.dark [role="dialog"]:not([id*="overlay"]),
 html.dark [id*="dropdown"],
-html.dark [id*="modal"] {
+html.dark [id*="modal"]:not([id*="overlay"]),
+html.dark [id*="drawer"]:not([id*="overlay"]) {
   background-color: #09090b !important;
   color: #ffffff !important;
   border-color: #27272a !important;
+}
+
+/* Semi-transparent backdrop overlays so background page stays visible */
+html.dark [id*="overlay"] {
+  background-color: rgba(0, 0, 0, 0.25) !important;
 }
 
 /* Table headers & cells in black theme */
@@ -190,4 +196,45 @@ body::-webkit-scrollbar {
 
 .animate-slide-in-left {
   animation: slideInFromLeft 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInFromRight 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+.animate-float {
+  animation: float 3.2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
