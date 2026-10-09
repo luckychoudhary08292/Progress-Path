@@ -8,6 +8,7 @@ import subjectsRoutes from './routes/subjects.ts';
 import problemsRoutes from './routes/problems.ts';
 import calendarRoutes from './routes/calendar.ts';
 import adminRoutes from './routes/admin.ts';
+import feedbackRoutes from './routes/feedback.ts';
 import { PublicStatsRepository } from './repositories.ts';
 import { initDatabase, isDbConnected, getDbError, getConnectedDbName } from './db.ts';
 import { bootstrapInitialAdmin } from './bootstrap.ts';
@@ -135,6 +136,7 @@ app.use('/api/subjects', subjectsRoutes);
 app.use('/api/problems', problemsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // 9. Unknown API routes 404 handler (Prevents fallthrough to SPA index.html)
 app.all('/api/*', (_req, res) => {

@@ -12,9 +12,10 @@ import {
   BookOpen,
   ClipboardPaste,
   RotateCcw,
-  UploadCloud,
   Check,
   ChevronDown,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { SubjectSummary } from '../types.ts';
 import { VideoPlayerModal, VideoPlayerLecture } from './VideoPlayerModal.tsx';
@@ -22,6 +23,7 @@ import { VideoPlayerModal, VideoPlayerLecture } from './VideoPlayerModal.tsx';
 export interface ImportConsoleProps {
   onNavigateToSubject?: (subjectId: string) => void;
   onNavigateToCoding?: () => void;
+  hideHeader?: boolean;
 }
 
 export interface ExtractedPlaylistItem {
@@ -32,7 +34,7 @@ export interface ExtractedPlaylistItem {
   thumbnail?: string;
 }
 
-export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
+export function ImportConsole({ onNavigateToSubject, hideHeader = false }: ImportConsoleProps) {
   // Step 1: Subjects list and selection
   const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
@@ -217,7 +219,7 @@ export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
     }
   };
 
-  // Remove a video card using cross button (Step 3)
+  // Remove a video item
   const handleRemoveVideo = (indexToRemove: number) => {
     setPreviewItems((prev) => {
       const updated = prev.filter((_, idx) => idx !== indexToRemove);
@@ -328,378 +330,298 @@ export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
   const selectedSubject = subjects.find((s) => s.id === selectedSubjectId);
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-5xl mx-auto pb-16 px-1 sm:px-0">
-      {/* Page Header */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0 shadow-2xs">
-              <UploadCloud className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  YouTube Playlist Importer
-                </h1>
-                <span className="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
-                  Auto-Extract
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-snug">
-                Select your subject, paste a YouTube playlist link, curate lectures, and insert directly into your database.
-              </p>
-            </div>
+    <div className="w-full space-y-4 text-slate-900 dark:text-slate-100">
+      {/* Clean Header (Only rendered when not embedded inside a parent header) */}
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <h1 className="text-base sm:text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
+              YouTube Playlist Extractor
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Paste a public playlist URL to load videos directly into your subjects curriculum.
+            </p>
           </div>
-
           {hasExtracted && (
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer shrink-0"
+              className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Start Over</span>
+              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+              <span>Reset</span>
             </button>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Success Celebration Screen */}
+      {/* Success Notification */}
       {submitSuccessData && (
-        <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-5 sm:p-8 text-center space-y-4 shadow-sm animate-in fade-in duration-200">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
-            <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8" />
-          </div>
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-emerald-950">
-              Successfully Imported into Database!
-            </h2>
-            <p className="text-xs sm:text-sm text-emerald-700 mt-1 max-w-md mx-auto">
-              Added <span className="font-bold text-emerald-900">{submitSuccessData.insertedCount} lectures</span> directly into{' '}
-              <span className="font-bold text-emerald-900">"{submitSuccessData.subjectName}"</span>.
-            </p>
+        <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/70 dark:bg-emerald-950/30 p-4 sm:p-5 text-slate-900 dark:text-slate-100 space-y-3">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                Lectures Imported Successfully
+              </h3>
+              <p className="text-xs text-emerald-800/90 dark:text-emerald-300/90 leading-relaxed">
+                Added <strong className="font-semibold">{submitSuccessData.insertedCount} lectures</strong> to{' '}
+                <strong className="font-semibold">"{submitSuccessData.subjectName}"</strong>.
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-2 pt-1 pl-8">
             {onNavigateToSubject && (
               <button
                 type="button"
                 onClick={() => onNavigateToSubject(submitSuccessData.subjectId)}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors cursor-pointer shadow-xs"
               >
-                <span>Go to Subject & Watch Lectures</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Open Subject</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
             <button
               type="button"
               onClick={handleReset}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-50 font-semibold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
-              <span>Import Another Playlist</span>
+              <Plus className="w-3.5 h-3.5 text-slate-400" />
+              <span>Import Another</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Import Wizard */}
+      {/* Main Extractor Flow */}
       {!submitSuccessData && (
-        <div className="space-y-4 sm:space-y-6">
-          {/* STEP 1: Select Subject */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                  1
-                </span>
-                <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                  Select Target Subject
-                </h2>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsCreatingSubject((prev) => !prev)}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
-              >
-                <FolderPlus className="w-3.5 h-3.5" />
-                <span>+ Create Subject</span>
-              </button>
-            </div>
-
-            {/* Inline New Subject Creator Form */}
-            {isCreatingSubject && (
-              <form
-                onSubmit={handleCreateSubject}
-                className="p-3 sm:p-3.5 rounded-xl bg-blue-50/80 border border-blue-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 transition-all"
-              >
-                <input
-                  type="text"
-                  value={newSubjectName}
-                  onChange={(e) => setNewSubjectName(e.target.value)}
-                  placeholder="e.g. Full Stack Web Development"
-                  className="flex-1 px-3 py-2 rounded-lg bg-white border border-blue-300 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmittingNewSubject || !newSubjectName.trim()}
-                    className="flex-1 sm:flex-initial px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmittingNewSubject ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Check className="w-3.5 h-3.5" />
-                    )}
-                    <span>Save</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCreatingSubject(false);
-                      setNewSubjectName('');
-                    }}
-                    className="px-3 py-2 rounded-lg bg-slate-200 text-slate-700 text-xs font-medium cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {createSubjectError && (
-              <p className="text-xs text-red-600">{createSubjectError}</p>
-            )}
-
-            {isLoadingSubjects ? (
-              <div className="flex items-center gap-2 text-xs text-slate-500 py-3">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                <span>Loading your subjects...</span>
-              </div>
-            ) : subjectFetchError ? (
-              <div className="p-3 rounded-xl bg-red-50 text-red-600 text-xs border border-red-200">
-                {subjectFetchError}
-              </div>
-            ) : subjects.length === 0 ? (
-              <div className="p-4 rounded-xl border border-dashed text-center text-xs text-slate-500">
-                No subjects found yet. Click <strong>"+ Create Subject"</strong> above to make your first subject.
-              </div>
-            ) : (
-              <>
-                {/* Mobile Subject Dropdown Picker (< sm screens) */}
-                <div className="sm:hidden relative">
-                  <div className="relative">
-                    <select
-                      id="mobile-subject-select"
-                      aria-label="Select target subject"
-                      value={selectedSubjectId}
-                      onChange={(e) => setSelectedSubjectId(e.target.value)}
-                      className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-blue-300 bg-blue-50/70 text-xs font-bold text-slate-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer"
-                    >
-                      {subjects.map((subj) => (
-                        <option key={subj.id} value={subj.id}>
-                          {subj.name} ({subj.totalTopics} lectures)
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600 pointer-events-none">
-                      <BookOpen className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 pointer-events-none">
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Desktop / Tablet Cards Grid (>= sm screens) */}
-                <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                  {subjects.map((subj) => {
-                    const isSelected = subj.id === selectedSubjectId;
-                    return (
-                      <div
-                        key={subj.id}
-                        onClick={() => setSelectedSubjectId(subj.id)}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer select-none flex items-center justify-between gap-3 ${
-                          isSelected
-                            ? 'border-blue-600 bg-blue-50/80 text-blue-900 ring-2 ring-blue-500/20'
-                            : 'border-slate-200 hover:border-slate-300 bg-white'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
-                              isSelected
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-slate-100 text-slate-500 border-slate-200'
-                            }`}
-                          >
-                            <BookOpen className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold truncate">{subj.name}</p>
-                            <p className="text-[10px] text-slate-500">
-                              {subj.totalTopics} lectures
-                            </p>
-                          </div>
-                        </div>
-
-                        {isSelected && (
-                          <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* STEP 2: Paste YouTube Playlist URL & Extract */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-3 sm:space-y-4">
-            <div className="flex items-center gap-2.5">
-              <span className="w-6 h-6 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                2
-              </span>
-              <h2 className="text-sm sm:text-base font-bold text-slate-900">
-                Paste YouTube Playlist Link & Extract Data
-              </h2>
-            </div>
-
-            <div className="space-y-2">
-              <div className="relative flex items-center">
-                <div className="absolute left-3 text-red-600 pointer-events-none">
-                  <Video className="w-4 h-4" />
-                </div>
-                <input
-                  type="url"
-                  id="youtube-playlist-url-input"
-                  value={playlistUrl}
-                  onChange={(e) => {
-                    setPlaylistUrl(e.target.value);
-                    if (extractError) setExtractError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleExtractPlaylist();
-                    }
-                  }}
-                  placeholder="https://www.youtube.com/playlist?list=PL..."
-                  className="w-full pl-9 pr-20 py-2.5 sm:py-3 rounded-xl border border-slate-300 bg-slate-50/50 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500/50 transition-all font-mono"
-                />
-
+        <div className="space-y-4">
+          {/* Setup Card: Target Subject & Playlist Link */}
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-5 space-y-4 shadow-2xs">
+            {/* Row 1: Target Subject Selection */}
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label
+                  htmlFor="extractor-subject-select"
+                  className="block text-xs font-medium text-slate-700 dark:text-slate-300"
+                >
+                  Target Subject
+                </label>
                 <button
                   type="button"
-                  onClick={handlePasteClipboard}
-                  className="absolute right-1.5 sm:right-2 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-[11px] font-semibold text-slate-700 inline-flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Paste from clipboard"
+                  onClick={() => setIsCreatingSubject((prev) => !prev)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <ClipboardPaste className="w-3 h-3" />
-                  <span>Paste</span>
+                  <Plus className="w-3 h-3" />
+                  <span>New Subject</span>
                 </button>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-500 px-1">
-                <span>
-                  Works with playlist links (<code>?list=PL...</code>), watch links, or playlist IDs.
-                </span>
-                <span>
-                  Target: <strong className="text-slate-800">{selectedSubject?.name || 'None selected'}</strong>
-                </span>
+              {/* Inline Create Subject Form */}
+              {isCreatingSubject && (
+                <form
+                  onSubmit={handleCreateSubject}
+                  className="mb-3 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
+                >
+                  <input
+                    type="text"
+                    value={newSubjectName}
+                    onChange={(e) => setNewSubjectName(e.target.value)}
+                    placeholder="Enter subject name (e.g. Data Structures)..."
+                    className="flex-1 px-3 py-1.5 text-xs rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSubmittingNewSubject || !newSubjectName.trim()}
+                      className="px-3 py-1.5 rounded-md bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium hover:bg-slate-800 dark:hover:bg-white transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
+                    >
+                      {isSubmittingNewSubject ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Check className="w-3 h-3" />
+                      )}
+                      <span>Create</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCreatingSubject(false);
+                        setNewSubjectName('');
+                      }}
+                      className="px-2.5 py-1.5 rounded-md text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {createSubjectError && (
+                <p className="text-xs text-rose-600 dark:text-rose-400 mb-2">{createSubjectError}</p>
+              )}
+
+              {/* Subject Dropdown */}
+              {isLoadingSubjects ? (
+                <div className="flex items-center gap-2 text-xs text-slate-400 py-1.5">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Loading subjects...</span>
+                </div>
+              ) : subjectFetchError ? (
+                <p className="text-xs text-rose-600 dark:text-rose-400">{subjectFetchError}</p>
+              ) : subjects.length === 0 ? (
+                <div className="p-3 rounded-lg border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
+                  No subjects found. Click "+ New Subject" to create one.
+                </div>
+              ) : (
+                <div className="relative">
+                  <select
+                    id="extractor-subject-select"
+                    value={selectedSubjectId}
+                    onChange={(e) => setSelectedSubjectId(e.target.value)}
+                    className="w-full px-3 py-2 pr-8 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none"
+                  >
+                    {subjects.map((subj) => (
+                      <option key={subj.id} value={subj.id}>
+                        {subj.name} ({subj.totalTopics || 0} lectures)
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              )}
+            </div>
+
+            {/* Row 2: Playlist Link Input with Paste & Extract Button */}
+            <div>
+              <label
+                htmlFor="youtube-playlist-url-input"
+                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5"
+              >
+                YouTube Playlist Link
+              </label>
+
+              <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="url"
+                    id="youtube-playlist-url-input"
+                    value={playlistUrl}
+                    onChange={(e) => {
+                      setPlaylistUrl(e.target.value);
+                      if (extractError) setExtractError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleExtractPlaylist();
+                      }
+                    }}
+                    placeholder="https://www.youtube.com/playlist?list=PL..."
+                    className="w-full pl-3 pr-16 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-red-500 font-mono transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={handlePasteClipboard}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-[11px] font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer inline-flex items-center gap-1"
+                    title="Paste from clipboard"
+                  >
+                    <ClipboardPaste className="w-3 h-3" />
+                    <span>Paste</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  id="extract-youtube-playlist-btn"
+                  onClick={handleExtractPlaylist}
+                  disabled={isExtracting || !playlistUrl.trim() || !selectedSubjectId}
+                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shrink-0 shadow-2xs"
+                >
+                  {isExtracting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Extracting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Extract Playlist</span>
+                    </>
+                  )}
+                </button>
               </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Paste any public YouTube playlist URL or video link containing <code>?list=...</code>
+              </p>
             </div>
 
             {extractError && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <div className="min-w-0 flex-1 leading-relaxed">{extractError}</div>
+              <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                <div className="flex-1 leading-relaxed">{extractError}</div>
               </div>
             )}
-
-            <div className="pt-1">
-              <button
-                type="button"
-                id="extract-youtube-playlist-btn"
-                onClick={handleExtractPlaylist}
-                disabled={isExtracting || !playlistUrl.trim() || !selectedSubjectId}
-                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
-              >
-                {isExtracting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Extracting Playlist Videos...</span>
-                  </>
-                ) : (
-                  <>
-                    <Video className="w-4 h-4" />
-                    <span>Extract Data</span>
-                  </>
-                )}
-              </button>
-            </div>
           </div>
 
-          {/* STEP 3: Preview Before Database Insertion */}
+          {/* Extracted Lectures Review & Curate */}
           {hasExtracted && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4 animate-in fade-in duration-200">
-              {/* Preview Header & Stats */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                    3
-                  </span>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
-                      <span>Curate & Preview Lectures</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
-                        {previewItems.length} Videos
-                      </span>
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Playlist: <strong className="text-slate-800">"{playlistTitle}"</strong> · Use the cross button to remove any unwanted video.
-                    </p>
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-5 space-y-3.5 shadow-2xs">
+              {/* Review Header */}
+              <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex-wrap">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
+                      {playlistTitle || 'Playlist Lectures'}
+                    </h3>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      ({previewItems.length} {previewItems.length === 1 ? 'lecture' : 'lectures'})
+                    </span>
                   </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Review and edit titles or remove lectures before adding to {selectedSubject?.name}.
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => setIsAddingCustomLecture(true)}
-                    className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Video</span>
+                    <Plus className="w-3 h-3 text-slate-400" />
+                    <span>Add Lecture</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPreviewItems([])}
-                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    className="px-2 py-1 text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer transition-colors"
                   >
-                    Clear All
+                    Clear
                   </button>
                 </div>
               </div>
 
-              {/* Inline Add Custom Lecture Form */}
+              {/* Inline Add Lecture Form */}
               {isAddingCustomLecture && (
                 <form
                   onSubmit={handleAddCustomLecture}
-                  className="p-3 sm:p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 space-y-2.5"
+                  className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Extra Lecture to Preview</span>
+                    <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
+                      Add Custom Lecture
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsAddingCustomLecture(false)}
-                      className="text-slate-400 hover:text-slate-600 p-0.5"
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
@@ -708,8 +630,8 @@ export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
                       type="text"
                       value={customTitle}
                       onChange={(e) => setCustomTitle(e.target.value)}
-                      placeholder="Lecture Title"
-                      className="px-3 py-2 rounded-lg bg-white border border-slate-300 text-xs text-slate-900"
+                      placeholder="Lecture Title (e.g. Introduction to Trees)"
+                      className="px-2.5 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-xs text-slate-900 dark:text-white"
                       autoFocus
                     />
                     <input
@@ -717,58 +639,75 @@ export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
                       value={customUrl}
                       onChange={(e) => setCustomUrl(e.target.value)}
                       placeholder="Video URL (optional)"
-                      className="px-3 py-2 rounded-lg bg-white border border-slate-300 text-xs text-slate-900"
+                      className="px-2.5 py-1.5 rounded-md bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 text-xs text-slate-900 dark:text-white font-mono"
                     />
                   </div>
 
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() => setIsAddingCustomLecture(false)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-200"
+                      className="px-2.5 py-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={!customTitle.trim()}
-                      className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
+                      className="px-3 py-1 rounded-md bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium hover:bg-slate-800 dark:hover:bg-white disabled:opacity-50"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add to List</span>
+                      Add to List
                     </button>
                   </div>
                 </form>
               )}
 
-              {/* Preview Cards List with Cross (X) Button */}
+              {/* Lectures List */}
               {previewItems.length === 0 ? (
-                <div className="py-8 text-center text-xs text-slate-400 border border-dashed rounded-xl">
-                  No videos in preview. Add one manually or re-extract a playlist.
+                <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
+                  No lectures in preview.
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-[440px] overflow-y-auto pr-0.5 divide-y divide-slate-100 dark:divide-slate-800/80">
                   {previewItems.map((item, idx) => (
                     <div
                       key={`preview-${item.videoId || idx}`}
-                      className="p-2 sm:p-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2 group/item shadow-2xs"
+                      className="pt-2 first:pt-0 flex items-center justify-between gap-2.5 group hover:bg-slate-50/60 dark:hover:bg-slate-800/40 p-1.5 rounded-lg transition-colors"
                     >
-                      {/* Left: Session Number Badge, Thumbnail & Title */}
-                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-100 text-slate-600 font-mono text-[11px] sm:text-xs font-bold flex items-center justify-center shrink-0 border border-slate-200">
-                          #{item.session}
+                      {/* Left: Index & Thumbnail */}
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span className="text-[11px] font-mono font-medium text-slate-400 w-5 shrink-0 text-right">
+                          {item.session}
                         </span>
 
                         {item.thumbnail ? (
-                          <img
-                            src={item.thumbnail}
-                            alt=""
-                            className="w-14 h-9 sm:w-20 sm:h-12 object-cover rounded-lg bg-zinc-900 shrink-0 border border-slate-200 shadow-2xs"
-                            loading="lazy"
-                          />
+                          <div className="relative w-14 h-9 sm:w-16 sm:h-10 rounded bg-slate-900 shrink-0 overflow-hidden border border-slate-200 dark:border-slate-700">
+                            <img
+                              src={item.thumbnail}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                            {item.videoUrl && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setTestVideoLecture({
+                                    title: item.title,
+                                    session: item.session,
+                                    videoUrl: item.videoUrl,
+                                  })
+                                }
+                                className="absolute inset-0 bg-black/30 hover:bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                title="Preview video"
+                              >
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                              </button>
+                            )}
+                          </div>
                         ) : (
-                          <div className="w-14 h-9 sm:w-20 sm:h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 border border-slate-200">
-                            <Video className="w-4 h-4" />
+                          <div className="w-14 h-9 sm:w-16 sm:h-10 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 shrink-0">
+                            <Video className="w-3.5 h-3.5" />
                           </div>
                         )}
 
@@ -777,17 +716,17 @@ export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
                             type="text"
                             value={item.title}
                             onChange={(e) => handleUpdateTitle(idx, e.target.value)}
-                            className="w-full text-xs font-semibold text-slate-900 bg-transparent hover:bg-slate-50 focus:bg-white px-1.5 py-0.5 rounded border border-transparent hover:border-slate-200 focus:border-blue-400 focus:outline-none transition-colors"
+                            className="w-full text-xs text-slate-900 dark:text-white bg-transparent hover:bg-white dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-800 px-1 py-0.5 rounded border border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-500 focus:outline-none transition-colors truncate"
                             title="Click to edit title"
                           />
-                          <p className="text-[10px] sm:text-[11px] font-mono text-slate-400 truncate mt-0.5">
+                          <p className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate px-1">
                             {item.videoUrl}
                           </p>
                         </div>
                       </div>
 
-                      {/* Right: Actions (Preview & Remove) */}
-                      <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                      {/* Right: Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
                         {item.videoUrl && (
                           <button
                             type="button"
@@ -798,25 +737,20 @@ export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
                                 videoUrl: item.videoUrl,
                               })
                             }
-                            className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                            title="Test watch video"
+                            className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Watch preview"
                           >
-                            <Play className="w-3 h-3 fill-current text-blue-600" />
-                            <span>Preview</span>
+                            <Play className="w-3.5 h-3.5" />
                           </button>
                         )}
-
-                        {/* Cross Button to Remove Video */}
                         <button
                           type="button"
                           id={`remove-video-btn-${idx}`}
                           onClick={() => handleRemoveVideo(idx)}
-                          className="px-2.5 py-1.5 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center gap-1 text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-200 sm:border-transparent text-xs font-semibold transition-colors cursor-pointer active:scale-95"
-                          title="Remove video from import"
-                          aria-label={`Remove video #${item.session} ${item.title}`}
+                          className="p-1.5 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                          title="Remove from import"
                         >
-                          <X className="w-3.5 h-3.5 text-red-500" />
-                          <span className="sm:hidden text-red-600 text-[11px]">Remove</span>
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </div>
@@ -825,79 +759,44 @@ export function ImportConsole({ onNavigateToSubject }: ImportConsoleProps) {
               )}
 
               {submitError && (
-                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs flex items-center gap-2">
+                <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-300 text-xs flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{submitError}</span>
                 </div>
               )}
 
-              {/* Submit & Insert into DB Action Bar */}
-              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                <div className="text-xs text-slate-500">
-                  Ready to insert <strong className="text-slate-900 font-bold">{previewItems.length} lectures</strong> into{' '}
-                  <strong className="text-blue-600 font-bold">{selectedSubject?.name || 'Selected Subject'}</strong>
-                </div>
+              {/* Bottom Action Row */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Ready to add to <strong className="text-slate-900 dark:text-white font-medium">{selectedSubject?.name}</strong>
+                </span>
 
                 <button
                   type="button"
                   id="submit-insert-to-db-btn"
                   onClick={handleSubmitToDb}
                   disabled={isSubmittingToDb || previewItems.length === 0 || !selectedSubjectId}
-                  className="w-full sm:w-auto px-6 py-2.5 sm:py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md active:scale-95"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 text-xs font-medium inline-flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
                 >
                   {isSubmittingToDb ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Inserting into Database...</span>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving lectures...</span>
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4" />
-                      <span>Submit & Insert into DB</span>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Import {previewItems.length} {previewItems.length === 1 ? 'Lecture' : 'Lectures'}</span>
                     </>
                   )}
                 </button>
               </div>
             </div>
           )}
-
-          {/* Floating Mobile Docked Submit Bar (Visible on mobile when reviewing) */}
-          {hasExtracted && previewItems.length > 0 && !submitSuccessData && (
-            <div className="sm:hidden fixed bottom-14 left-3 right-3 z-30 bg-white border border-slate-200 p-3 rounded-2xl shadow-xl flex items-center justify-between gap-3 animate-in fade-in duration-150">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 truncate">
-                  {previewItems.length} lectures ready
-                </p>
-                <p className="text-[10px] text-blue-600 font-semibold truncate">
-                  Into: {selectedSubject?.name || 'Selected Subject'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                id="mobile-floating-submit-btn"
-                onClick={handleSubmitToDb}
-                disabled={isSubmittingToDb || previewItems.length === 0 || !selectedSubjectId}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs inline-flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-md active:scale-95"
-              >
-                {isSubmittingToDb ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Insert to DB</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Video Player Modal for Test Preview (conditionally mounted) */}
+      {/* Video Player Modal for Test Preview */}
       {testVideoLecture && (
         <VideoPlayerModal
           isOpen={true}

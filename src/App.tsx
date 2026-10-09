@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, FileCode, User as UserIcon, ShieldCheck, Home, UploadCloud, Settings } from 'lucide-react';
+import { Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, FileCode, User as UserIcon, ShieldCheck, Home, UploadCloud, Settings, MessageSquare } from 'lucide-react';
 import { User } from './types.ts';
 import { SignupForm } from './components/SignupForm.tsx';
 import { LoginForm } from './components/LoginForm.tsx';
@@ -37,6 +37,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<AppView>('dashboard');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'security' | 'danger' | 'permissions' | 'extractor' | 'feedback' | null>(null);
 
   // Short day & date (e.g. mon, Sep 28) for navigation display
   const today = new Date();
@@ -216,7 +217,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-x-hidden w-full transition-colors duration-150 ${
+      className={`min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-x-clip w-full transition-colors duration-150 ${
         user
           ? 'pb-12'
           : isAuthFormView
@@ -226,9 +227,12 @@ export default function App() {
     >
       {user ? (
         <>
-          {/* Top Global Navigation Bar */}
-          <nav id="app-top-nav" className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 mb-6 w-full shadow-xs transition-colors">
-            <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10">
+          {/* Top Global Navigation Bar - Fixed & Stuck to Screen on Scroll with Dynamic Theme Background (Pure Black in Dark Mode) */}
+          <nav
+            id="app-top-nav"
+            className="fixed top-0 left-0 right-0 z-40 w-full bg-white/95 dark:bg-black/95 backdrop-blur-md border-b border-slate-200 dark:border-zinc-800 shadow-xs transition-colors duration-150"
+          >
+            <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-white/95 dark:bg-black/95 text-slate-900 dark:text-white transition-colors">
               {/* Main Nav Header */}
               <div className="flex items-center justify-between h-14 md:h-15">
                 {/* Left: Brand Logo */}
@@ -484,6 +488,7 @@ export default function App() {
                           type="button"
                           onClick={() => {
                             setActiveTab('profile');
+                            setActiveProfileTab(null);
                             setSelectedSubjectId(null);
                             setIsProfileMenuOpen(false);
                           }}
@@ -624,8 +629,11 @@ export default function App() {
             </div>
           </nav>
 
+          {/* Spacer to prevent layout shift beneath fixed nav */}
+          <div className="h-14 md:h-15 w-full shrink-0 mb-2.5 sm:mb-5 md:mb-6" aria-hidden="true" />
+
           {/* Main Body View */}
-          <main className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 min-w-0 flex-1 pb-24 md:pb-12 overflow-x-hidden">
+          <main className="w-full max-w-[1920px] mx-auto px-3 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 min-w-0 flex-1 pb-24 md:pb-12 overflow-x-clip">
             <div
               key={selectedSubjectId ? `subject-${selectedSubjectId}` : activeTab}
               className="tab-slide-enter w-full min-w-0"
@@ -670,6 +678,8 @@ export default function App() {
                   isSettingsOpen={isProfileSettingsOpen}
                   onOpenSettings={() => setIsProfileSettingsOpen(true)}
                   onCloseSettings={() => setIsProfileSettingsOpen(false)}
+                  activeProfileTab={activeProfileTab}
+                  onProfileTabChange={setActiveProfileTab}
                 />
               ) : activeTab === 'admin' && user.role === 'admin' ? (
                 <AdminMonitor

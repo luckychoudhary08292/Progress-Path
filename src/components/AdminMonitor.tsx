@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   GraduationCap,
   UploadCloud,
+  MessageSquare,
 } from 'lucide-react';
 import {
   User,
@@ -24,12 +25,14 @@ import {
   GlobalLectureItem,
   GlobalProblemItem,
   ProblemDifficulty,
+  FeedbackItem,
 } from '../types.ts';
 import { AdminOverviewSection } from './admin/AdminOverviewSection.tsx';
 import { AdminUsersSection } from './admin/AdminUsersSection.tsx';
 import { AdminContentSection } from './admin/AdminContentSection.tsx';
 import { AdminActivityLogSection } from './admin/AdminActivityLogSection.tsx';
 import { AdminGlobalImporterSection } from './admin/AdminGlobalImporterSection.tsx';
+import { AdminFeedbackSection } from './admin/AdminFeedbackSection.tsx';
 
 interface AdminMonitorProps {
   currentUser?: User | null;
@@ -51,6 +54,7 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
     content: false,
     import: false,
     activity: false,
+    feedback: false,
   });
 
   // Section 1: Overview Data
@@ -77,6 +81,10 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
   // Section 4: Activity Log Data
   const [allAuditLogs, setAllAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+
+  // Section 5: Feedbacks Data
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(false);
 
   // Get Auth Token Helper
   const getAuthToken = () => localStorage.getItem('auth_token');
@@ -217,6 +225,54 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
     }
   }, []);
 
+  // 5. Fetch Feedbacks
+  const fetchFeedbacksData = useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      setIsLoadingFeedbacks(true);
+      const res = await fetch('/api/feedback', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 403) {
+        setErrorStatus(403);
+        setErrorMessage('Access Denied: Administrator privileges required.');
+        return;
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        setFeedbacks(data.feedbacks || []);
+        setLoadedSections((prev) => ({ ...prev, feedback: true }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch user feedbacks:', err);
+    } finally {
+      setIsLoadingFeedbacks(false);
+    }
+  }, []);
+
+  // Delete Feedback Handler
+  const handleDeleteFeedback = async (id: string): Promise<boolean> => {
+    const token = getAuthToken();
+    if (!token) return false;
+
+    const res = await fetch(`/api/feedback/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to delete feedback');
+    }
+
+    setFeedbacks((prev) => prev.filter((item) => item.id !== id));
+    return true;
+  };
+
   // Lazy loading triggered on active section change
   useEffect(() => {
     if (activeSection === 'overview') {
@@ -227,6 +283,8 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
       fetchContentData();
     } else if (activeSection === 'activity') {
       fetchActivityLogs();
+    } else if (activeSection === 'feedback') {
+      fetchFeedbacksData();
     }
   }, [
     activeSection,
@@ -234,6 +292,7 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
     fetchUsersData,
     fetchContentData,
     fetchActivityLogs,
+    fetchFeedbacksData,
   ]);
 
   // Initial mount: load overview tab
@@ -452,7 +511,7 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
   }
 
   return (
-    <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 pb-12 space-y-6">
+    <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 pb-12 space-y-6">
       {/* Admin Panel Header & Sub-Nav */}
       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -569,6 +628,26 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
               <Clock className="w-3.5 h-3.5 text-amber-600" />
               <span>Activity Log</span>
             </button>
+
+            {/* 6. User Feedbacks Tab */}
+            <button
+              id="admin-tab-feedback"
+              type="button"
+              onClick={() => setActiveSection('feedback')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeSection === 'feedback'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Feedbacks</span>
+              {feedbacks.length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                  {feedbacks.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -633,6 +712,15 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
             logs={allAuditLogs}
             isLoading={isLoadingLogs}
             onRefresh={fetchActivityLogs}
+          />
+        )}
+
+        {activeSection === 'feedback' && (
+          <AdminFeedbackSection
+            feedbacks={feedbacks}
+            isLoading={isLoadingFeedbacks}
+            onRefresh={fetchFeedbacksData}
+            onDeleteFeedback={handleDeleteFeedback}
           />
         )}
       </div>

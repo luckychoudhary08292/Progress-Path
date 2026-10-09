@@ -32,9 +32,13 @@ import {
   Sun,
   Moon,
   Laptop,
+  UploadCloud,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
-import { User, UserProfileStats } from '../types.ts';
+import { User, UserProfileStats, FeedbackItem } from '../types.ts';
 import { ThemeToggle } from './ThemeToggle.tsx';
+import { ImportConsole } from './ImportConsole.tsx';
 
 interface UserProfileProps {
   user: User;
@@ -46,9 +50,11 @@ interface UserProfileProps {
   isSettingsOpen?: boolean;
   onOpenSettings?: () => void;
   onCloseSettings?: () => void;
+  activeProfileTab?: ProfileTab;
+  onProfileTabChange?: (tab: ProfileTab) => void;
 }
 
-type ProfileTab = 'profile' | 'security' | 'danger' | 'permissions';
+export type ProfileTab = 'profile' | 'security' | 'danger' | 'permissions' | 'extractor' | 'feedback' | null;
 
 export function UserProfile({
   user,
@@ -60,16 +66,18 @@ export function UserProfile({
   isSettingsOpen,
   onOpenSettings,
   onCloseSettings,
+  activeProfileTab,
+  onProfileTabChange,
 }: UserProfileProps) {
   const [stats, setStats] = useState<UserProfileStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // Active Navigation Tab (Defaults to individual 'profile' tab)
-  const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
+  // Active Navigation Tab (Defaults to null - do not show anything here by default on desktop until clicked)
+  const [activeTab, setActiveTab] = useState<ProfileTab>(activeProfileTab ?? null);
 
-  // Mobile Dynamic Sub-page state ('overview' | 'profile' | 'security' | 'permissions' | 'danger')
+  // Mobile Dynamic Sub-page state ('overview' | 'profile' | 'security' | 'permissions' | 'danger' | 'feedback')
   // On mobile: default is 'overview' (only profile info card + dashboard). Clicking setting options opens dynamic sub-page.
-  const [mobileSubPage, setMobileSubPage] = useState<'overview' | 'profile' | 'security' | 'permissions' | 'danger'>('overview');
+  const [mobileSubPage, setMobileSubPage] = useState<'overview' | 'profile' | 'security' | 'permissions' | 'danger' | 'feedback'>('overview');
 
   // Mobile Settings Hub Modal state (controlled from top nav Settings button or internal)
   const [internalSettingsModalOpen, setInternalSettingsModalOpen] = useState(false);
@@ -116,6 +124,117 @@ export function UserProfile({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
+
+  // Feedback Form State
+  const [feedbackCategory, setFeedbackCategory] = useState<'General' | 'Feature' | 'Bug' | 'Suggestion'>('General');
+  const [feedbackTitle, setFeedbackTitle] = useState('');
+  const [feedbackDescription, setFeedbackDescription] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [myFeedbacks, setMyFeedbacks] = useState<FeedbackItem[]>([]);
+  const [isLoadingMyFeedbacks, setIsLoadingMyFeedbacks] = useState(false);
+
+  // Sync activeProfileTab if passed from parent (e.g. top nav)
+  useEffect(() => {
+    setActiveTab(activeProfileTab ?? null);
+    if (activeProfileTab === 'feedback') {
+      setMobileSubPage('feedback');
+    }
+  }, [activeProfileTab]);
+
+  // Fetch feedbacks submitted by current user
+  const fetchMyFeedbacks = async () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    try {
+      setIsLoadingMyFeedbacks(true);
+      const res = await fetch('/api/feedback/my', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyFeedbacks(data.feedbacks || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingMyFeedbacks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'feedback' || mobileSubPage === 'feedback') {
+      fetchMyFeedbacks();
+    }
+  }, [activeTab, mobileSubPage]);
+
+  // Submit Feedback Handler
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFeedbackError(null);
+    setFeedbackSuccess(false);
+
+    if (!feedbackTitle.trim()) {
+      setFeedbackError('Please enter a title for your feedback');
+      return;
+    }
+    if (feedbackTitle.trim().length < 3) {
+      setFeedbackError('Title must be at least 3 characters long');
+      return;
+    }
+    if (!feedbackDescription.trim()) {
+      setFeedbackError('Please enter a description for your feedback');
+      return;
+    }
+    if (feedbackDescription.trim().length < 5) {
+      setFeedbackError('Description must be at least 5 characters long');
+      return;
+    }
+
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setFeedbackError('Authentication required. Please sign in again.');
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    try {
+      const finalTitle = feedbackCategory === 'General'
+        ? feedbackTitle.trim()
+        : `[${feedbackCategory}] ${feedbackTitle.trim()}`;
+
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: finalTitle,
+          description: feedbackDescription.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setFeedbackSuccess(true);
+        setFeedbackTitle('');
+        setFeedbackDescription('');
+        showToast('Feedback submitted successfully', 'Thank you! The admin team will review your feedback.');
+        fetchMyFeedbacks();
+      } else {
+        const err = data.fieldErrors?.title || data.fieldErrors?.description || data.message || 'Failed to submit feedback';
+        setFeedbackError(err);
+        showToast('Feedback submission failed', err, 'error');
+      }
+    } catch {
+      setFeedbackError('Network error while submitting feedback');
+      showToast('Network error', 'Could not reach server', 'error');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   // Sync state if user prop changes
   useEffect(() => {
@@ -356,7 +475,7 @@ export function UserProfile({
   };
 
   return (
-    <div id="user-profile-page" className="w-full flex flex-col gap-4 sm:gap-6 pb-12 relative">
+    <div id="user-profile-page" className="w-full flex flex-col gap-2.5 sm:gap-5 md:gap-6 pb-12 relative">
       {/* Floating Toast Notification */}
       {toast && (
         <div
@@ -391,7 +510,7 @@ export function UserProfile({
       )}
 
       {/* Top Identity Header Card: Visible on desktop always, on mobile only in overview mode */}
-      <div className={`${mobileSubPage !== 'overview' ? 'hidden md:flex' : 'flex'} bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 sm:p-5 flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-5 shadow-xs transition-colors`}>
+      <div className={`${mobileSubPage !== 'overview' ? 'hidden md:flex' : 'flex'} bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-3 sm:p-5 flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-5 shadow-xs transition-colors`}>
         <div className="flex items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1">
           {/* Avatar with status indicator */}
           <div className="relative shrink-0">
@@ -434,6 +553,50 @@ export function UserProfile({
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Desktop Top Quick Action: Settings button */}
+        <div className="hidden md:flex items-center gap-2 shrink-0">
+          <button
+            id="desktop-top-settings-btn"
+            type="button"
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer active:scale-95 transition-all shadow-2xs"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+            <span>Settings</span>
+          </button>
+        </div>
+
+        {/* Mobile Top Quick Action Bar: Feedback option right next to Settings */}
+        <div className="flex md:hidden items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 w-full mt-1">
+          <button
+            id="mobile-top-settings-btn"
+            type="button"
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 active:scale-95 transition-all"
+          >
+            <Settings className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+            <span>Settings</span>
+          </button>
+          <button
+            id="mobile-top-feedback-btn"
+            type="button"
+            onClick={() => {
+              const next = mobileSubPage === 'feedback' ? 'overview' : 'feedback';
+              setActiveTab(next === 'feedback' ? 'feedback' : null);
+              setMobileSubPage(next);
+              onProfileTabChange?.(next === 'feedback' ? 'feedback' : null);
+            }}
+            className={`flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold cursor-pointer active:scale-95 transition-all border ${
+              mobileSubPage === 'feedback' || activeTab === 'feedback'
+                ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-slate-900 dark:border-slate-100'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Feedback</span>
+          </button>
         </div>
       </div>
 
@@ -563,95 +726,70 @@ export function UserProfile({
         id="profile-subnav-tabs-bar"
         className="hidden md:flex items-center gap-1.5 border-b border-slate-200 pb-3 overflow-x-auto scrollbar-none shrink-0"
       >
+        {/* YouTube Playlist Extractor Tab - Desktop / Website Frame Size */}
         <button
-          id="profile-subtab-overview"
+          id="profile-subtab-extractor"
           type="button"
-          onClick={() => setActiveTab('profile')}
+          onClick={() => {
+            const next = activeTab === 'extractor' ? null : 'extractor';
+            setActiveTab(next);
+            onProfileTabChange?.(next);
+          }}
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
-            activeTab === 'profile'
-              ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold'
+            activeTab === 'extractor'
+              ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold shadow-xs'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <UserIcon className="w-3.5 h-3.5" />
-          <span>Personal Info</span>
+          <UploadCloud className="w-3.5 h-3.5" />
+          <span>YouTube Playlist Extractor</span>
         </button>
 
+        {/* Feedback Tab - Desktop / Website Frame Size */}
         <button
-          id="profile-subtab-settings"
+          id="profile-subtab-feedback"
           type="button"
-          onClick={() => setIsSettingsModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-        >
-          <Settings className="w-3.5 h-3.5" />
-          <span>Settings</span>
-        </button>
-
-        <button
-          id="profile-subtab-security"
-          type="button"
-          onClick={() => setActiveTab('security')}
+          onClick={() => {
+            const next = activeTab === 'feedback' ? null : 'feedback';
+            setActiveTab(next);
+            onProfileTabChange?.(next);
+          }}
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
-            activeTab === 'security'
-              ? 'bg-slate-900 text-white font-semibold'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            activeTab === 'feedback'
+              ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-semibold shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <Key className="w-3.5 h-3.5" />
-          <span>Change Password</span>
-        </button>
-
-        <button
-          id="profile-subtab-danger"
-          type="button"
-          onClick={() => setActiveTab('danger')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
-            activeTab === 'danger'
-              ? 'bg-rose-600 text-white font-semibold'
-              : 'text-rose-600 hover:text-rose-700 hover:bg-rose-50'
-          }`}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          <span>Delete Account</span>
-        </button>
-
-        <button
-          id="profile-subtab-permissions"
-          type="button"
-          onClick={() => setActiveTab('permissions')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer shrink-0 ${
-            activeTab === 'permissions'
-              ? 'bg-slate-900 text-white font-semibold'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-          }`}
-        >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span>Role & Permissions</span>
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span>Feedback</span>
         </button>
       </div>
 
       {/* Mobile Dynamic Sub-Page Header (Only on mobile when performing a specific task) */}
       {mobileSubPage !== 'overview' && (
-        <div className="md:hidden flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 shadow-2xs animate-in fade-in duration-150">
+        <div className="md:hidden flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs animate-in fade-in duration-150">
           <button
             type="button"
             id="mobile-back-to-profile-btn"
             onClick={() => {
               setMobileSubPage('overview');
               setActiveTab('profile');
+              onProfileTabChange?.('profile');
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 active:scale-95 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 active:scale-95 transition-all cursor-pointer"
           >
-            <ArrowLeft className="w-3.5 h-3.5 text-slate-600" />
+            <ArrowLeft className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />
             <span>Back to Profile</span>
           </button>
-          <span className="text-xs font-bold text-slate-800">
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
             {mobileSubPage === 'profile'
               ? 'Personal Information'
               : mobileSubPage === 'security'
               ? 'Change Password'
               : mobileSubPage === 'permissions'
               ? 'Roles & Permissions'
+              : mobileSubPage === 'feedback'
+              ? 'Feedback & Suggestions'
               : 'Delete Account'}
           </span>
         </div>
@@ -666,16 +804,32 @@ export function UserProfile({
           id="profile-personal-info-section"
           className={`${
             mobileSubPage !== 'profile' ? 'hidden md:block' : 'block'
-          } bg-white rounded-xl border border-slate-200 p-5 sm:p-6 space-y-6 shadow-xs`}
+          } bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 space-y-6 shadow-xs animate-in fade-in duration-150`}
         >
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
-              <UserIcon className="w-4 h-4 text-slate-700" />
-              <span>Personal Information</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Manage your personal display name and review your registered account details.
-            </p>
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <UserIcon className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                <span>Personal Information</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Manage your personal display name and review your registered account details.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="profile-close-personal-info-btn"
+              onClick={() => {
+                setActiveTab(null);
+                setMobileSubPage('overview');
+                onProfileTabChange?.(null);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer px-2.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Close Personal Information"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
+            </button>
           </div>
 
           {nameSuccess && (
@@ -799,6 +953,278 @@ export function UserProfile({
               )}
             </div>
           </form>
+
+          {/* Quick Tool Shortcut: YouTube Playlist Extractor */}
+          <div
+            id="profile-desktop-youtube-extractor-card"
+            className="hidden md:flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 transition-colors mt-6"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                <UploadCloud className="w-4 h-4" />
+              </div>
+              <div className="space-y-0.5">
+                <h3 className="text-xs font-semibold text-slate-900 dark:text-white">
+                  YouTube Playlist Extractor
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Import full lecture series directly into your curriculum.
+                </p>
+              </div>
+            </div>
+
+            <button
+              id="profile-open-extractor-btn"
+              type="button"
+              onClick={() => setActiveTab('extractor')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 transition-colors cursor-pointer shadow-2xs"
+            >
+              <span>Open Extractor</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION: YouTube Playlist Extractor Workspace (Website / Desktop Frame Only) */}
+      {activeTab === 'extractor' && (
+        <section
+          id="profile-youtube-extractor-workspace"
+          className="hidden md:block bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4 animate-in fade-in duration-150"
+        >
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div>
+              <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <UploadCloud className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                <span>YouTube Playlist Extractor</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Extract video lectures from any public playlist directly into your curriculum.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              id="profile-close-extractor-btn"
+              onClick={() => {
+                setActiveTab(null);
+                onProfileTabChange?.(null);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer px-2.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Close Extractor"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
+            </button>
+          </div>
+
+          <ImportConsole
+            hideHeader={true}
+            onNavigateToSubject={(id) => onNavigateToTab('subjects')}
+            onNavigateToCoding={() => onNavigateToTab('coding')}
+          />
+        </section>
+      )}
+
+      {/* SECTION: User Feedback Form (Website Frame & Mobile Frame Size) */}
+      {(
+        mobileSubPage === 'feedback' ||
+        activeTab === 'feedback'
+      ) && (
+        <section
+          id="profile-feedback-section"
+          className={`${
+            mobileSubPage !== 'feedback' ? 'hidden md:block' : 'block'
+          } bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-5 shadow-xs animate-in fade-in duration-150`}
+        >
+          {/* Header */}
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3.5 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                <span>Feedback & Suggestions</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Share your ideas, report issues, or suggest improvements to help us make the app better.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              id="profile-close-feedback-btn"
+              onClick={() => {
+                setActiveTab(null);
+                setMobileSubPage('overview');
+                onProfileTabChange?.(null);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer px-2.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Close Feedback"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
+            </button>
+          </div>
+
+          {feedbackSuccess && (
+            <div
+              id="feedback-submit-success"
+              className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2.5 animate-in fade-in duration-200"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="font-medium">
+                Thank you! Your feedback has been received and recorded.
+              </span>
+            </div>
+          )}
+
+          {feedbackError && (
+            <div
+              id="feedback-submit-error"
+              className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2.5 animate-in fade-in duration-200"
+            >
+              <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+              <span>{feedbackError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmitFeedback} className="space-y-4 max-w-2xl">
+            {/* Category Segmented Selector */}
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                Type
+              </label>
+              <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 w-fit">
+                {(['General', 'Feature', 'Bug', 'Suggestion'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setFeedbackCategory(cat)}
+                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+                      feedbackCategory === cat
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs font-semibold'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {cat === 'Feature' ? 'Feature Idea' : cat === 'Bug' ? 'Report Bug' : cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Title / Subject */}
+            <div id="feedback-title-block">
+              <label
+                htmlFor="feedback-title-input"
+                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
+              >
+                Subject
+              </label>
+              <input
+                id="feedback-title-input"
+                type="text"
+                value={feedbackTitle}
+                onChange={(e) => {
+                  setFeedbackTitle(e.target.value);
+                  if (feedbackError) setFeedbackError(null);
+                }}
+                disabled={isSubmittingFeedback}
+                placeholder="Brief summary of your feedback..."
+                className="w-full px-3 py-2 text-xs rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-500 text-slate-900 dark:text-white placeholder:text-slate-400 transition-colors"
+                required
+              />
+            </div>
+
+            {/* Description Textarea */}
+            <div id="feedback-description-block">
+              <label
+                htmlFor="feedback-description-input"
+                className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
+              >
+                Details
+              </label>
+              <textarea
+                id="feedback-description-input"
+                rows={4}
+                value={feedbackDescription}
+                onChange={(e) => {
+                  setFeedbackDescription(e.target.value);
+                  if (feedbackError) setFeedbackError(null);
+                }}
+                disabled={isSubmittingFeedback}
+                placeholder="Explain what happened, what you expected, or what you would like to see..."
+                className="w-full px-3 py-2 text-xs rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-500 text-slate-900 dark:text-white placeholder:text-slate-400 transition-colors resize-y leading-relaxed"
+                required
+              />
+            </div>
+
+            {/* Submit Action Row */}
+            <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <button
+                id="submit-feedback-btn"
+                type="submit"
+                disabled={isSubmittingFeedback || !feedbackTitle.trim() || !feedbackDescription.trim()}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+              >
+                {isSubmittingFeedback ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Send Feedback</span>
+                  </>
+                )}
+              </button>
+
+              <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                From <span className="text-slate-600 dark:text-slate-400">{user.name}</span> ({user.email})
+              </span>
+            </div>
+          </form>
+
+          {/* User's Previously Submitted Feedback Section */}
+          <div className="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Past Submissions ({myFeedbacks.length})
+              </h3>
+              {isLoadingMyFeedbacks && (
+                <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Loading...
+                </span>
+              )}
+            </div>
+
+            {myFeedbacks.length === 0 ? (
+              <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">
+                No previous feedback submitted yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {myFeedbacks.map((fb) => (
+                  <div
+                    key={fb.id}
+                    className="p-3 rounded-lg border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="text-xs font-semibold text-slate-900 dark:text-white">
+                        {fb.title}
+                      </h4>
+                      <span className="text-[10px] text-slate-400 shrink-0">
+                        {new Date(fb.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 whitespace-pre-wrap leading-relaxed">
+                      {fb.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>
       )}
 
@@ -813,14 +1239,30 @@ export function UserProfile({
             mobileSubPage !== 'security' ? 'hidden md:block' : 'block'
           } bg-white rounded-xl border border-slate-200 p-5 sm:p-6 space-y-6 shadow-xs`}
         >
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
-              <Key className="w-4 h-4 text-slate-700" />
-              <span>Change Password</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Enter your current password to verify your identity, then set a new secure password.
-            </p>
+          <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
+                <Key className="w-4 h-4 text-slate-700" />
+                <span>Change Password</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Enter your current password to verify your identity, then set a new secure password.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="profile-close-password-btn"
+              onClick={() => {
+                setActiveTab(null);
+                setMobileSubPage('overview');
+                onProfileTabChange?.(null);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer px-2.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Close Change Password"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
+            </button>
           </div>
 
           {passwordSuccess && (
@@ -1014,21 +1456,37 @@ export function UserProfile({
             mobileSubPage !== 'danger' ? 'hidden md:block' : 'block'
           } rounded-xl border-2 border-rose-300 bg-rose-50/50 p-5 sm:p-6 space-y-4 shadow-xs`}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5 text-rose-600" />
+          <div className="flex items-center justify-between gap-3 border-b border-rose-200/80 pb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-rose-950 flex items-center gap-2">
+                  <span>Danger Zone: Delete Account</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider bg-rose-200/80 text-rose-900 px-2 py-0.5 rounded">
+                    Irreversible
+                  </span>
+                </h2>
+                <p className="text-xs text-rose-800/90 mt-0.5">
+                  Permanently purge your account credentials and personal study records.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-rose-950 flex items-center gap-2">
-                <span>Danger Zone: Delete Account</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider bg-rose-200/80 text-rose-900 px-2 py-0.5 rounded">
-                  Irreversible
-                </span>
-              </h2>
-              <p className="text-xs text-rose-800/90 mt-0.5">
-                Permanently purge your account credentials and personal study records.
-              </p>
-            </div>
+            <button
+              type="button"
+              id="profile-close-danger-btn"
+              onClick={() => {
+                setActiveTab(null);
+                setMobileSubPage('overview');
+                onProfileTabChange?.(null);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-rose-700 hover:text-rose-900 cursor-pointer px-2.5 py-1 rounded-lg hover:bg-rose-100 transition-colors"
+              title="Close Danger Zone"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
+            </button>
           </div>
 
           {/* Scope notice box */}
@@ -1133,18 +1591,34 @@ export function UserProfile({
             mobileSubPage !== 'permissions' ? 'hidden md:block' : 'block'
           } bg-white rounded-xl border border-slate-200 p-6 space-y-4 shadow-xs`}
         >
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="p-2.5 rounded-lg bg-slate-100 text-slate-700">
-              <Shield className="w-5 h-5" />
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                <Shield className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-semibold text-slate-900 dark:text-white">
+                  {user.role === 'admin' ? 'Administrator Privileges' : 'Student Scholar Privileges'}
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Role capabilities and feature access assigned to your account.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-semibold text-slate-900">
-                {user.role === 'admin' ? 'Administrator Privileges' : 'Student Scholar Privileges'}
-              </h2>
-              <p className="text-xs text-slate-500">
-                Role capabilities and feature access assigned to your account.
-              </p>
-            </div>
+            <button
+              type="button"
+              id="profile-close-permissions-btn"
+              onClick={() => {
+                setActiveTab(null);
+                setMobileSubPage('overview');
+                onProfileTabChange?.(null);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer px-2.5 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Close Roles & Permissions"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -1260,20 +1734,20 @@ export function UserProfile({
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-settings-modal-title"
-            className="w-[84%] max-w-[340px] sm:w-full sm:max-w-md h-full sm:h-[calc(100vh-1.5rem)] sm:my-3 sm:mr-3 bg-white dark:bg-slate-900 shadow-2xl border-l sm:border border-slate-200/90 dark:border-slate-800 rounded-l-2xl sm:rounded-2xl p-3.5 sm:p-5 overflow-y-auto space-y-3 sm:space-y-3.5 animate-slide-in-right z-10 flex flex-col justify-start"
+            className="w-[88%] max-w-[340px] sm:w-full sm:max-w-md h-full sm:h-[calc(100vh-1.5rem)] sm:my-3 sm:mr-3 bg-white dark:bg-slate-900 shadow-2xl border-l sm:border border-slate-200/90 dark:border-slate-800 rounded-l-2xl sm:rounded-2xl p-2.5 sm:p-5 pt-2 sm:pt-4 overflow-y-auto space-y-2 sm:space-y-3.5 animate-slide-in-right z-10 flex flex-col justify-start"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-800 dark:text-slate-200 shadow-2xs">
+            <div className="flex items-center justify-between pb-2 sm:pb-2.5 border-b border-slate-100 dark:border-slate-800 shrink-0">
+              <div className="flex items-center gap-2 sm:gap-2.5">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-800 dark:text-slate-200 shadow-2xs shrink-0">
                   <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
-                  <h3 id="profile-settings-modal-title" className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                  <h3 id="profile-settings-modal-title" className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-100 leading-tight">
                     Settings & Services
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400">
                     Account management, privacy & security
                   </p>
                 </div>
@@ -1282,29 +1756,29 @@ export function UserProfile({
                 type="button"
                 id="close-profile-settings-btn"
                 onClick={() => setIsSettingsModalOpen(false)}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 aria-label="Close settings"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
 
             {/* List of Settings Service Cards */}
-            <div className="space-y-2 sm:space-y-2.5">
+            <div className="space-y-1.5 sm:space-y-2.5">
               {/* Appearance & Theme Preference Toggle */}
               <div
                 id="settings-theme-preference-card"
-                className="p-2.5 sm:p-3 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-2 transition-all"
+                className="p-2 sm:p-3 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 space-y-1.5 sm:space-y-2 transition-all"
               >
                 <div className="flex items-center gap-2 sm:gap-2.5">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                     <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-tight">
                       Theme Preference
                     </h4>
-                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       Choose between Light, Dark, or System mode
                     </p>
                   </div>
@@ -1312,6 +1786,34 @@ export function UserProfile({
 
                 <ThemeToggle variant="cards" showDescription={false} />
               </div>
+
+              {/* Share Feedback & Suggestions Service Card */}
+              <button
+                type="button"
+                id="settings-service-feedback"
+                onClick={() => {
+                  setActiveTab('feedback');
+                  setMobileSubPage('feedback');
+                  setIsSettingsModalOpen(false);
+                  onProfileTabChange?.('feedback');
+                }}
+                className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                    <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                      Feedback & Suggestions
+                    </h4>
+                    <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      Share ideas, bug reports, or feature requests
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
 
               {/* 1. Edit Personal Information */}
               <button
@@ -1321,18 +1823,19 @@ export function UserProfile({
                   setActiveTab('profile');
                   setMobileSubPage('profile');
                   setIsSettingsModalOpen(false);
+                  onProfileTabChange?.('profile');
                 }}
-                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <Edit3 className="w-4 h-4" />
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                       Edit Personal Information
                     </h4>
-                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       Display name, email & profile details
                     </p>
                   </div>
@@ -1348,18 +1851,19 @@ export function UserProfile({
                   setActiveTab('security');
                   setMobileSubPage('security');
                   setIsSettingsModalOpen(false);
+                  onProfileTabChange?.('security');
                 }}
-                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                    <Key className="w-4 h-4" />
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                       Change Password
                     </h4>
-                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       Update your account security password
                     </p>
                   </div>
@@ -1375,18 +1879,19 @@ export function UserProfile({
                   setActiveTab('permissions');
                   setMobileSubPage('permissions');
                   setIsSettingsModalOpen(false);
+                  onProfileTabChange?.('permissions');
                 }}
-                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50/40 dark:hover:bg-purple-950/20 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50/40 dark:hover:bg-purple-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-4 h-4" />
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                       Roles & Permissions
                     </h4>
-                    <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       View role privileges & system access
                     </p>
                   </div>
@@ -1403,17 +1908,17 @@ export function UserProfile({
                     setIsSettingsModalOpen(false);
                     onNavigateToPrivacy();
                   }}
-                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left transition-all group cursor-pointer"
+                  className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left transition-all group cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
-                      <Shield className="w-4 h-4" />
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
+                      <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                     <div className="min-w-0">
                       <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                         Privacy Guidelines
                       </h4>
-                      <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                         Data privacy policy & GDPR compliance
                       </p>
                     </div>
@@ -1431,17 +1936,17 @@ export function UserProfile({
                     setIsSettingsModalOpen(false);
                     onNavigateToTerms();
                   }}
-                  className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left transition-all group cursor-pointer"
+                  className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-left transition-all group cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4" />
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
+                      <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </div>
                     <div className="min-w-0">
                       <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                         Terms of Service
                       </h4>
-                      <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
                         Platform usage rules & academic agreements
                       </p>
                     </div>
@@ -1458,18 +1963,19 @@ export function UserProfile({
                   setActiveTab('danger');
                   setMobileSubPage('danger');
                   setIsSettingsModalOpen(false);
+                  onProfileTabChange?.('danger');
                 }}
-                className="w-full flex items-center justify-between p-2.5 sm:p-3 rounded-xl border border-rose-200/80 dark:border-rose-900/50 hover:border-rose-400 hover:bg-rose-50/40 dark:hover:bg-rose-950/20 text-left transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-rose-200/80 dark:border-rose-900/50 hover:border-rose-400 hover:bg-rose-50/40 dark:hover:bg-rose-950/20 text-left transition-all group cursor-pointer"
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                    <Trash2 className="w-4 h-4" />
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-rose-700 dark:text-rose-400 group-hover:text-rose-800 dark:group-hover:text-rose-300 transition-colors">
                       Delete Account
                     </h4>
-                    <p className="text-[10px] sm:text-[11px] text-rose-500 dark:text-rose-400/80 truncate">
+                    <p className="text-[9.5px] sm:text-[11px] text-rose-500 dark:text-rose-400/80 truncate">
                       Permanent account removal & data purge
                     </p>
                   </div>
@@ -1479,16 +1985,16 @@ export function UserProfile({
             </div>
 
             {/* Logout Footer Option */}
-            <div className="pt-2 border-t border-slate-100">
+            <div className="pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
               <button
                 type="button"
                 onClick={() => {
                   setIsSettingsModalOpen(false);
                   onLogout();
                 }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 px-2.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span>Log Out of ProgressPath</span>
               </button>
             </div>

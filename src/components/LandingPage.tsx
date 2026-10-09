@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { SystemLogo } from './SystemLogo.tsx';
+import studyDeskBanner from '../assets/images/study_desk_banner_1791446260071.jpg';
+import desktopUiPreview from '../assets/images/desktop_ui_preview.png';
+import { usePWAInstall } from '../hooks/usePWAInstall.ts';
 import {
   BookOpen,
   Code2,
   Calendar as CalendarIcon,
-  CalendarCheck,
-  TrendingUp,
   ArrowRight,
-  CheckCircle2,
-  Circle,
   Shield,
-  Lock,
-  CreditCard,
   X,
-  Youtube,
   Mail,
   Github,
-  Users,
-  Video,
+  Youtube,
+  Laptop,
+  Smartphone,
+  Check,
+  ChevronRight,
+  Download,
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -43,8 +43,13 @@ export function LandingPage({
   onNavigateToPrivacy,
 }: LandingPageProps) {
   const [activeLegalModal, setActiveLegalModal] = useState<'privacy' | 'terms' | 'security' | null>(null);
+  const [activePreviewTab, setActivePreviewTab] = useState<'desktop' | 'mobile' | 'coding'>('desktop');
+  const [showPWAInstallGuide, setShowPWAInstallGuide] = useState(false);
 
-  // Real-time aggregate platform metrics (strictly numerical, zero user private info)
+  // Progressive Web App install prompt hook (supports Chromium Android/Desktop + iOS Safari flow)
+  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+
+  // Real-time aggregate platform metrics
   const [platformStats, setPlatformStats] = useState<PlatformStats>({
     totalUsers: 1,
     totalLectures: 10,
@@ -73,7 +78,7 @@ export function LandingPage({
           }
         }
       } catch {
-        // Fallback store
+        // Fallback default stats
       }
     }
 
@@ -88,559 +93,484 @@ export function LandingPage({
   return (
     <div
       id="landing-page-container"
-      className="min-h-screen w-full bg-white text-slate-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white"
+      className="min-h-screen w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans antialiased"
     >
-      {/* 1. Global Navigation - Reflects the Existing Footer Background (bg-slate-950 border-b border-slate-800) */}
+      {/* 1. TOP BAR NAVIGATION - Fixed / Stuck to Screen with Black Background */}
       <header
         id="landing-header"
-        className="sticky top-0 z-40 w-full bg-slate-950 text-slate-300 border-b border-slate-800 shadow-md transition-colors"
+        className="fixed top-0 left-0 right-0 z-50 w-full bg-black/95 backdrop-blur-md border-b border-zinc-800/90 shadow-md transition-colors"
       >
-        <div className="w-full max-w-[1560px] mx-auto px-3.5 sm:px-8 lg:px-12 2xl:px-16 h-14 sm:h-20 flex items-center justify-between">
-          {/* Brand Logo & Wordmark */}
+        <div className="w-full max-w-[1920px] mx-auto px-3.5 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 h-14 sm:h-18 flex items-center justify-between text-white bg-black">
+          {/* Brand Wordmark & System Logo */}
           <div
             id="landing-brand-logo"
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
             <SystemLogo size="sm" />
-            <span className="font-bold text-white tracking-tight text-base sm:text-2xl">
+            <span className="font-bold text-white tracking-tight text-base sm:text-xl">
               ProgressPath
             </span>
           </div>
 
-          {/* Center Navigation Tagline for Widescreen */}
-          <nav className="hidden lg:flex items-center gap-8 text-sm sm:text-base text-slate-400 font-medium">
-            <span className="hover:text-white transition-colors cursor-default">Learn</span>
-            <span className="text-slate-600 font-bold">&bull;</span>
-            <span className="hover:text-white transition-colors cursor-default">Practice</span>
-            <span className="text-slate-600 font-bold">&bull;</span>
-            <span className="hover:text-white transition-colors cursor-default">Grow</span>
-          </nav>
-
-          {/* Right Action Buttons - Space-friendly on mobile, comfortable on desktop */}
+          {/* Action Buttons */}
           <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             <button
               id="nav-login-btn"
               type="button"
               onClick={onNavigateToLogin}
-              className="text-[11px] sm:text-base font-medium sm:font-semibold text-slate-300 hover:text-white px-2 py-1 sm:px-4 sm:py-2.5 rounded-md sm:rounded-xl hover:bg-slate-900 transition-colors cursor-pointer"
+              className="text-[11px] xs:text-xs sm:text-sm font-semibold text-zinc-200 hover:text-white px-2 xs:px-2.5 sm:px-3.5 py-1 xs:py-1.5 sm:py-2 rounded-md sm:rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer border border-transparent hover:border-zinc-700 leading-tight"
             >
-              Log In
+              Sign In
             </button>
             <button
               id="nav-signup-btn"
               type="button"
               onClick={onNavigateToSignup}
-              className="text-[11px] sm:text-base font-semibold bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white px-2.5 py-1 sm:px-6 sm:py-3 rounded-md sm:rounded-xl transition-all shadow-2xs hover:shadow flex items-center gap-1 sm:gap-2 cursor-pointer"
+              className="text-[11px] xs:text-xs sm:text-sm font-semibold bg-blue-600 hover:bg-blue-500 text-white px-2.5 xs:px-3 sm:px-5 py-1 xs:py-1.5 sm:py-2.5 rounded-md sm:rounded-lg transition-colors flex items-center gap-1 sm:gap-2 cursor-pointer shadow-xs sm:shadow-sm hover:shadow leading-tight"
             >
               <span>Get Started</span>
-              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* 2. Hero Section - Ultra Clean, Crisp & Lightweight */}
+      {/* Header Height Spacer to guarantee perfect alignment below fixed header */}
+      <div className="h-14 sm:h-18 w-full shrink-0" aria-hidden="true" />
+
+      {/* 2. HERO SECTION - Big Screen Size Fitted Banner, Compact App-Style on Mobile */}
       <section
-        id="hero-section"
-        className="relative w-full pt-6 sm:pt-20 lg:pt-24 pb-8 sm:pb-24 px-3.5 sm:px-8 lg:px-12 2xl:px-16 overflow-hidden bg-slate-100 flex items-center min-h-0 sm:min-h-[580px]"
+        id="hero-banner-section"
+        className="relative w-full min-h-0 lg:min-h-[calc(100vh-4.5rem)] flex items-center bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 overflow-hidden"
       >
-        {/* Workspace Desk Background Image */}
-        <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden">
-          <img
-            src="/hero_desk_bg.jpg"
-            alt="ProgressPath Developer Workspace Desk Background"
-            className="w-full h-full object-cover object-bottom sm:object-center brightness-105 contrast-102 scale-[1.02]"
-            referrerPolicy="no-referrer"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/60 to-white/35 sm:to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-white" />
-        </div>
-
-        <div className="w-full max-w-[1560px] mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
-            {/* Left Content Column - Direct, Punchy, Crystal-Clear Words (Targeted Element) */}
-            <div className="lg:col-span-6 space-y-3 sm:space-y-6 text-left">
-              {/* Badge - Clean micro-pill on mobile, full badge on desktop */}
-              <div className="sm:hidden inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50/90 border border-blue-200/60 text-[11px] font-semibold text-blue-700 shadow-2xs backdrop-blur-sm">
+        <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 py-3.5 sm:py-10 lg:py-12 flex-1 flex items-center">
+          <div className="w-full grid grid-cols-12 gap-2.5 sm:gap-6 lg:gap-10 xl:gap-14 2xl:gap-16 items-center">
+            {/* Left Column: Left-Aligned Content (Aligned Horizontally on Mobile) */}
+            <div className="col-span-7 sm:col-span-7 lg:col-span-7 xl:col-span-6 2xl:col-span-6 flex flex-col items-start text-left space-y-1.5 sm:space-y-5 lg:space-y-7 xl:space-y-8 z-10">
+              {/* Mobile App pill tag */}
+              <div className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200/70 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 text-[10px] sm:text-[11px] font-semibold lg:hidden">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                <span>CS Study &amp; Practice</span>
-              </div>
-              <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 border border-blue-200/80 text-sm font-semibold text-blue-700 shadow-2xs backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                <span>CS Curriculum &amp; Practice System</span>
+                <span className="truncate">Next-Gen LMS</span>
               </div>
 
-              {/* Headline - Light, high-impact aesthetic on mobile */}
-              <h1 className="sm:hidden text-[26px] font-black tracking-tight text-slate-950 leading-tight">
-                Master CS &amp; Code.{' '}
-                <span className="text-blue-600 block">Clean &amp; Focused.</span>
-              </h1>
+              {/* Left-Aligned Headline */}
               <h1
                 id="hero-headline"
-                className="hidden sm:block text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 leading-[1.14]"
+                className="text-sm xs:text-base sm:text-3xl md:text-5xl lg:text-[46px] xl:text-[56px] 2xl:text-[64px] font-bold tracking-tight text-slate-950 dark:text-white leading-[1.2] sm:leading-[1.12]"
+                style={{ textWrap: 'balance' }}
               >
-                Master Computer Science.{' '}
-                <span className="text-blue-600 block sm:inline">With Zero Clutter.</span>
+                Engineering Study &amp; Problem Tracking Without Clutter.
               </h1>
 
-              {/* Subtext - Crisp single line on mobile, complete copy on desktop */}
-              <p className="sm:hidden text-xs text-slate-600 leading-relaxed font-normal">
-                Curated roadmaps, LeetCode vaults, and study planner.
-              </p>
+              {/* Left-Aligned Subtitle */}
               <p
                 id="hero-subtext"
-                className="hidden sm:block text-lg text-slate-700 leading-relaxed max-w-xl font-normal"
+                className="text-[11px] sm:text-base lg:text-lg xl:text-xl text-slate-600 dark:text-slate-300 max-w-2xl leading-snug sm:leading-relaxed line-clamp-2 sm:line-clamp-none"
               >
-                Sequential lecture roadmaps, curated LeetCode vaults, and daily study scheduling — built to help you learn without distractions.
+                Curated video lecture roadmaps, LeetCode problem vaults, and daily academic scheduling built for engineering students to maintain focused momentum across every laptop and display.
               </p>
 
-              {/* Desktop Action Buttons (Mobile uses sticky top navigation buttons for zero clutter) */}
-              <div className="hidden sm:flex pt-2 items-center gap-3">
+              {/* Primary Action Buttons (Left-Aligned) */}
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 w-auto pt-0.5 sm:pt-1">
                 <button
                   id="hero-signup-btn"
                   type="button"
                   onClick={onNavigateToSignup}
-                  className="inline-flex items-center justify-center gap-3 px-9 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-lg shadow-md hover:shadow-xl transition-all cursor-pointer group"
+                  className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2.5 xs:px-3 sm:px-8 py-1 xs:py-1.5 sm:py-4 rounded-md sm:rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] xs:text-xs sm:text-base transition-all cursor-pointer shadow-xs hover:shadow active:scale-98 leading-tight"
                 >
-                  <span>Start Learning Free</span>
-                  <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                  <span className="sm:inline hidden">Start Learning Free</span>
+                  <span className="sm:hidden inline">Start Free</span>
+                  <ArrowRight className="w-2.5 h-2.5 xs:w-3 xs:h-3 sm:w-4 sm:h-4" />
+                </button>
+
+                {/* Nearby PWA Install / Download App Button */}
+                <button
+                  id="hero-pwa-install-btn"
+                  type="button"
+                  onClick={async () => {
+                    if (isInstalled) {
+                      // Already installed, show friendly confirmation
+                      setShowPWAInstallGuide(true);
+                      return;
+                    }
+                    if (isInstallable) {
+                      const outcome = await install();
+                      if (!outcome) {
+                        setShowPWAInstallGuide(true);
+                      }
+                    } else {
+                      // iOS Safari, Firefox, or browser without active beforeinstallprompt
+                      setShowPWAInstallGuide(true);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2.5 xs:px-3 sm:px-6 py-1 xs:py-1.5 sm:py-4 rounded-md sm:rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-[11px] xs:text-xs sm:text-base transition-all cursor-pointer border border-slate-300/80 dark:border-slate-700 shadow-xs hover:shadow active:scale-98 leading-tight"
+                  title="Download and install ProgressPath as an app on your mobile or desktop"
+                >
+                  <Download className="w-2.5 h-2.5 xs:w-3 xs:h-3 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="sm:inline hidden">
+                    {isInstalled ? 'App Installed' : 'Download App (PWA)'}
+                  </span>
+                  <span className="sm:hidden inline">
+                    {isInstalled ? 'Installed' : 'Download App'}
+                  </span>
                 </button>
               </div>
 
-              {/* Micro Trust Row - Clean, single-line micro-strip on mobile, full badges on desktop */}
-              <div className="sm:hidden flex items-center justify-between text-[10px] text-slate-500 font-medium pt-2 border-t border-slate-200/60">
-                <span className="flex items-center gap-1">
-                  <Shield className="w-3 h-3 text-slate-400" /> Free forever
+              {/* Trust Notes (Unboxed Metadata) */}
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-[9px] xs:text-[10px] sm:text-sm text-slate-500 dark:text-slate-400 pt-0 sm:pt-1">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 font-medium text-slate-700 dark:text-slate-300">
+                  <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Free</span>
                 </span>
-                <span className="text-slate-300">&bull;</span>
-                <span className="flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-slate-400" /> 100% private
-                </span>
-                <span className="text-slate-300">&bull;</span>
-                <span>No credit card</span>
-              </div>
-              <div className="hidden sm:flex pt-2 flex-wrap items-center gap-6 text-sm text-slate-600 font-medium">
-                <span className="flex items-center gap-1">
-                  <Shield className="w-4 h-4 text-slate-500" /> Free forever
-                </span>
-                <span className="flex items-center gap-1">
-                  <Lock className="w-4 h-4 text-slate-500" /> 100% private data
-                </span>
-                <span className="flex items-center gap-1">
-                  <CreditCard className="w-4 h-4 text-slate-500" /> No credit card
-                </span>
+                <span aria-hidden="true">&bull;</span>
+                <span>Private</span>
+                <span aria-hidden="true">&bull;</span>
+                <span>PWA</span>
               </div>
             </div>
 
-            {/* Desktop-Only Clean Mockup (Completely hidden on mobile to eliminate clutter) */}
-            <div className="hidden lg:flex col-span-6 relative items-center justify-end">
-              <div className="w-full max-w-xl bg-white/95 backdrop-blur-md rounded-3xl border border-slate-200/90 shadow-2xl p-6 text-left space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                      P
+            {/* Right Column: Attached Image (Aligned Horizontally on Mobile) */}
+            <div className="col-span-5 sm:col-span-5 lg:col-span-5 xl:col-span-6 2xl:col-span-6 relative w-full h-auto self-center sm:self-auto sm:h-64 md:h-80 lg:h-[calc(100vh-9.5rem)] xl:h-[calc(100vh-9rem)] min-h-[135px] xs:min-h-[155px] sm:min-h-[240px] lg:min-h-[460px] max-h-[220px] sm:max-h-[340px] lg:max-h-[720px] flex items-center justify-center">
+              <div className="relative w-full h-full min-h-[135px] xs:min-h-[155px] sm:min-h-[240px] rounded-lg sm:rounded-2xl lg:rounded-3xl overflow-hidden border border-slate-200/90 dark:border-slate-800/90 shadow-xs sm:shadow-2xl bg-slate-100 dark:bg-slate-900 group aspect-[4/3] sm:aspect-auto">
+                {/* The Attached Study Desk Image */}
+                <img
+                  src={studyDeskBanner}
+                  alt="Study desk with open textbook, notebooks, colorful pens, and library bookshelf"
+                  className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                  loading="eager"
+                />
+
+                {/* 1. Left Partial Gradient Overlay */}
+                <div
+                  className="absolute inset-y-0 left-0 w-8 sm:w-40 lg:w-48 xl:w-60 bg-gradient-to-r from-white via-white/70 to-transparent dark:from-slate-950 dark:via-slate-950/70 dark:to-transparent pointer-events-none"
+                  aria-hidden="true"
+                />
+
+                {/* 2. Bottom Partial Gradient Overlay */}
+                <div
+                  className="absolute inset-x-0 bottom-0 h-8 sm:h-44 bg-gradient-to-t from-white via-white/60 to-transparent dark:from-slate-950 dark:via-slate-950/60 dark:to-transparent pointer-events-none"
+                  aria-hidden="true"
+                />
+
+                {/* 3. Top Partial Accent Gradient */}
+                <div
+                  className="absolute inset-x-0 top-0 h-6 sm:h-20 bg-gradient-to-b from-white/40 to-transparent dark:from-slate-950/40 dark:to-transparent pointer-events-none"
+                  aria-hidden="true"
+                />
+
+                {/* Floating Study Focus Card */}
+                <div className="absolute bottom-1.5 right-1.5 sm:bottom-6 sm:right-6 max-w-[125px] sm:max-w-sm p-1.5 sm:p-4 rounded-md sm:rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 shadow-xs sm:shadow-lg text-left z-20 hidden xs:block sm:block">
+                  <div className="flex items-center gap-1.5 sm:gap-3">
+                    <div className="w-5 h-5 sm:w-9 sm:h-9 rounded sm:rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
                     </div>
-                    <span className="text-sm font-bold text-slate-900">Workspace Overview</span>
-                  </div>
-                  <span className="text-xs font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold">
-                    Live Sync
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[11px] text-slate-500 block font-medium">DSA Roadmap</span>
-                    <span className="text-base font-bold text-slate-900 block mt-0.5">60% Done</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[11px] text-slate-500 block font-medium">Problem Vault</span>
-                    <span className="text-base font-bold text-slate-900 block mt-0.5">150 Questions</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-[11px] text-slate-500 block font-medium">Daily Focus</span>
-                    <span className="text-base font-bold text-slate-900 block mt-0.5">3 Scheduled</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 text-xs">
-                    <span className="font-medium text-slate-800">Arrays &amp; Two Pointers</span>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 text-xs">
-                    <span className="font-medium text-slate-800">Linked Lists &amp; Fast-Slow</span>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-white border border-slate-100 text-xs">
-                    <span className="font-medium text-slate-600">Trees &amp; Binary Search</span>
-                    <Circle className="w-4 h-4 text-slate-300" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Real-Time Platform Stats - Compact Small Cards with Live Numbers (No User Private Details) */}
-      <section
-        id="live-stats-section"
-        className="w-full py-5 sm:py-9 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-slate-900 text-white border-y border-slate-800"
-      >
-        <div className="w-full max-w-[1560px] mx-auto space-y-3.5 sm:space-y-5">
-          {/* Section Header with Live Activity Pulse */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-emerald-500"></span>
-              </span>
-              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-emerald-400">
-                Live Platform Activity
-              </span>
-            </div>
-            <span className="text-[10px] sm:text-xs text-slate-400">
-              Real-time aggregate platform statistics &bull; 100% private data
-            </span>
-          </div>
-
-          {/* 5 Small Real-Time Stat Cards Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
-            {/* Card 1: Real-time Number of Users */}
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Total Users</span>
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-blue-500/15 text-blue-400 flex items-center justify-center shrink-0">
-                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-              </div>
-              <div className="text-lg sm:text-2xl font-black text-white tracking-tight">
-                {platformStats.totalUsers.toLocaleString()}
-              </div>
-              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
-                Active learners
-              </p>
-            </div>
-
-            {/* Card 2: Total Number of Lectures */}
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Total Lectures</span>
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0">
-                  <Video className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-              </div>
-              <div className="text-lg sm:text-2xl font-black text-white tracking-tight">
-                {platformStats.totalLectures.toLocaleString()}
-              </div>
-              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
-                Curriculum sessions
-              </p>
-            </div>
-
-            {/* Card 3: Completed Lectures */}
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Completed</span>
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-              </div>
-              <div className="text-lg sm:text-2xl font-black text-emerald-400 tracking-tight">
-                {platformStats.completedLectures.toLocaleString()}
-              </div>
-              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
-                Lectures completed
-              </p>
-            </div>
-
-            {/* Card 4: LeetCode Questions */}
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">LeetCode</span>
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
-                  <Code2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-              </div>
-              <div className="text-lg sm:text-2xl font-black text-amber-400 tracking-tight">
-                {platformStats.leetcodeQuestions.toLocaleString()}
-              </div>
-              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
-                Questions in vault
-              </p>
-            </div>
-
-            {/* Card 5: Total Users with Tasks Added */}
-            <div className="col-span-2 sm:col-span-1 bg-slate-800/80 border border-slate-700/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-left space-y-1 shadow-2xs hover:border-slate-600 transition-colors">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] sm:text-xs font-semibold text-slate-300">Users with Tasks</span>
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0">
-                  <CalendarCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </div>
-              </div>
-              <div className="text-lg sm:text-2xl font-black text-purple-400 tracking-tight">
-                {platformStats.usersWithTasks.toLocaleString()}
-              </div>
-              <p className="text-[10px] sm:text-xs text-slate-400 truncate">
-                {platformStats.totalTasksAdded} tasks logged
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Core Features - Tiny Small Cards (Mobile: Row 1 = 2 columns, Row 2 = 1 column; Desktop = 3 columns) */}
-      <section
-        id="features-section"
-        className="w-full py-5 sm:py-20 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-white border-t border-slate-100"
-      >
-        <div className="w-full max-w-[1560px] mx-auto text-center space-y-4 sm:space-y-10">
-          <div className="space-y-0.5 sm:space-y-2">
-            <span className="text-[10px] sm:text-xs font-bold tracking-widest text-blue-600 uppercase">
-              BUILT FOR CLARITY
-            </span>
-            <h2 className="text-lg sm:text-4xl font-extrabold text-slate-950 tracking-tight">
-              Everything You Need. Nothing You Don't.
-            </h2>
-          </div>
-
-          {/* Tiny Cards Grid: Mobile Row 1 = 2 cols, Row 2 = 1 col (spanning 2); Desktop = 3 cols */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-6 text-left">
-            {/* Card 1: Row 1, Col 1 */}
-            <div className="p-3 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/90 bg-white hover:border-blue-300 hover:shadow-xs transition-all shadow-2xs space-y-1.5 sm:space-y-2.5">
-              <div className="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                <BookOpen className="w-3.5 h-3.5 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-lg font-bold text-slate-900 mb-0.5 sm:mb-1 leading-snug">
-                  Roadmaps
-                </h3>
-                <p className="text-[11px] sm:text-sm text-slate-600 leading-tight sm:leading-relaxed">
-                  Sequential DSA, OS &amp; DBMS curriculums with progress tracking.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 2: Row 1, Col 2 */}
-            <div className="p-3 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/90 bg-white hover:border-emerald-300 hover:shadow-xs transition-all shadow-2xs space-y-1.5 sm:space-y-2.5">
-              <div className="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <Code2 className="w-3.5 h-3.5 sm:w-6 sm:h-6" />
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-lg font-bold text-slate-900 mb-0.5 sm:mb-1 leading-snug">
-                  Problem Vault
-                </h3>
-                <p className="text-[11px] sm:text-sm text-slate-600 leading-tight sm:leading-relaxed">
-                  Curated LeetCode problems organized by pattern &amp; difficulty.
-                </p>
-              </div>
-            </div>
-
-            {/* Card 3: Row 2, Col 1 (Spans full width across 2 columns on mobile) */}
-            <div className="col-span-2 sm:col-span-1 p-3 sm:p-6 rounded-xl sm:rounded-2xl border border-slate-200/90 bg-white hover:border-purple-300 hover:shadow-xs transition-all shadow-2xs">
-              <div className="flex sm:flex-col items-center sm:items-start gap-2.5 sm:gap-0 sm:space-y-2.5 text-left">
-                <div className="w-7 h-7 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                  <CalendarIcon className="w-3.5 h-3.5 sm:w-6 sm:h-6" />
-                </div>
-                <div>
-                  <h3 className="text-xs sm:text-lg font-bold text-slate-900 mb-0.5 sm:mb-1 leading-snug">
-                    Daily Study Planner
-                  </h3>
-                  <p className="text-[11px] sm:text-sm text-slate-600 leading-tight sm:leading-relaxed">
-                    Schedule focus blocks, set priorities &amp; track completed tasks.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Desktop-Only Showcase (Hidden on Mobile to keep Mobile clean & light) */}
-      <section
-        id="showcase-section"
-        className="hidden sm:block w-full py-16 lg:py-24 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-slate-50/60"
-      >
-        <div className="w-full max-w-[1560px] mx-auto bg-slate-100/70 rounded-3xl p-8 sm:p-14 border border-slate-200/70">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-            {/* Left Column: Overlapping Mockups */}
-            <div className="lg:col-span-7 relative flex items-center justify-center">
-              <div className="w-full max-w-lg bg-white rounded-3xl border border-slate-200 shadow-xl p-6 space-y-4 text-left ml-auto">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <span className="text-base font-bold text-slate-900">Today's Plan</span>
-                  <span className="text-xs font-mono text-slate-400">Study Session</span>
-                </div>
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
-                      <span className="font-mono text-slate-500 text-xs">09:00 &ndash; 10:30</span>
-                      <span className="font-semibold text-slate-900">Operating Systems</span>
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-600 border border-rose-100">
-                      High
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-5 h-5 rounded-full border border-blue-400 shrink-0 flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <div className="min-w-0">
+                      <div className="text-[10px] sm:text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">
+                        Deep Study Mode
                       </div>
-                      <span className="font-mono text-slate-500 text-xs">11:00 &ndash; 12:00</span>
-                      <span className="font-semibold text-slate-900">DSA Practice</span>
+                      <div className="text-[8px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                        Zero distraction focus
+                      </div>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
-                      Normal
-                    </span>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Right Column: Copy */}
-            <div className="lg:col-span-5 space-y-5 text-left">
-              <span className="text-xs font-bold tracking-widest text-slate-400 uppercase block">
-                BUILT FOR YOUR GOALS
-              </span>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
-                Learn. Practice. <br />
-                Get Interview Ready.
-              </h3>
-              <p className="text-base text-slate-600 leading-relaxed">
-                A simple, focused platform for engineering students and developers to maintain daily momentum.
-              </p>
-              <div className="pt-2 space-y-3 text-sm font-medium text-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>Sequential roadmaps with video lectures</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>Practice with curated coding problems</span>
-                </div>
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                  <span>Daily schedule to stay consistent</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* 6. Closing Call To Action (Compact & Clean on Mobile, Spacious on Desktop) */}
+      {/* 3. REAL-TIME STATS STRIP (App-style Compact Bento Grid) */}
       <section
-        id="closing-cta-section"
-        className="relative w-full py-4 sm:py-24 px-3.5 sm:px-8 lg:px-12 2xl:px-16 bg-gradient-to-b from-white via-blue-50/25 to-blue-50/60 overflow-hidden text-center"
+        id="stats-strip"
+        className="w-full py-5 sm:py-10 bg-slate-100/90 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-3.5 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20"
       >
-        {/* Mountain Peak Vector Illustration in Background (Desktop only) */}
-        <div className="hidden sm:flex absolute bottom-0 left-0 right-0 w-full justify-center pointer-events-none opacity-40 select-none overflow-hidden">
-          <svg
-            viewBox="0 0 1600 260"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-full max-w-7xl h-auto"
-          >
-            <polygon points="120,260 400,130 680,260" fill="#E2E8F0" />
-            <polygon points="400,130 460,170 400,260" fill="#CBD5E1" />
-            <polygon points="560,260 960,40 1360,260" fill="#E2E8F0" />
-            <polygon points="960,40 1040,120 960,260" fill="#CBD5E1" />
-            <polygon points="920,260 960,40 1000,120" fill="#F1F5F9" />
-            <line x1="960" y1="40" x2="960" y2="12" stroke="#3B82F6" strokeWidth="3" strokeLinecap="round" />
-            <polygon points="960,12 1005,24 960,36" fill="#3B82F6" />
-          </svg>
-        </div>
-
-        <div className="relative z-10 max-w-2xl mx-auto space-y-2 sm:space-y-6">
-          <h2 className="text-sm sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight leading-snug">
-            <span className="sm:hidden">Start Your Preparation Today</span>
-            <span className="hidden sm:inline">Build Compounding Technical Competence Every Single Day.</span>
-          </h2>
-
-          <p className="hidden sm:block text-xs sm:text-base text-slate-600 max-w-lg mx-auto">
-            Join learners tracking roadmaps, problem solving, and daily study habits without cognitive noise.
-          </p>
-
-          <div className="pt-0.5 sm:pt-1">
-            <button
-              id="cta-signup-btn"
-              type="button"
-              onClick={onNavigateToSignup}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 sm:px-10 sm:py-4 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold text-xs sm:text-base shadow-sm hover:shadow-xl transition-all cursor-pointer group"
-            >
-              <span>Get Started Free</span>
-              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-1" />
-            </button>
+        <div className="w-full max-w-[1920px] mx-auto grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-6 text-left sm:text-center">
+          <div className="p-3 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-slate-900 dark:text-white font-mono tabular-nums leading-tight">
+              {platformStats.totalUsers.toLocaleString()}
+            </div>
+            <div className="text-[10px] sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-medium truncate">
+              Registered Learners
+            </div>
           </div>
 
-          <div className="hidden sm:block pt-1 text-[11px] sm:text-xs text-slate-500 font-medium">
-            <span>Free forever</span>
-            <span className="mx-2 sm:mx-3">&bull;</span>
-            <span>100% private data</span>
-            <span className="mx-2 sm:mx-3">&bull;</span>
-            <span>No credit card required</span>
+          <div className="p-3 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-blue-600 dark:text-blue-400 font-mono tabular-nums leading-tight">
+              {platformStats.totalLectures.toLocaleString()}
+            </div>
+            <div className="text-[10px] sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-medium truncate">
+              Video Lectures
+            </div>
+          </div>
+
+          <div className="p-3 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums leading-tight">
+              {platformStats.leetcodeQuestions.toLocaleString()}
+            </div>
+            <div className="text-[10px] sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-medium truncate">
+              LeetCode Problems
+            </div>
+          </div>
+
+          <div className="p-3 sm:p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs">
+            <div className="text-xl sm:text-3xl lg:text-4xl font-bold text-slate-800 dark:text-slate-200 font-mono tabular-nums leading-tight">
+              {platformStats.totalTasksAdded.toLocaleString()}
+            </div>
+            <div className="text-[10px] sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-medium truncate">
+              Tasks Solved
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 7. Comprehensive Professional Footer */}
-      <footer id="landing-footer" className="w-full bg-slate-950 text-slate-400 border-t border-slate-800">
-        <div className="w-full max-w-[1560px] mx-auto px-3.5 sm:px-8 lg:px-12 2xl:px-16 pt-3.5 sm:pt-16 pb-3.5 sm:pb-12">
-          {/* Mobile-Only Minimal Structured Footer - Minimal Vertical Space */}
-          <div className="sm:hidden space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div
-                className="flex items-center gap-2 cursor-pointer select-none"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              >
-                <SystemLogo size="sm" />
-                <span className="font-bold text-white tracking-tight text-xs">
-                  ProgressPath
-                </span>
-              </div>
+      {/* 4. INTERACTIVE INTERFACE TOUR (Practical Clean Switcher - Full Screen Fitted) */}
+      <section
+        id="ui-preview-section"
+        className="hidden md:block w-full py-10 sm:py-24 px-3.5 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800"
+      >
+        <div className="w-full max-w-[1920px] mx-auto space-y-6 sm:space-y-12">
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs sm:text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+              Interface Tour
+            </span>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-slate-950 dark:text-white tracking-tight">
+              A Clear, Functional Workspace.
+            </h2>
+            <p className="text-xs sm:text-base text-slate-600 dark:text-slate-400">
+              Designed like practical developer tools — fast, predictable, and focused on study output across any laptop screen.
+            </p>
+          </div>
 
-              <div className="flex items-center gap-2">
-                <a
-                  href="mailto:luckypc08292@gmail.com?subject=ProgressPath%20Inquiry"
-                  aria-label="Gmail Support"
-                  className="w-6 h-6 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-red-400 flex items-center justify-center"
-                >
-                  <Mail className="w-3 h-3" />
-                </a>
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="GitHub"
-                  className="w-6 h-6 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center"
-                >
-                  <Github className="w-3 h-3" />
-                </a>
-                <a
-                  href="https://www.youtube.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="YouTube"
-                  className="w-6 h-6 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-red-500 flex items-center justify-center"
-                >
-                  <Youtube className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1.5 border-t border-slate-800/80">
+          {/* Simple Segmented Tabs (Solid, No Gradients) */}
+          <div className="flex items-center justify-center">
+            <div className="inline-flex p-1 sm:p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
               <button
                 type="button"
-                onClick={() => {
-                  if (onNavigateToPrivacy) onNavigateToPrivacy();
-                  else setActiveLegalModal('privacy');
-                }}
-                className="hover:text-white transition-colors cursor-pointer"
+                onClick={() => setActivePreviewTab('desktop')}
+                className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+                  activePreviewTab === 'desktop'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
               >
-                Privacy Policy
+                <Laptop className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Desktop Workspace</span>
               </button>
-              <span className="text-slate-700">&bull;</span>
+              <button
+                type="button"
+                onClick={() => setActivePreviewTab('mobile')}
+                className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
+                  activePreviewTab === 'mobile'
+                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Mobile App</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Card Showcase with Solid Full-Width Responsive Styling */}
+          <div className="rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3.5 sm:p-8 lg:p-10 text-left shadow-2xs sm:shadow-sm">
+            {activePreviewTab === 'desktop' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 xl:gap-12 items-center">
+                <div className="lg:col-span-8 xl:col-span-8 2xl:col-span-8 rounded-lg sm:rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 aspect-video shadow-xs sm:shadow-md">
+                  <img
+                    src={desktopUiPreview}
+                    alt="Desktop Workspace View"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/desktop_ui_preview.png';
+                    }}
+                  />
+                </div>
+                <div className="lg:col-span-4 xl:col-span-4 2xl:col-span-4 space-y-2.5 sm:space-y-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                    <Laptop className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <h3 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
+                    Wide-Screen Multi-Tasking
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Watch sequential YouTube lectures without distractions, write private Markdown notes, and track milestone percentage completion on full-screen displays.
+                  </p>
+                  <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 pt-0.5 sm:pt-1">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Ad-free YouTube player with notes</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Exam readiness bento metrics</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>One-click solution walkthroughs</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {activePreviewTab === 'mobile' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 xl:gap-12 items-center">
+                <div className="lg:col-span-6 flex justify-center">
+                  <div className="w-56 sm:w-72 rounded-2xl sm:rounded-3xl overflow-hidden border-2 sm:border-4 border-slate-700 bg-black shadow-lg sm:shadow-xl">
+                    <img
+                      src="/src/assets/images/mobile_ui_preview_1791443137159.jpg"
+                      alt="Mobile App View"
+                      className="w-full aspect-[3/4] object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                </div>
+                <div className="lg:col-span-6 space-y-2.5 sm:space-y-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Smartphone className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <h3 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white">
+                    PWA Mobile Touch Experience
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Install ProgressPath onto your smartphone. Zero-blank opening splash screen, right-sliding flyout preferences, and thumb-friendly buttons.
+                  </p>
+                  <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-slate-700 dark:text-slate-300 pt-0.5 sm:pt-1">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>Instant zero-millisecond splash launch</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>Floating flyout side drawer panel</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>Offline service worker precaching</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* 5. CORE THREE FEATURES (App-like Modular Cards) */}
+      <section
+        id="features-section"
+        className="w-full py-6 sm:py-24 px-3 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800"
+      >
+        <div className="w-full max-w-[1920px] mx-auto space-y-4 sm:space-y-12">
+          <div className="text-center space-y-1.5 sm:space-y-2 max-w-2xl mx-auto">
+            <span className="text-[10px] sm:text-sm font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+              Core Features
+            </span>
+            <h2 className="text-lg sm:text-3xl md:text-4xl font-bold text-slate-950 dark:text-white tracking-tight">
+              The Three Core Pillars.
+            </h2>
+            <p className="text-[11px] sm:text-base text-slate-600 dark:text-slate-400">
+              Everything needed to build real technical skill, with zero unnecessary distractions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5 xs:gap-2.5 sm:gap-6 lg:gap-8 text-left">
+            {/* Card 1 */}
+            <div className="p-2 xs:p-2.5 sm:p-8 lg:p-9 rounded-lg sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 space-y-1 sm:space-y-4 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-md sm:rounded-xl bg-blue-50 dark:bg-slate-800 text-blue-600 dark:text-slate-200 flex items-center justify-center shrink-0 mb-1 sm:mb-3">
+                  <BookOpen className="w-3 h-3 sm:w-5 sm:h-5" />
+                </div>
+                <h3 className="text-[11px] xs:text-xs sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                  01. Curated Roadmaps
+                </h3>
+              </div>
+              <p className="text-[9px] xs:text-[10px] sm:text-sm text-slate-600 dark:text-slate-400 leading-tight sm:leading-relaxed line-clamp-3 sm:line-clamp-none mt-1 sm:mt-0">
+                Sequenced syllabi for DSA, OS, Networks, and DBMS. Track watched videos and notes.
+              </p>
+            </div>
+
+            {/* Card 2 */}
+            <div className="p-2 xs:p-2.5 sm:p-8 lg:p-9 rounded-lg sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 space-y-1 sm:space-y-4 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-md sm:rounded-xl bg-emerald-50 dark:bg-slate-800 text-emerald-600 dark:text-slate-200 flex items-center justify-center shrink-0 mb-1 sm:mb-3">
+                  <Code2 className="w-3 h-3 sm:w-5 sm:h-5" />
+                </div>
+                <h3 className="text-[11px] xs:text-xs sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                  02. Problem Vault
+                </h3>
+              </div>
+              <p className="text-[9px] xs:text-[10px] sm:text-sm text-slate-600 dark:text-slate-400 leading-tight sm:leading-relaxed line-clamp-3 sm:line-clamp-none mt-1 sm:mt-0">
+                Curated LeetCode problems grouped by patterns. Flag problems to revisit before interviews.
+              </p>
+            </div>
+
+            {/* Card 3 */}
+            <div className="p-2 xs:p-2.5 sm:p-8 lg:p-9 rounded-lg sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 space-y-1 sm:space-y-4 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-md sm:rounded-xl bg-amber-50 dark:bg-slate-800 text-amber-600 dark:text-slate-200 flex items-center justify-center shrink-0 mb-1 sm:mb-3">
+                  <CalendarIcon className="w-3 h-3 sm:w-5 sm:h-5" />
+                </div>
+                <h3 className="text-[11px] xs:text-xs sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                  03. Daily Study Planner
+                </h3>
+              </div>
+              <p className="text-[9px] xs:text-[10px] sm:text-sm text-slate-600 dark:text-slate-400 leading-tight sm:leading-relaxed line-clamp-3 sm:line-clamp-none mt-1 sm:mt-0">
+                Schedule study sessions, prioritize tasks, and build daily consistency before coding.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. PHILOSOPHY CALLOUT (Practical & Full Screen Fitted) */}
+      <section
+        id="about-philosophy"
+        className="w-full py-5 sm:py-24 px-3 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-center"
+      >
+        <div className="w-full max-w-[1920px] mx-auto">
+          <div className="w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto p-3.5 xs:p-4 sm:p-12 lg:p-16 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 sm:space-y-6 shadow-2xs sm:shadow-sm">
+            <div className="inline-flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+              <span>Built Without Social Traps</span>
+            </div>
+
+            <h2 className="text-sm xs:text-base sm:text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight leading-snug sm:leading-tight">
+              No Public Leaderboards. No Distracting Feeds.
+            </h2>
+
+            <p className="text-[11px] sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-snug sm:leading-relaxed">
+              Most study platforms compete for user screen-time using public rank shaming and notification spam. ProgressPath is built as a private, calm desk for disciplined engineering work across every device.
+            </p>
+
+            <div className="pt-0.5 sm:pt-2">
+              <button
+                type="button"
+                onClick={onNavigateToSignup}
+                className="inline-flex items-center justify-center gap-1 sm:gap-2 px-2.5 xs:px-3 sm:px-7 py-1.5 xs:py-1.5 sm:py-3.5 rounded-md sm:rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[11px] xs:text-xs sm:text-base transition-colors cursor-pointer shadow-xs hover:shadow active:scale-98 leading-tight"
+              >
+                <span>Create Free Account</span>
+                <ArrowRight className="w-2.5 h-2.5 xs:w-3 xs:h-3 sm:w-4 sm:h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. PRACTICAL FOOTER (Full Screen Fitted) */}
+      <footer id="landing-footer" className="w-full bg-slate-950 text-slate-400 py-8 sm:py-12 px-3.5 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 text-xs sm:text-sm">
+        <div className="w-full max-w-[1920px] mx-auto space-y-6 sm:space-y-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 sm:gap-6">
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <SystemLogo size="sm" />
+              <span className="font-bold text-white text-base sm:text-lg">ProgressPath</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-slate-400 text-xs sm:text-sm">
               <button
                 type="button"
                 onClick={() => {
@@ -651,7 +581,16 @@ export function LandingPage({
               >
                 Terms of Service
               </button>
-              <span className="text-slate-700">&bull;</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onNavigateToPrivacy) onNavigateToPrivacy();
+                  else setActiveLegalModal('privacy');
+                }}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Privacy Policy
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveLegalModal('security')}
@@ -659,348 +598,67 @@ export function LandingPage({
               >
                 Security
               </button>
-            </div>
-
-            <div className="flex items-center justify-between text-[9px] text-slate-500 pt-0.5">
-              <span>&copy; {new Date().getFullYear()} ProgressPath</span>
-              <span className="font-mono text-slate-500">luckypc08292@gmail.com</span>
-            </div>
-          </div>
-
-          {/* Desktop Full Multi-Column Grid */}
-          <div className="hidden sm:grid grid-cols-2 md:grid-cols-2 lg:grid-cols-12 gap-x-4 gap-y-6 sm:gap-8 lg:gap-12 pb-6 sm:pb-12 border-b border-slate-800/80">
-            {/* Column 1: Brand Info & Social Icons */}
-            <div className="col-span-2 lg:col-span-5 space-y-2.5 sm:space-y-5 text-left">
-              <div
-                className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              >
-                <SystemLogo size="sm" />
-                <span className="font-bold text-white tracking-tight text-lg sm:text-xl">
-                  ProgressPath
-                </span>
-              </div>
-
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed max-w-sm line-clamp-2 sm:line-clamp-none">
-                The structured engineering study platform and algorithmic practice vault. Designed to turn scattered study notes into verifiable technical competence.
-              </p>
-
-              {/* Social & Contact Icons including Gmail and YouTube */}
-              <div className="flex items-center gap-2.5 sm:gap-3 pt-0.5 sm:pt-1">
-                {/* Gmail direct contact */}
-                <a
-                  href="mailto:luckypc08292@gmail.com?subject=ProgressPath%20Inquiry%20&amp;body=Hi%20ProgressPath%20Team,"
-                  aria-label="Contact via Gmail"
-                  title="Contact via Gmail (luckypc08292@gmail.com)"
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 hover:border-red-500/50 hover:bg-slate-800 text-slate-300 hover:text-red-400 flex items-center justify-center transition-all group"
-                >
-                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:scale-110" />
-                </a>
-
-                {/* YouTube Channel link */}
-                <a
-                  href="https://www.youtube.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="ProgressPath on YouTube"
-                  title="YouTube Curricula & Walkthroughs"
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 hover:border-red-600/50 hover:bg-slate-800 text-slate-300 hover:text-red-500 flex items-center justify-center transition-all group"
-                >
-                  <Youtube className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:scale-110" />
-                </a>
-
-                {/* GitHub link */}
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="ProgressPath on GitHub"
-                  title="Open Source & Community"
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all group"
-                >
-                  <Github className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:scale-110" />
-                </a>
-
-                <div className="h-4 w-px bg-slate-800 mx-1" />
-
-                <span className="text-[10px] sm:text-xs text-slate-500 font-mono truncate">
-                  luckypc08292@gmail.com
-                </span>
-              </div>
-            </div>
-
-            {/* Column 2: Platform Links */}
-            <div className="col-span-1 lg:col-span-2 space-y-2 sm:space-y-4 text-left">
-              <h4 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-200">
-                Platform
-              </h4>
-              <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Curricula
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Problems
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Calendar
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Readiness
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            {/* Column 3: Curricula */}
-            <div className="col-span-1 lg:col-span-2 space-y-2 sm:space-y-4 text-left">
-              <h4 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-200">
-                Roadmaps
-              </h4>
-              <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    DSA Guide
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    OS Concepts
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Networks
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={onNavigateToSignup}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Databases
-                  </button>
-                </li>
-              </ul>
-            </div>
-
-            {/* Column 4: Essential Policies & Legal */}
-            <div className="col-span-2 lg:col-span-3 space-y-2 sm:space-y-4 text-left pt-2 sm:pt-0 border-t border-slate-900 sm:border-0">
-              <h4 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-200">
-                Privacy &amp; Security
-              </h4>
-              <ul className="grid grid-cols-2 sm:grid-cols-1 gap-1.5 sm:gap-2 text-xs sm:text-sm">
-                <li>
-                  <button
-                    id="footer-nav-privacy-btn"
-                    type="button"
-                    onClick={() => {
-                      if (onNavigateToPrivacy) {
-                        onNavigateToPrivacy();
-                      } else {
-                        setActiveLegalModal('privacy');
-                      }
-                    }}
-                    className="hover:text-white transition-colors cursor-pointer text-left flex items-center gap-1.5"
-                  >
-                    <span>Privacy Policy</span>
-                    <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 font-semibold border border-blue-800">
-                      Private
-                    </span>
-                  </button>
-                </li>
-                <li>
-                  <button
-                    id="footer-nav-terms-btn"
-                    type="button"
-                    onClick={() => {
-                      if (onNavigateToTerms) {
-                        onNavigateToTerms();
-                      } else {
-                        setActiveLegalModal('terms');
-                      }
-                    }}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Terms of Service
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    onClick={() => setActiveLegalModal('security')}
-                    className="hover:text-white transition-colors cursor-pointer text-left"
-                  >
-                    Data Isolation
-                  </button>
-                </li>
-                <li>
-                  <a
-                    href="mailto:luckypc08292@gmail.com?subject=ProgressPath%20Feedback"
-                    className="hover:text-white transition-colors cursor-pointer text-left flex items-center gap-1.5"
-                  >
-                    <span>Gmail Support</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Desktop Sub-Footer Copyright & Status */}
-          <div className="hidden sm:flex pt-6 sm:pt-8 flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-[11px] sm:text-xs text-slate-500">
-            <div className="flex items-center gap-2">
-              <span>&copy; {new Date().getFullYear()} ProgressPath Inc. All rights reserved.</span>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-              <button
-                id="subfooter-privacy-btn"
-                type="button"
-                onClick={() => {
-                  if (onNavigateToPrivacy) {
-                    onNavigateToPrivacy();
-                  } else {
-                    setActiveLegalModal('privacy');
-                  }
-                }}
-                className="hover:text-slate-300 transition-colors cursor-pointer"
-              >
-                Privacy Policy
-              </button>
-              <button
-                id="subfooter-terms-btn"
-                type="button"
-                onClick={() => {
-                  if (onNavigateToTerms) {
-                    onNavigateToTerms();
-                  } else {
-                    setActiveLegalModal('terms');
-                  }
-                }}
-                className="hover:text-slate-300 transition-colors cursor-pointer"
-              >
-                Terms of Service
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveLegalModal('security')}
-                className="hover:text-slate-300 transition-colors cursor-pointer"
-              >
-                Security
-              </button>
               <a
                 href="mailto:luckypc08292@gmail.com"
-                className="hover:text-slate-300 transition-colors cursor-pointer"
+                className="hover:text-white transition-colors"
               >
-                luckypc08292@gmail.com
+                Support
               </a>
+            </div>
+          </div>
+
+          <div className="pt-5 sm:pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-slate-500 gap-2 sm:gap-3 text-[11px] sm:text-xs">
+            <div>
+              &copy; {new Date().getFullYear()} ProgressPath. Engineering study platform.
+            </div>
+            <div>
+              luckypc08292@gmail.com
             </div>
           </div>
         </div>
       </footer>
 
-      {/* Interactive Legal Policy Modal Dialog */}
+      {/* LEGAL MODALS (Privacy, Terms, Security) */}
       {activeLegalModal && (
         <div
+          id="landing-legal-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in duration-150"
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-sm animate-fade-in"
           onClick={() => setActiveLegalModal(null)}
         >
           <div
-            className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[85vh] flex flex-col"
+            id="landing-legal-modal-card"
+            className="w-full max-w-lg max-h-[85vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl overflow-y-auto p-5 space-y-4 text-left"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Shield className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {activeLegalModal === 'privacy' && 'Privacy Policy'}
-                    {activeLegalModal === 'terms' && 'Terms and Conditions'}
-                    {activeLegalModal === 'security' && 'Security & Data Isolation'}
-                  </h3>
-                  <p className="text-xs text-slate-500">Effective Date: 2026-09-23</p>
-                </div>
-              </div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                {activeLegalModal === 'privacy' && 'Privacy Policy'}
+                {activeLegalModal === 'terms' && 'Terms of Service'}
+                {activeLegalModal === 'security' && 'Security Architecture'}
+              </h3>
               <button
                 type="button"
                 onClick={() => setActiveLegalModal(null)}
-                className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Modal Scrollable Content */}
-            <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-600 leading-relaxed text-left">
+            <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               {activeLegalModal === 'privacy' && (
                 <>
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    1. Zero Data Selling &amp; Strict User Confidentiality
-                  </h4>
                   <p>
-                    ProgressPath is built on a fundamental respect for student and engineer privacy. We do not sell, rent, or monetize your study notes, personal syllabus checklists, or problem solving records to third parties or advertising networks.
+                    ProgressPath is built around privacy. We do not sell or monetize personal study notes, problem solutions, or lecture progress.
                   </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    2. Dual-Tier Topic Isolation
-                  </h4>
                   <p>
-                    Any custom milestones, lecture notes, video links, or private topics you add to any subject remain completely isolated within your authenticated account. They are not visible to other learners or public visitors.
+                    Passwords are authenticated using standard bcrypt hashes. Session tokens remain in secure client storage.
                   </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    3. Authentication &amp; Token Handling
-                  </h4>
                   <p>
-                    User credentials and session tokens are strictly encrypted in transit using industry-standard TLS cryptographic protocols. Passwords are never stored in plaintext and are salted using modern cryptographic hashing.
-                  </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    4. Contact &amp; Data Inquiries
-                  </h4>
-                  <p>
-                    If you have questions regarding your data or wish to request complete data deletion, please contact our administrative team directly at{' '}
-                    <a href="mailto:luckypc08292@gmail.com" className="text-blue-600 font-semibold underline">
+                    For queries or account deletion, contact{' '}
+                    <a href="mailto:luckypc08292@gmail.com" className="text-blue-600 underline">
                       luckypc08292@gmail.com
                     </a>.
                   </p>
@@ -1009,70 +667,135 @@ export function LandingPage({
 
               {activeLegalModal === 'terms' && (
                 <>
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    1. Acceptance of Terms
-                  </h4>
                   <p>
-                    By accessing or registering an account on ProgressPath, you agree to these Terms and Conditions. ProgressPath provides a study curriculum tracking and problem recording platform for personal, non-commercial education.
+                    By registering an account on ProgressPath, you agree to these Terms. ProgressPath provides a study curriculum tracking and problem recording platform for personal, non-commercial education.
                   </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    2. User Conduct &amp; Account Integrity
-                  </h4>
                   <p>
-                    You agree to maintain the security of your login credentials and not share accounts. Users must not attempt to scrape, attack, circumvent rate limiters, or inject malicious code into the curriculum repository.
-                  </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    3. Curated Curricula &amp; External References
-                  </h4>
-                  <p>
-                    Course roadmaps and problem links (e.g. references to LeetCode, Codeforces, or YouTube lectures) remain the property of their respective creators. ProgressPath organizes and benchmarks public educational curricula for structured tracking.
-                  </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    4. Availability &amp; Modifications
-                  </h4>
-                  <p>
-                    We continuously improve ProgressPath features. We reserve the right to deploy updates, maintain system databases, or modify platform features with prior notice.
+                    Users agree to maintain secure credentials and not attempt automated scraping or abuse of the platform.
                   </p>
                 </>
               )}
 
               {activeLegalModal === 'security' && (
                 <>
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    1. Defense-in-Depth Architecture
-                  </h4>
                   <p>
-                    ProgressPath implements layered security defenses including automatic sliding-window rate limiting on authentication routes (preventing brute-force attacks) and strict API DDoS protection.
+                    ProgressPath implements layered defenses including automatic sliding-window rate limiting on authentication routes (preventing brute-force attacks) and strict API DDoS protection.
                   </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    2. Injection Protection &amp; Sanitization
-                  </h4>
                   <p>
-                    All API inputs undergo strict schema verification and query sanitization to protect against NoSQL injection, cross-site scripting (XSS), and prototype pollution attacks.
-                  </p>
-
-                  <h4 className="font-bold text-slate-900 text-sm sm:text-base">
-                    3. Role-Based Access Control (RBAC)
-                  </h4>
-                  <p>
-                    System administrative tools and global subject management are protected by strict role boundaries. Standard learner accounts cannot modify shared global curriculum templates.
+                    All API inputs undergo strict schema verification and query sanitization to protect against injection and prototype pollution attacks.
                   </p>
                 </>
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
               <button
                 type="button"
                 onClick={() => setActiveLegalModal(null)}
-                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm cursor-pointer transition-colors"
+                className="px-4 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-xs cursor-pointer"
               >
-                Close &amp; Accept
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PWA App Install Guide Modal (Mobile & Desktop) */}
+      {showPWAInstallGuide && (
+        <div
+          id="pwa-install-guide-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pwa-guide-title"
+        >
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl p-4 sm:p-6 text-slate-900 dark:text-white relative animate-in fade-in zoom-in duration-200">
+            <button
+              type="button"
+              onClick={() => setShowPWAInstallGuide(false)}
+              className="absolute top-3.5 right-3.5 p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              aria-label="Close install modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3.5">
+              <div className="w-10 h-10 rounded-xl bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <Download className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 id="pwa-guide-title" className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">
+                  {isInstalled ? 'App Is Already Installed' : 'Install ProgressPath App'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {isInstalled ? 'Running as standalone application' : 'Install directly on Desktop & Mobile (PWA)'}
+                </p>
+              </div>
+            </div>
+
+            {isInstalled ? (
+              <div className="space-y-3 py-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>ProgressPath is installed! You can launch it directly from your home screen or desktop application menu.</span>
+                </div>
+              </div>
+            ) : isIOS ? (
+              <div className="space-y-3 py-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <p className="font-medium text-slate-800 dark:text-slate-200">
+                  To install on iPhone / iPad (iOS Safari):
+                </p>
+                <ol className="space-y-2 list-decimal list-inside bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] sm:text-xs">
+                  <li>
+                    Tap the <strong className="text-blue-600 dark:text-blue-400">Share</strong> icon (square with upward arrow) in your Safari bottom bar.
+                  </li>
+                  <li>
+                    Scroll down the action sheet and select <strong className="text-slate-900 dark:text-white">"Add to Home Screen"</strong>.
+                  </li>
+                  <li>
+                    Tap <strong className="text-blue-600 dark:text-blue-400">Add</strong> in the top-right corner to place ProgressPath on your phone.
+                  </li>
+                </ol>
+              </div>
+            ) : (
+              <div className="space-y-3 py-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                <p className="font-medium text-slate-800 dark:text-slate-200">
+                  How to install on your device:
+                </p>
+                <div className="space-y-2.5 text-[11px] sm:text-xs">
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                    <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1">
+                      <Laptop className="w-3.5 h-3.5 text-blue-600" />
+                      <span>On Desktop (Chrome, Edge, Brave, Opera):</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Click the <strong className="text-slate-900 dark:text-white">Install</strong> icon in your browser URL address bar (or menu &gt; <em>"Install Progress Path"</em>).
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+                    <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 mb-1">
+                      <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                      <span>On Android (Chrome, Samsung Internet):</span>
+                    </div>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Tap the browser menu (3 dots) &gt; <strong className="text-slate-900 dark:text-white">"Install app"</strong> or <strong className="text-slate-900 dark:text-white">"Add to Home screen"</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="pt-3.5 mt-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+              <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <Check className="w-3 h-3 text-emerald-500" /> Fast offline caching & no store download
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPWAInstallGuide(false)}
+                className="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs cursor-pointer shadow-xs"
+              >
+                Got It
               </button>
             </div>
           </div>

@@ -1,0 +1,255 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D16" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#8B5CF6" />
+    </linearGradient>
+    <linearGradient id="accentCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+    <linearGradient id="slideGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050811" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1600" height="900" fill="url(#bgGrad)" />
+
+  <!-- Top App Navigation Bar -->
+  <rect x="0" y="0" width="1600" height="64" fill="#0B1120" stroke="#1E293B" stroke-width="1" />
+  
+  <!-- macOS dots -->
+  <circle cx="28" cy="32" r="6" fill="#EF4444" />
+  <circle cx="48" cy="32" r="6" fill="#F59E0B" />
+  <circle cx="68" cy="32" r="6" fill="#10B981" />
+
+  <!-- Logo -->
+  <rect x="96" y="16" width="32" height="32" rx="8" fill="url(#primaryGrad)" />
+  <path d="M104 32 L110 38 L120 26" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <text x="138" y="38" fill="#FFFFFF" font-size="18" font-weight="700" letter-spacing="-0.5">ProgressPath</text>
+  <rect x="250" y="22" width="46" height="20" rx="6" fill="#1E293B" />
+  <text x="258" y="36" fill="#60A5FA" font-size="11" font-weight="700">v2.4</text>
+
+  <!-- Top Navigation Links -->
+  <text x="330" y="37" fill="#94A3B8" font-size="14" font-weight="500">Playlists</text>
+  
+  <rect x="408" y="16" width="102" height="32" rx="8" fill="#1E293B" />
+  <text x="424" y="37" fill="#60A5FA" font-size="14" font-weight="600">Workspace</text>
+  
+  <text x="532" y="37" fill="#94A3B8" font-size="14" font-weight="500">Notes Vault</text>
+  <text x="638" y="37" fill="#94A3B8" font-size="14" font-weight="500">DSA Tracker</text>
+  <text x="746" y="37" fill="#94A3B8" font-size="14" font-weight="500">Analytics</text>
+
+  <!-- Search Bar -->
+  <rect x="850" y="16" width="380" height="32" rx="16" fill="#1E293B" stroke="#334155" stroke-width="1" />
+  <circle cx="872" cy="32" r="5" fill="none" stroke="#64748B" stroke-width="1.8" />
+  <line x1="876" y1="36" x2="882" y2="42" stroke="#64748B" stroke-width="1.8" stroke-linecap="round" />
+  <text x="896" y="37" fill="#64748B" font-size="13">Search YouTube lecture, topics, or notes...</text>
+  <rect x="1178" y="21" width="42" height="22" rx="4" fill="#0F172A" />
+  <text x="1185" y="36" fill="#94A3B8" font-size="11" font-weight="600">⌘ K</text>
+
+  <!-- Top Right Streak & User Profile -->
+  <rect x="1250" y="16" width="136" height="32" rx="16" fill="#451A03" stroke="#B45309" stroke-width="1" />
+  <text x="1264" y="37" font-size="14">🔥</text>
+  <text x="1288" y="37" fill="#FCD34D" font-size="12" font-weight="700">14-Day Streak</text>
+
+  <!-- Notification Bell -->
+  <circle cx="1410" cy="32" r="16" fill="#1E293B" />
+  <path d="M1405 34 A5 5 0 0 1 1415 34 L1417 37 L1403 37 Z" fill="#94A3B8" />
+  <circle cx="1418" cy="24" r="4" fill="#EF4444" />
+
+  <!-- Avatar -->
+  <circle cx="1456" cy="32" r="16" fill="url(#primaryGrad)" />
+  <text x="1448" y="37" fill="#FFFFFF" font-size="12" font-weight="700">LP</text>
+  <circle cx="1468" cy="42" r="4" fill="#10B981" stroke="#0F172A" stroke-width="1.5" />
+  <text x="1484" y="37" fill="#F8FAFC" font-size="13" font-weight="600">Lucky Patel</text>
+
+  <!-- ================= MAIN WORKSPACE AREA ================= -->
+  
+  <!-- LEFT COLUMN: VIDEO PLAYER & NOTES (width 1030) -->
+  <rect x="24" y="80" width="1030" height="520" rx="16" fill="#050811" stroke="#1E293B" stroke-width="1" />
+  
+  <!-- Video Screen Content -->
+  <rect x="24" y="80" width="1030" height="465" rx="16" fill="url(#slideGrad)" />
+  
+  <!-- YouTube / Channel Watermark -->
+  <rect x="52" y="104" width="30" height="20" rx="5" fill="#EF4444" />
+  <polygon points="63,110 63,118 71,114" fill="#FFFFFF" />
+  <text x="92" y="119" fill="#94A3B8" font-size="13" font-weight="600">YouTube Player • GATE CSE &amp; Full Stack Masterclass</text>
+
+  <!-- Video Lecture Slide Design -->
+  <text x="52" y="170" fill="#60A5FA" font-size="14" font-weight="700" letter-spacing="1.5">ALGORITHM DESIGN &amp; DYNAMIC PROGRAMMING</text>
+  <text x="52" y="206" fill="#FFFFFF" font-size="28" font-weight="800">Lecture 14: Top-Down Memoization &amp; DAG Graphs</text>
+
+  <!-- Slide Code Box -->
+  <rect x="52" y="230" width="974" height="210" rx="12" fill="#0D1117" stroke="#30363D" stroke-width="1" />
+  <circle cx="76" cy="248" r="4" fill="#EF4444" />
+  <circle cx="90" cy="248" r="4" fill="#F59E0B" />
+  <circle cx="104" cy="248" r="4" fill="#10B981" />
+  <text x="126" y="252" fill="#8B949E" font-size="12" font-family="monospace">Solution_Memoization.cpp</text>
+
+  <!-- Code syntax lines -->
+  <text x="76" y="282" fill="#8B949E" font-size="14" font-family="monospace">// Overlapping subproblems memoization: O(N) Time | O(N) Auxiliary Space</text>
+  <text x="76" y="306" fill="#FF7B72" font-size="14" font-family="monospace">int <tspan fill="#D2A8FF">solve</tspan>(<tspan fill="#FFA657">int</tspan> n, vector&lt;<tspan fill="#FFA657">int</tspan>&gt;&amp; <tspan fill="#79C0FF">memo</tspan>) {</text>
+  <text x="100" y="330" fill="#FF7B72" font-size="14" font-family="monospace">    if <tspan fill="#E6EDF3">(n &lt;= 1) </tspan><tspan fill="#FF7B72">return</tspan> n;</text>
+  <text x="100" y="354" fill="#FF7B72" font-size="14" font-family="monospace">    if <tspan fill="#E6EDF3">(memo[n] != -1) </tspan><tspan fill="#FF7B72">return</tspan> memo[n]; <tspan fill="#8B949E">// Cache hit: O(1) return</tspan></text>
+  <text x="100" y="378" fill="#FF7B72" font-size="14" font-family="monospace">    return <tspan fill="#79C0FF">memo[n]</tspan> = <tspan fill="#D2A8FF">solve</tspan>(n - 1, memo) + <tspan fill="#D2A8FF">solve</tspan>(n - 2, memo);</text>
+  <text x="76" y="402" fill="#E6EDF3" font-size="14" font-family="monospace">}</text>
+
+  <rect x="730" y="360" width="270" height="60" rx="8" fill="#1E293B" stroke="#3B82F6" stroke-width="1.5" />
+  <text x="746" y="384" fill="#93C5FD" font-size="12" font-weight="700">SUBPROBLEM PRUNING RATIO</text>
+  <text x="746" y="404" fill="#10B981" font-size="16" font-weight="800">2^N  →  Linear O(N)</text>
+
+  <!-- Video Controls Bar -->
+  <rect x="24" y="545" width="1030" height="55" fill="#0B1120" />
+  
+  <!-- Scrubber line -->
+  <rect x="24" y="545" width="1030" height="5" fill="#334155" />
+  <rect x="24" y="545" width="480" height="5" fill="#EF4444" />
+  <circle cx="504" cy="547" r="6" fill="#EF4444" />
+
+  <!-- Play/Pause Controls -->
+  <polygon points="56,564 56,584 72,574" fill="#FFFFFF" />
+  <text x="96" y="579" fill="#F8FAFC" font-size="14" font-weight="600">24:18 <tspan fill="#64748B">/ 52:10</tspan></text>
+
+  <text x="210" y="579" fill="#94A3B8" font-size="13">🔊</text>
+  <rect x="236" y="573" width="70" height="5" rx="2.5" fill="#334155" />
+  <rect x="236" y="573" width="45" height="5" rx="2.5" fill="#38BDF8" />
+
+  <rect x="780" y="562" width="60" height="24" rx="4" fill="#1E293B" />
+  <text x="788" y="578" fill="#60A5FA" font-size="11" font-weight="700">1080p HD</text>
+
+  <rect x="850" y="562" width="48" height="24" rx="4" fill="#1E293B" />
+  <text x="860" y="578" fill="#F1F5F9" font-size="11" font-weight="600">1.25x</text>
+
+  <rect x="908" y="562" width="34" height="24" rx="4" fill="#1E293B" />
+  <text x="916" y="578" fill="#F1F5F9" font-size="11" font-weight="600">CC</text>
+
+  <text x="960" y="579" fill="#94A3B8" font-size="16">⚙️</text>
+  <text x="1000" y="579" fill="#94A3B8" font-size="16">⛶</text>
+
+  <!-- LOWER LEFT: DETAILS, TABS & NOTES (y 618) -->
+  <rect x="24" y="618" width="1030" height="258" rx="16" fill="#0B1120" stroke="#1E293B" stroke-width="1" />
+  
+  <text x="48" y="652" fill="#FFFFFF" font-size="18" font-weight="700">L-14: Dynamic Programming Fundamentals &amp; Top-Down Memoization</text>
+  
+  <rect x="48" y="668" width="100" height="22" rx="6" fill="#1E3A8A" />
+  <text x="56" y="683" fill="#93C5FD" font-size="11" font-weight="600">GATE CSE 2025</text>
+  
+  <rect x="156" y="668" width="70" height="22" rx="6" fill="#312E81" />
+  <text x="166" y="683" fill="#C7D2FE" font-size="11" font-weight="600">DSA Track</text>
+
+  <rect x="234" y="668" width="110" height="22" rx="6" fill="#14532D" />
+  <text x="244" y="683" fill="#86EFAC" font-size="11" font-weight="600">✓ 3.4k Completed</text>
+
+  <!-- Interactive Action Buttons -->
+  <rect x="680" y="640" width="180" height="36" rx="8" fill="#2563EB" />
+  <text x="696" y="663" fill="#FFFFFF" font-size="13" font-weight="600">⏱ Add Note @ 24:18</text>
+
+  <rect x="872" y="640" width="160" height="36" rx="8" fill="#1E293B" stroke="#334155" stroke-width="1" />
+  <text x="896" y="663" fill="#34D399" font-size="13" font-weight="600">✓ Mark Complete</text>
+
+  <!-- Tabs -->
+  <line x1="48" y1="706" x2="1030" y2="706" stroke="#1E293B" stroke-width="1" />
+  
+  <rect x="48" y="704" width="140" height="3" fill="#3B82F6" />
+  <text x="52" y="698" fill="#60A5FA" font-size="13" font-weight="700">Markdown Notes</text>
+  <text x="210" y="698" fill="#94A3B8" font-size="13" font-weight="500">Video Transcript</text>
+  <text x="340" y="698" fill="#94A3B8" font-size="13" font-weight="500">Discussion (24)</text>
+  <text x="470" y="698" fill="#94A3B8" font-size="13" font-weight="500">Resources &amp; Code</text>
+
+  <!-- Notes content -->
+  <rect x="48" y="722" width="982" height="136" rx="10" fill="#090D16" stroke="#1E293B" stroke-width="1" />
+  <text x="68" y="748" fill="#38BDF8" font-size="13" font-weight="700"># Lecture 14 Takeaways [Timestamp 24:18]</text>
+  <text x="68" y="774" fill="#CBD5E1" font-size="13">• Optimal Substructure: Solution to the main problem is recursively built from subproblems.</text>
+  <text x="68" y="798" fill="#CBD5E1" font-size="13">• Overlapping Subproblems: Solved multiple times in naive tree; memo array caches them in O(1).</text>
+  <text x="68" y="822" fill="#CBD5E1" font-size="13">• Space Optimization: Auxiliary recursion stack = O(N), memo table = O(N).</text>
+  <text x="68" y="844" fill="#10B981" font-size="12" font-weight="600">Auto-saved to Cloud Notes • Last synced 12s ago</text>
+
+
+  <!-- ================= RIGHT COLUMN: PLAYLIST SIDEBAR ================= -->
+  <rect x="1070" y="80" width="506" height="796" rx="16" fill="#0B1120" stroke="#1E293B" stroke-width="1" />
+
+  <!-- Playlist Header -->
+  <text x="1094" y="116" fill="#FFFFFF" font-size="17" font-weight="700">Course Curriculum &amp; Playlist</text>
+  <text x="1094" y="138" fill="#94A3B8" font-size="13">14 of 32 Lectures Completed • 44% Overall Progress</text>
+
+  <!-- Progress Bar -->
+  <rect x="1094" y="152" width="458" height="8" rx="4" fill="#1E293B" />
+  <rect x="1094" y="152" width="202" height="8" rx="4" fill="url(#primaryGrad)" />
+
+  <!-- Playlist Items -->
+  <!-- Item 1: Watched -->
+  <rect x="1094" y="174" width="458" height="74" rx="10" fill="#0F172A" stroke="#1E293B" stroke-width="1" />
+  <circle cx="1124" cy="211" r="12" fill="#065F46" />
+  <text x="1119" y="215" fill="#34D399" font-size="12" font-weight="800">✓</text>
+  <text x="1148" y="202" fill="#E2E8F0" font-size="14" font-weight="600">12. Bit Manipulation &amp; Bitmasks</text>
+  <text x="1148" y="224" fill="#64748B" font-size="12">36:20 • Completed • Notes Attached (3)</text>
+
+  <!-- Item 2: Watched -->
+  <rect x="1094" y="258" width="458" height="74" rx="10" fill="#0F172A" stroke="#1E293B" stroke-width="1" />
+  <circle cx="1124" cy="295" r="12" fill="#065F46" />
+  <text x="1119" y="299" fill="#34D399" font-size="12" font-weight="800">✓</text>
+  <text x="1148" y="286" fill="#E2E8F0" font-size="14" font-weight="600">13. Backtracking: N-Queens &amp; Sudoku</text>
+  <text x="1148" y="308" fill="#64748B" font-size="12">52:10 • Completed • Notes Attached (5)</text>
+
+  <!-- Item 3: NOW PLAYING (Highlighted) -->
+  <rect x="1094" y="342" width="458" height="88" rx="10" fill="#1E293B" stroke="#3B82F6" stroke-width="2" />
+  <circle cx="1124" cy="386" r="14" fill="#2563EB" />
+  <polygon points="1121,380 1121,392 1131,386" fill="#FFFFFF" />
+  
+  <text x="1148" y="372" fill="#60A5FA" font-size="11" font-weight="800" letter-spacing="1">▶ NOW PLAYING</text>
+  <text x="1148" y="394" fill="#FFFFFF" font-size="14" font-weight="700">14. DP: Memoization Fundamentals</text>
+  <text x="1148" y="414" fill="#93C5FD" font-size="12">52:10 • Playing at 24:18 (46%)</text>
+
+  <!-- Waveform indicator -->
+  <rect x="1500" y="380" width="3" height="14" rx="1.5" fill="#3B82F6" />
+  <rect x="1506" y="374" width="3" height="22" rx="1.5" fill="#60A5FA" />
+  <rect x="1512" y="382" width="3" height="10" rx="1.5" fill="#3B82F6" />
+  <rect x="1518" y="376" width="3" height="18" rx="1.5" fill="#60A5FA" />
+
+  <!-- Item 4: Up Next -->
+  <rect x="1094" y="440" width="458" height="74" rx="10" fill="#090D16" stroke="#1E293B" stroke-width="1" />
+  <circle cx="1124" cy="477" r="12" fill="#1E293B" />
+  <text x="1119" y="482" fill="#94A3B8" font-size="11" font-weight="700">15</text>
+  <text x="1148" y="468" fill="#CBD5E1" font-size="14" font-weight="600">15. DP: Tabulation &amp; Space Optimization</text>
+  <text x="1148" y="490" fill="#64748B" font-size="12">41:15 • Up Next in Queue</text>
+
+  <!-- Item 5: Upcoming -->
+  <rect x="1094" y="524" width="458" height="74" rx="10" fill="#090D16" stroke="#1E293B" stroke-width="1" />
+  <circle cx="1124" cy="561" r="12" fill="#1E293B" />
+  <text x="1119" y="566" fill="#94A3B8" font-size="11" font-weight="700">16</text>
+  <text x="1148" y="552" fill="#94A3B8" font-size="14" font-weight="500">16. 0/1 Knapsack &amp; Subset Sum</text>
+  <text x="1148" y="574" fill="#64748B" font-size="12">55:40 • Locked Until L-15</text>
+
+  <!-- Item 6: Upcoming -->
+  <rect x="1094" y="608" width="458" height="74" rx="10" fill="#090D16" stroke="#1E293B" stroke-width="1" />
+  <circle cx="1124" cy="645" r="12" fill="#1E293B" />
+  <text x="1119" y="650" fill="#94A3B8" font-size="11" font-weight="700">17</text>
+  <text x="1148" y="636" fill="#94A3B8" font-size="14" font-weight="500">17. Longest Common Subsequence (LCS)</text>
+  <text x="1148" y="658" fill="#64748B" font-size="12">46:10 • Locked Until L-16</text>
+
+  <!-- Quick Note Scratchpad at bottom -->
+  <rect x="1094" y="694" width="458" height="162" rx="12" fill="#090D16" stroke="#1E293B" stroke-width="1" />
+  <text x="1114" y="722" fill="#FFFFFF" font-size="14" font-weight="700">Quick Note Scratchpad</text>
+  <rect x="1460" y="708" width="76" height="20" rx="4" fill="#1E3A8A" />
+  <text x="1468" y="722" fill="#93C5FD" font-size="11" font-weight="700">@ 24:18</text>
+
+  <rect x="1114" y="736" width="418" height="66" rx="8" fill="#111827" stroke="#334155" stroke-width="1" />
+  <text x="1128" y="760" fill="#E2E8F0" font-size="12">Memoization table size must be N+1 for base</text>
+  <text x="1128" y="780" fill="#E2E8F0" font-size="12">cases 0 and 1...</text>
+
+  <rect x="1114" y="812" width="418" height="34" rx="8" fill="#2563EB" />
+  <text x="1270" y="834" fill="#FFFFFF" font-size="13" font-weight="700">Save Note to Vault</text>
+
+</svg>

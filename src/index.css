@@ -6,6 +6,10 @@
   color-scheme: light;
 }
 
+html, body {
+  overflow-x: clip;
+}
+
 /* =========================================================================
    BLACK THEME SYSTEM
    - White theme: untouched, original styling preserved 100%
