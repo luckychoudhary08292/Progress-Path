@@ -21,6 +21,8 @@ import { ConfirmModal } from './ConfirmModal.tsx';
 import { VideoPlayerModal } from './VideoPlayerModal.tsx';
 import { LazyVideoPlayer } from './LazyVideoPlayer.tsx';
 import { apiCache } from '../services/apiCache.ts';
+import { exportSubjectNotesToPdf } from '../services/pdfExporter.ts';
+import { PdfNoticeModal } from './PdfNoticeModal.tsx';
 
 interface SubjectDetailProps {
   subjectId: string;
@@ -61,6 +63,61 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [hasVideoOnly, setHasVideoOnly] = useState(false);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isPdfNoticeOpen, setIsPdfNoticeOpen] = useState(false);
+
+  // Close active full-screen video player or modals on device / browser back button
+  useEffect(() => {
+    const handlePopState = () => {
+      if (activeVideoLecture) {
+        setActiveVideoLecture(null);
+      } else if (isAddLectureModalOpen) {
+        setIsAddLectureModalOpen(false);
+      } else if (previewVideoId) {
+        setPreviewVideoId(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeVideoLecture, isAddLectureModalOpen, previewVideoId]);
+
+  const handleDownloadPdf = () => {
+    if (!data) return;
+
+    // Merge live edited notes into lectures array
+    const lecturesWithLiveNotes = data.lectures.map((l) => ({
+      ...l,
+      notes: notesState[l.id] !== undefined ? notesState[l.id] : l.notes,
+    }));
+
+    // Verification: check if ANY lecture in this subject has non-empty notes
+    const hasAnyNotes = lecturesWithLiveNotes.some(
+      (l) => Boolean(l.notes && l.notes.trim().length > 0)
+    );
+
+    if (!hasAnyNotes) {
+      setIsPdfNoticeOpen(true);
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+    try {
+      const result = exportSubjectNotesToPdf({
+        subjectName: data.subject.name,
+        totalTopics: data.totalTopics,
+        completedTopics: data.completedTopics,
+        lectures: lecturesWithLiveNotes,
+      });
+
+      if (!result.success) {
+        setIsPdfNoticeOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to export PDF:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   // Debounce search input (250ms) to ensure smooth, stutter-free filtering
   useEffect(() => {
@@ -659,6 +716,25 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
               <ChevronDown className="w-3 h-3 text-slate-400" />
             )}
           </button>
+
+          {/* Download Notes PDF Button (on lecture tracking card) */}
+          <button
+            id="download-lectures-pdf-btn"
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-xs font-semibold rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 active:scale-95 text-slate-700 transition-all cursor-pointer shrink-0"
+            title="Download all lecture notes with video titles as PDF"
+            aria-label="Download all lecture notes with video titles as PDF"
+          >
+            {isGeneratingPdf ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+            ) : (
+              <FileText className="w-3.5 h-3.5 text-blue-600" />
+            )}
+            <span className="hidden sm:inline">Notes PDF</span>
+            <span className="sm:hidden text-[11px]">PDF</span>
+          </button>
         </div>
 
         {/* Expandable Filter Panel (works on desktop and mobile) */}
@@ -1050,6 +1126,16 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
             setActiveVideoLecture(item as LectureItem);
           }
         }}
+      />
+
+      {/* Verification Notice Modal when Subject has 0 Notes */}
+      <PdfNoticeModal
+        isOpen={isPdfNoticeOpen}
+        title="No Study Notes Recorded"
+        subjectName={data?.subject.name}
+        message="Is subject ke kisi bhi lecture me abhi study notes nahi likhe gaye hain. PDF me sirf wahi lectures aate hain jinke notes user ne likhe hon. Kripya pehle kisi lecture me study notes likhein."
+        actionLabel="Got It"
+        onClose={() => setIsPdfNoticeOpen(false)}
       />
     </div>
   );

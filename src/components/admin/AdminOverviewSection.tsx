@@ -43,28 +43,23 @@ export const AdminOverviewSection: React.FC<AdminOverviewSectionProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner with Refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900">Admin Control Center</h2>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              Live Overview
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Real-time platform metrics, user engagement, and curriculum assets.
-          </p>
+      {/* Header: Title and small Refresh Button (Border & Square card removed) */}
+      <div className="flex items-center justify-between gap-3 pt-1 pb-1">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Admin Control Center</h2>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
+            Live
+          </span>
         </div>
 
         <button
           type="button"
           onClick={onRefresh}
           disabled={isLoading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer self-start sm:self-auto disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200/80 dark:border-zinc-700 shadow-2xs transition-colors cursor-pointer disabled:opacity-60 active:scale-95 shrink-0"
           title="Refresh metrics"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-zinc-400'}`} />
           <span>{isLoading ? 'Updating...' : 'Refresh'}</span>
         </button>
       </div>

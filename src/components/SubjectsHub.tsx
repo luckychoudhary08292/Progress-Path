@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, Loader2, Globe, UserCheck, ArrowRight, Trash2, X } from 'lucide-react';
+import { BookOpen, Plus, Loader2, Globe, UserCheck, ArrowRight, Trash2, X, FileText } from 'lucide-react';
 import { SubjectSummary } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
 import { apiCache } from '../services/apiCache.ts';
+import { exportSubjectNotesToPdf } from '../services/pdfExporter.ts';
+import { PdfNoticeModal } from './PdfNoticeModal.tsx';
 
 interface SubjectsHubProps {
   onSelectSubject: (subjectId: string) => void;
@@ -22,6 +24,63 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const [subjectToDelete, setSubjectToDelete] = useState<SubjectSummary | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [downloadingSubjectId, setDownloadingSubjectId] = useState<string | null>(null);
+  const [pdfNoticeSubject, setPdfNoticeSubject] = useState<SubjectSummary | null>(null);
+
+  // Close open dialogs/modals when user taps system back button
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isAdding) {
+        setIsAdding(false);
+      } else if (subjectToDelete) {
+        setSubjectToDelete(null);
+      } else if (pdfNoticeSubject) {
+        setPdfNoticeSubject(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isAdding, subjectToDelete, pdfNoticeSubject]);
+
+  const handleDownloadSubjectPdf = async (subj: SubjectSummary) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+
+    try {
+      setDownloadingSubjectId(subj.id);
+      const res = await fetch(`/api/subjects/${subj.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const lectures = data.lectures || [];
+
+        // Verification: Check if user has recorded notes in any lecture
+        const hasNotes = lectures.some(
+          (l: any) => Boolean(l.notes && l.notes.trim().length > 0)
+        );
+
+        if (!hasNotes) {
+          setPdfNoticeSubject(subj);
+          return;
+        }
+
+        exportSubjectNotesToPdf({
+          subjectName: data.subject?.name || subj.name,
+          totalTopics: data.totalTopics ?? subj.totalTopics,
+          completedTopics: data.completedTopics ?? subj.completedTopics,
+          lectures: lectures,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to download notes PDF:', err);
+    } finally {
+      setDownloadingSubjectId(null);
+    }
+  };
 
   const fetchSubjects = async () => {
     const token = localStorage.getItem('auth_token');
@@ -515,6 +574,26 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
                   </span>
 
                   <div className="flex items-center gap-1 shrink-0">
+                    {/* Notes PDF Download Button (Mobile) */}
+                    <button
+                      id={`download-pdf-btn-mobile-${subj.id}`}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadSubjectPdf(subj);
+                      }}
+                      disabled={downloadingSubjectId === subj.id}
+                      className="p-1 text-slate-500 hover:text-blue-600 rounded transition-colors cursor-pointer bg-slate-50 hover:bg-blue-50 border border-slate-200"
+                      title="Download notes PDF"
+                      aria-label={`Download notes PDF for ${subj.name}`}
+                    >
+                      {downloadingSubjectId === subj.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+                      ) : (
+                        <FileText className="w-3 h-3 text-slate-600" />
+                      )}
+                    </button>
+
                     {subj.isOwner && (
                       <button
                         type="button"
@@ -572,7 +651,28 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
                       )}
                     </span>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
+                      {/* Notes PDF Download Button (Desktop) */}
+                      <button
+                        id={`download-pdf-btn-desktop-${subj.id}`}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadSubjectPdf(subj);
+                        }}
+                        disabled={downloadingSubjectId === subj.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-slate-600 hover:text-blue-700 hover:bg-blue-50/80 border border-slate-200 hover:border-blue-200 rounded transition-all cursor-pointer"
+                        title="Download all lecture notes for this subject as PDF"
+                        aria-label={`Download notes PDF for ${subj.name}`}
+                      >
+                        {downloadingSubjectId === subj.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
+                        ) : (
+                          <FileText className="w-3 h-3 text-blue-600" />
+                        )}
+                        <span>Notes PDF</span>
+                      </button>
+
                       {subj.isOwner && (
                         <button
                           type="button"
@@ -664,6 +764,21 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
         onConfirm={handleConfirmDeleteSubject}
         onCancel={() => setSubjectToDelete(null)}
       />
+
+      {/* Verification Notice Modal when Subject has 0 Notes */}
+      {pdfNoticeSubject && (
+        <PdfNoticeModal
+          isOpen={!!pdfNoticeSubject}
+          title="No Study Notes Recorded"
+          subjectName={pdfNoticeSubject.name}
+          message={`"${pdfNoticeSubject.name}" ke kisi bhi lecture me abhi study notes nahi likhe gaye hain. PDF me sirf wahi lectures aate hain jinke notes user ne likhe hon. Kripya is subject ko open karke pehle kisi lecture me study notes likhein.`}
+          actionLabel="Open Subject"
+          onAction={() => {
+            onSelectSubject(pdfNoticeSubject.id);
+          }}
+          onClose={() => setPdfNoticeSubject(null)}
+        />
+      )}
     </div>
   );
 }

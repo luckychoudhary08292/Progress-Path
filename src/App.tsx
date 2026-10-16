@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, FileCode, User as UserIcon, ShieldCheck, Home, UploadCloud, Settings, MessageSquare } from 'lucide-react';
-import { User } from './types.ts';
+import { 
+  Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, 
+  FileCode, User as UserIcon, Users, ShieldCheck, Home, UploadCloud, Settings, 
+  MessageSquare, ChevronDown, Check, GraduationCap, Layers, Clock, ArrowRight
+} from 'lucide-react';
+import { User, AdminSection } from './types.ts';
 import { SignupForm } from './components/SignupForm.tsx';
 import { LoginForm } from './components/LoginForm.tsx';
 import { Dashboard } from './components/Dashboard.tsx';
@@ -39,6 +43,14 @@ export default function App() {
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [activeProfileTab, setActiveProfileTab] = useState<'profile' | 'security' | 'danger' | 'permissions' | 'extractor' | 'feedback' | null>(null);
 
+  // Admin Section state & Interface Mode Switcher
+  const [activeAdminSection, setActiveAdminSection] = useState<AdminSection>('overview');
+  const [isInterfaceDropdownOpen, setIsInterfaceDropdownOpen] = useState(false);
+  const interfaceDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Computed interface mode
+  const isAdminMode = user?.role === 'admin' && activeTab === 'admin';
+
   // Short day & date (e.g. mon, Sep 28) for navigation display
   const today = new Date();
   const shortDay = today.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
@@ -49,6 +61,28 @@ export default function App() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close interface switcher dropdown on outside click or Escape key
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (interfaceDropdownRef.current && !interfaceDropdownRef.current.contains(event.target as Node)) {
+        setIsInterfaceDropdownOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsInterfaceDropdownOpen(false);
+      }
+    }
+    if (isInterfaceDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isInterfaceDropdownOpen]);
 
   // Close profile dropdown on outside click or Escape key
   useEffect(() => {
@@ -104,6 +138,89 @@ export default function App() {
 
     checkAuth();
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // System Back Button (Mobile & Desktop) Navigation History Management
+  // ---------------------------------------------------------------------------
+  // Whenever the active view, tab, or subject changes, push an entry to browser history.
+  // When the user taps the device back button or browser back arrow, popstate restores
+  // the previous screen instead of exiting the entire application.
+  const isNavigatingFromPopState = useRef(false);
+
+  // Synchronize browser history stack when state changes internally
+  useEffect(() => {
+    if (isInitializing) return;
+    if (isNavigatingFromPopState.current) {
+      isNavigatingFromPopState.current = false;
+      return;
+    }
+
+    const statePayload = {
+      isAuth: !!user,
+      currentView,
+      activeLegalDoc,
+      activeTab,
+      selectedSubjectId,
+      activeAdminSection,
+    };
+
+    // Replace state if on root initial, or push state for new in-app navigations
+    const currentState = window.history.state;
+    const isSameState =
+      currentState &&
+      currentState.isAuth === statePayload.isAuth &&
+      currentState.currentView === statePayload.currentView &&
+      currentState.activeLegalDoc === statePayload.activeLegalDoc &&
+      currentState.activeTab === statePayload.activeTab &&
+      currentState.selectedSubjectId === statePayload.selectedSubjectId &&
+      currentState.activeAdminSection === statePayload.activeAdminSection;
+
+    if (!isSameState) {
+      window.history.pushState(statePayload, '', window.location.pathname);
+    }
+  }, [user, currentView, activeLegalDoc, activeTab, selectedSubjectId, activeAdminSection, isInitializing]);
+
+  // Handle hardware / system back button (popstate event)
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const state = event.state;
+      isNavigatingFromPopState.current = true;
+
+      if (state) {
+        if (state.activeLegalDoc !== undefined) {
+          setActiveLegalDoc(state.activeLegalDoc);
+        }
+        if (state.currentView) {
+          setCurrentView(state.currentView);
+        }
+        if (state.selectedSubjectId !== undefined) {
+          setSelectedSubjectId(state.selectedSubjectId);
+        }
+        if (state.activeTab) {
+          setActiveTab(state.activeTab);
+        }
+        if (state.activeAdminSection) {
+          setActiveAdminSection(state.activeAdminSection);
+        }
+      } else {
+        // Fallback natural step backward if state was empty
+        if (activeLegalDoc) {
+          setActiveLegalDoc(null);
+        } else if (selectedSubjectId) {
+          setSelectedSubjectId(null);
+        } else if (activeTab === 'admin') {
+          setActiveTab('dashboard');
+        } else if (activeTab !== 'dashboard') {
+          setActiveTab('dashboard');
+        } else if (!user && currentView !== 'landing') {
+          setCurrentView('landing');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeLegalDoc, selectedSubjectId, activeTab, user, currentView]);
 
   const handleAuthSuccess = (authenticatedUser: User, token: string) => {
     localStorage.setItem('auth_token', token);
@@ -227,130 +344,345 @@ export default function App() {
     >
       {user ? (
         <>
-          {/* Top Global Navigation Bar - Fixed & Stuck to Screen on Scroll with Dynamic Theme Background (Pure Black in Dark Mode) */}
+          {/* Top Global Navigation Bar - Dynamic Admin / User Interface Navbar */}
           <nav
             id="app-top-nav"
-            className="fixed top-0 left-0 right-0 z-40 w-full bg-white/95 dark:bg-black/95 backdrop-blur-md border-b border-slate-200 dark:border-zinc-800 shadow-xs transition-colors duration-150"
+            className={`fixed top-0 left-0 right-0 z-40 w-full backdrop-blur-md border-b transition-colors duration-150 ${
+              isAdminMode
+                ? 'bg-white/95 dark:bg-black/95 border-purple-200/80 dark:border-purple-900/60 shadow-xs'
+                : 'bg-white/95 dark:bg-black/95 border-slate-200 dark:border-zinc-800 shadow-xs'
+            }`}
           >
-            <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-white/95 dark:bg-black/95 text-slate-900 dark:text-white transition-colors">
+            <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-transparent text-slate-900 dark:text-white transition-colors">
               {/* Main Nav Header */}
-              <div className="flex items-center justify-between h-14 md:h-15">
-                {/* Left: Brand Logo */}
-                <div
-                  onClick={() => {
-                    setActiveTab('dashboard');
-                    setSelectedSubjectId(null);
-                  }}
-                  className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
-                  title="Go to Dashboard"
-                >
-                  <SystemLogo size="sm" />
-                  <span className="font-semibold text-slate-900 dark:text-white tracking-tight text-sm sm:text-base">ProgressPath</span>
+              <div className="flex items-center justify-between h-14 md:h-15 gap-2 sm:gap-4">
+                {/* Left: Brand Logo + Interface Switcher Dropdown */}
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                  <div
+                    onClick={() => {
+                      if (isAdminMode) {
+                        setActiveAdminSection('overview');
+                      } else {
+                        setActiveTab('dashboard');
+                        setSelectedSubjectId(null);
+                      }
+                    }}
+                    className="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none shrink-0"
+                    title={isAdminMode ? "Admin Control Panel (Overview)" : "Go to Dashboard"}
+                  >
+                    <SystemLogo size="sm" />
+                    <span className="font-semibold text-slate-900 dark:text-white tracking-tight text-sm sm:text-base">ProgressPath</span>
+                  </div>
+
+                  {/* Interface Switcher Dropdown (Desktop only - hidden on mobile) */}
+                  {user.role === 'admin' && (
+                    <div className="hidden md:block relative shrink-0" ref={interfaceDropdownRef}>
+                      <button
+                        id="interface-switcher-btn"
+                        type="button"
+                        onClick={() => setIsInterfaceDropdownOpen((prev) => !prev)}
+                        className={`hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border shadow-2xs cursor-pointer select-none active:scale-95 ${
+                          isAdminMode
+                            ? 'bg-purple-50 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/70'
+                            : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border-slate-200 dark:border-zinc-700 hover:bg-slate-200 dark:hover:bg-zinc-700'
+                        }`}
+                        title="Switch between Admin and User interfaces"
+                        aria-haspopup="true"
+                        aria-expanded={isInterfaceDropdownOpen}
+                      >
+                        {isAdminMode ? (
+                          <>
+                            <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 shrink-0" />
+                            <span className="hidden xs:inline">Admin Panel</span>
+                            <span className="xs:hidden">Admin</span>
+                          </>
+                        ) : (
+                          <>
+                            <GraduationCap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span className="hidden xs:inline">User Interface</span>
+                            <span className="xs:hidden">User</span>
+                          </>
+                        )}
+                        <ChevronDown className={`w-3 h-3 text-slate-400 dark:text-zinc-400 transition-transform duration-200 ${isInterfaceDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {isInterfaceDropdownOpen && (
+                        <div
+                          id="interface-switcher-menu"
+                          className="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-slate-200 dark:border-zinc-800 p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 text-slate-800 dark:text-slate-100"
+                        >
+                          <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                            Select Interface
+                          </div>
+
+                          {/* Option 1: User Interface */}
+                          <button
+                            id="switch-to-user-view-option"
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('dashboard');
+                              setSelectedSubjectId(null);
+                              setIsInterfaceDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left ${
+                              !isAdminMode
+                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold'
+                                : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                  !isAdminMode
+                                    ? 'bg-blue-600 text-white shadow-2xs'
+                                    : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300'
+                                }`}
+                              >
+                                <GraduationCap className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-xs text-slate-900 dark:text-white">User Interface</div>
+                                <div className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">Study, coding &amp; tracker</div>
+                              </div>
+                            </div>
+                            {!isAdminMode && (
+                              <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 ml-1.5" />
+                            )}
+                          </button>
+
+                          {/* Option 2: Admin Panel */}
+                          <button
+                            id="switch-to-admin-panel-option"
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('admin');
+                              setSelectedSubjectId(null);
+                              setIsInterfaceDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-2 mt-1 rounded-lg text-xs transition-colors cursor-pointer text-left ${
+                              isAdminMode
+                                ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold'
+                                : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                  isAdminMode
+                                    ? 'bg-purple-600 text-white shadow-2xs'
+                                    : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300'
+                                }`}
+                              >
+                                <Shield className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-xs text-slate-900 dark:text-white">Admin Panel</div>
+                                <div className="text-[10px] text-slate-500 dark:text-zinc-400 truncate">Users, content &amp; logs</div>
+                              </div>
+                            </div>
+                            {isAdminMode && (
+                              <Check className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 ml-1.5" />
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Center: Desktop Navigation Tabs (Centered on desktop) */}
-                <div className="hidden md:flex items-center justify-center gap-1 flex-1 mx-4">
-                  <button
-                    id="nav-tab-dashboard"
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('dashboard');
-                      setSelectedSubjectId(null);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      activeTab === 'dashboard' && !selectedSubjectId
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                    }`}
-                  >
-                    <LayoutDashboard className="w-3.5 h-3.5" />
-                    <span>Dashboard</span>
-                  </button>
-
-                  <button
-                    id="nav-tab-subjects"
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('subjects');
-                      setSelectedSubjectId(null);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      activeTab === 'subjects' || selectedSubjectId
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                    }`}
-                  >
-                    <BookOpen className="w-3.5 h-3.5" />
-                    <span>Subjects</span>
-                  </button>
-
-                  <button
-                    id="nav-tab-coding"
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('coding');
-                      setSelectedSubjectId(null);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      activeTab === 'coding' && !selectedSubjectId
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                    }`}
-                  >
-                    <Code className="w-3.5 h-3.5" />
-                    <span>Coding Repo</span>
-                  </button>
-
-                  <button
-                    id="nav-tab-calendar"
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('calendar');
-                      setSelectedSubjectId(null);
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                      activeTab === 'calendar' && !selectedSubjectId
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                    }`}
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>Calendar</span>
-                  </button>
-
-                  {/* Admin-only Navigation Tab */}
-                  {user.role === 'admin' && (
+                {/* Center: Desktop Navigation Tabs (ADMIN vs USER) */}
+                {isAdminMode ? (
+                  /* Admin Panel Navigation Tabs */
+                  <div className="hidden md:flex items-center justify-center gap-1 flex-1 mx-2 lg:mx-4">
                     <button
-                      id="nav-tab-admin"
+                      id="admin-nav-tab-overview"
+                      type="button"
+                      onClick={() => setActiveAdminSection('overview')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        activeAdminSection === 'overview'
+                          ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-900 dark:text-purple-200 font-bold border border-purple-200/80 dark:border-purple-800 shadow-2xs'
+                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <LayoutDashboard className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                      <span>Overview</span>
+                    </button>
+
+                    <button
+                      id="admin-nav-tab-users"
+                      type="button"
+                      onClick={() => setActiveAdminSection('users')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        activeAdminSection === 'users'
+                          ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-900 dark:text-purple-200 font-bold border border-purple-200/80 dark:border-purple-800 shadow-2xs'
+                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                      <span>Users</span>
+                    </button>
+
+                    <button
+                      id="admin-nav-tab-content"
+                      type="button"
+                      onClick={() => setActiveAdminSection('content')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        activeAdminSection === 'content'
+                          ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-900 dark:text-purple-200 font-bold border border-purple-200/80 dark:border-purple-800 shadow-2xs'
+                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <Layers className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>Content</span>
+                    </button>
+
+                    <button
+                      id="admin-nav-tab-import"
+                      type="button"
+                      onClick={() => setActiveAdminSection('import')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        activeAdminSection === 'import'
+                          ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-900 dark:text-purple-200 font-bold border border-purple-200/80 dark:border-purple-800 shadow-2xs'
+                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                      <span>Global Importer</span>
+                    </button>
+
+                    <button
+                      id="admin-nav-tab-activity"
+                      type="button"
+                      onClick={() => setActiveAdminSection('activity')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        activeAdminSection === 'activity'
+                          ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-900 dark:text-purple-200 font-bold border border-purple-200/80 dark:border-purple-800 shadow-2xs'
+                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                      <span>Activity Log</span>
+                    </button>
+
+                    <button
+                      id="admin-nav-tab-feedback"
+                      type="button"
+                      onClick={() => setActiveAdminSection('feedback')}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        activeAdminSection === 'feedback'
+                          ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-900 dark:text-purple-200 font-bold border border-purple-200/80 dark:border-purple-800 shadow-2xs'
+                          : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800'
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Feedback</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* Standard User Navigation Tabs */
+                  <div className="hidden md:flex items-center justify-center gap-1 flex-1 mx-4">
+                    <button
+                      id="nav-tab-dashboard"
                       type="button"
                       onClick={() => {
-                        setActiveTab('admin');
+                        setActiveTab('dashboard');
                         setSelectedSubjectId(null);
                       }}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                        activeTab === 'admin' && !selectedSubjectId
+                        activeTab === 'dashboard' && !selectedSubjectId
                           ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                       }`}
                     >
-                      <Shield className="w-3.5 h-3.5 text-slate-500" />
-                      <span>Admin</span>
+                      <LayoutDashboard className="w-3.5 h-3.5" />
+                      <span>Dashboard</span>
                     </button>
-                  )}
-                </div>
+
+                    <button
+                      id="nav-tab-subjects"
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('subjects');
+                        setSelectedSubjectId(null);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        activeTab === 'subjects' || selectedSubjectId
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Subjects</span>
+                    </button>
+
+                    <button
+                      id="nav-tab-coding"
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('coding');
+                        setSelectedSubjectId(null);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        activeTab === 'coding' && !selectedSubjectId
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Code className="w-3.5 h-3.5" />
+                      <span>Coding Repo</span>
+                    </button>
+
+                    <button
+                      id="nav-tab-calendar"
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('calendar');
+                        setSelectedSubjectId(null);
+                      }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                        activeTab === 'calendar' && !selectedSubjectId
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Calendar</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Profile Navigation: Circular Avatar Button at Right Side */}
                 <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                  {/* Quick Exit to User View button when in Admin Mode */}
+                  {isAdminMode && (
+                    <button
+                      id="nav-quick-exit-to-user-btn"
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('dashboard');
+                        setSelectedSubjectId(null);
+                      }}
+                      className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer shadow-2xs"
+                      title="Exit Admin Panel & Return to User View"
+                    >
+                      <GraduationCap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                      <span>User View</span>
+                    </button>
+                  )}
+
                   {/* Small Day, Date Badge near Profile Circle */}
                   <button
                     type="button"
                     id="nav-date-indicator-btn"
                     onClick={() => {
-                      setActiveTab('calendar');
-                      setSelectedSubjectId(null);
+                      if (!isAdminMode) {
+                        setActiveTab('calendar');
+                        setSelectedSubjectId(null);
+                      }
                     }}
                     className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 text-[11px] font-medium transition-colors cursor-pointer border border-slate-200/80 dark:border-slate-700/80 shadow-2xs"
-                    title="Today's date (Click to open Calendar)"
+                    title="Today's date"
                   >
                     <Calendar className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
                     <span className="capitalize">{formattedTodayShort}</span>
@@ -408,30 +740,30 @@ export default function App() {
                           setSelectedSubjectId(null);
                           setIsProfileMenuOpen(false);
                         }}
-                        className="w-full text-left p-3 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-100 transition-all cursor-pointer group"
+                        className="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100/90 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-all cursor-pointer group"
                       >
                         <div className="flex items-center gap-3">
                           <div className="relative shrink-0">
-                            <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+                            <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-sm shadow-xs">
                               {user.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1">
-                              <span className="text-xs font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                 {user.name}
                               </span>
-                              <span className="text-[10px] text-blue-600 font-semibold group-hover:underline shrink-0">
-                                View →
+                              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold group-hover:underline shrink-0">
+                                View &rarr;
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-500 truncate mt-0.5">{user.email}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{user.email}</p>
                             <div className="mt-1 flex items-center gap-1.5">
                               <span className={`inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md ${
                                 user.role === 'admin'
-                                  ? 'bg-purple-100 text-purple-700 border border-purple-200/60'
-                                  : 'bg-blue-100 text-blue-700 border border-blue-200/60'
+                                  ? 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800'
+                                  : 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800'
                               }`}>
                                 {user.role === 'admin' ? (
                                   <>
@@ -449,37 +781,69 @@ export default function App() {
 
                       {/* Navigation Links Group */}
                       <div className="mt-2 space-y-1">
-                        {/* Admin Access Tab - strictly visible to admins only */}
+                        {/* Admin / User Interface Switch Action - Strictly for admins */}
                         {user.role === 'admin' && (
-                          <button
-                            id="dropdown-nav-admin-link"
-                            type="button"
-                            onClick={() => {
-                              setActiveTab('admin');
-                              setSelectedSubjectId(null);
-                              setIsProfileMenuOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                              activeTab === 'admin'
-                                ? 'bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200/60 shadow-2xs'
-                                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                                activeTab === 'admin' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'
-                              }`}>
-                                <Shield className="w-3.5 h-3.5" />
+                          isAdminMode ? (
+                            /* In Admin Mode: Show "User Access" to switch back to User Interface */
+                            <button
+                              id="dropdown-nav-user-access-link"
+                              type="button"
+                              onClick={() => {
+                                setActiveTab('dashboard');
+                                setSelectedSubjectId(null);
+                                setIsProfileMenuOpen(false);
+                              }}
+                              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer bg-blue-50/70 hover:bg-blue-100/80 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 border border-blue-200/80 dark:border-blue-800/80 group"
+                              title="Switch to User Interface"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-blue-600 text-white shadow-2xs">
+                                  <GraduationCap className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="text-left">
+                                  <span className="block text-xs font-semibold leading-tight text-blue-900 dark:text-blue-200 group-hover:text-blue-700 dark:group-hover:text-white transition-colors">
+                                    User Access
+                                  </span>
+                                  <span className="block text-[10px] text-blue-600/80 dark:text-blue-400">
+                                    Switch to User Workspace
+                                  </span>
+                                </div>
                               </div>
-                              <div className="text-left">
-                                <span className="block text-xs font-semibold leading-tight">Admin Access</span>
-                                <span className="block text-[10px] text-slate-400">Controls & monitoring</span>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200/60 dark:border-blue-700">
+                                Switch &rarr;
+                              </span>
+                            </button>
+                          ) : (
+                            /* In User Mode: Show "Admin Access" to switch to Admin Panel */
+                            <button
+                              id="dropdown-nav-admin-link"
+                              type="button"
+                              onClick={() => {
+                                setActiveTab('admin');
+                                setSelectedSubjectId(null);
+                                setIsProfileMenuOpen(false);
+                              }}
+                              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer bg-purple-50/70 hover:bg-purple-100/80 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 border border-purple-200/80 dark:border-purple-800/80 group"
+                              title="Switch to Admin Panel"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-purple-600 text-white shadow-2xs">
+                                  <Shield className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="text-left">
+                                  <span className="block text-xs font-semibold leading-tight text-purple-900 dark:text-purple-200 group-hover:text-purple-700 dark:group-hover:text-white transition-colors">
+                                    Admin Access
+                                  </span>
+                                  <span className="block text-[10px] text-purple-600/80 dark:text-purple-400">
+                                    Switch to Admin Panel
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
-                              Access
-                            </span>
-                          </button>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 border border-purple-200/60 dark:border-purple-700">
+                                Access &rarr;
+                              </span>
+                            </button>
+                          )
                         )}
 
                         {/* Profile & Settings Tab */}
@@ -494,23 +858,23 @@ export default function App() {
                           }}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                             activeTab === 'profile'
-                              ? 'bg-slate-100 text-slate-900 font-semibold shadow-2xs'
-                              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-2xs'
+                              : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
                             <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              activeTab === 'profile' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
+                              activeTab === 'profile' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                             }`}>
                               <UserIcon className="w-3.5 h-3.5" />
                             </div>
                             <div className="text-left">
                               <span className="block text-xs font-semibold leading-tight">My Profile</span>
-                              <span className="block text-[10px] text-slate-400">Settings & activity</span>
+                              <span className="block text-[10px] text-slate-400 dark:text-slate-500">Settings &amp; activity</span>
                             </div>
                           </div>
                           {activeTab === 'profile' && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-800 font-semibold">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold">
                               Active
                             </span>
                           )}
@@ -527,54 +891,26 @@ export default function App() {
                           }}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                             activeTab === 'import'
-                              ? 'bg-red-50 text-red-700 font-semibold border border-red-200/60 shadow-2xs'
-                              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                              ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 font-semibold border border-red-200/60 dark:border-red-900/60 shadow-2xs'
+                              : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
                           }`}
                         >
                           <div className="flex items-center gap-2.5">
                             <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              activeTab === 'import' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600'
+                              activeTab === 'import' ? 'bg-red-600 text-white' : 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400'
                             }`}>
                               <UploadCloud className="w-3.5 h-3.5" />
                             </div>
                             <div className="text-left">
                               <span className="block text-xs font-semibold leading-tight">YouTube Playlist Importer</span>
-                              <span className="block text-[10px] text-slate-400">youtube playlist importer</span>
+                              <span className="block text-[10px] text-slate-400 dark:text-slate-500">youtube playlist importer</span>
                             </div>
                           </div>
                           {activeTab === 'import' && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-100 text-red-700 font-semibold">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 font-semibold">
                               Active
                             </span>
                           )}
-                        </button>
-
-                        {/* Dashboard Tab */}
-                        <button
-                          id="dropdown-nav-dashboard-link"
-                          type="button"
-                          onClick={() => {
-                            setActiveTab('dashboard');
-                            setSelectedSubjectId(null);
-                            setIsProfileMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-                            activeTab === 'dashboard'
-                              ? 'bg-slate-100 text-slate-900 font-semibold shadow-2xs'
-                              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              activeTab === 'dashboard' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                              <LayoutDashboard className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="text-left">
-                              <span className="block text-xs font-semibold leading-tight">Dashboard</span>
-                              <span className="block text-[10px] text-slate-400">Overview & schedule</span>
-                            </div>
-                          </div>
                         </button>
                       </div>
 
@@ -684,7 +1020,12 @@ export default function App() {
               ) : activeTab === 'admin' && user.role === 'admin' ? (
                 <AdminMonitor
                   currentUser={user}
-                  onNavigateToDashboard={() => setActiveTab('dashboard')}
+                  activeSection={activeAdminSection}
+                  onSectionChange={setActiveAdminSection}
+                  onNavigateToDashboard={() => {
+                    setActiveTab('dashboard');
+                    setSelectedSubjectId(null);
+                  }}
                 />
               ) : (
                 <Dashboard
@@ -711,110 +1052,203 @@ export default function App() {
             </div>
           </main>
 
-          {/* Mobile App Bottom Navigation Bar: Home, Subjects, Import, Coding, Calendar, Profile */}
-          <nav
-            id="mobile-bottom-app-nav"
-            aria-label="Mobile Bottom Navigation"
-            className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 px-1 py-1.5 flex items-center justify-around shadow-lg"
-          >
-            {/* 1. Home */}
-            <button
-              type="button"
-              id="mobile-bottom-nav-home"
-              onClick={() => {
-                setActiveTab('dashboard');
-                setSelectedSubjectId(null);
-              }}
-              className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                activeTab === 'dashboard' && !selectedSubjectId
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
+          {/* Mobile App Bottom Navigation Bar: Dedicated Admin vs User layout */}
+          {isAdminMode ? (
+            <nav
+              id="mobile-bottom-admin-nav"
+              aria-label="Mobile Admin Navigation"
+              className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-black/95 backdrop-blur-md border-t border-purple-200/80 dark:border-purple-900/60 px-1 py-1 flex items-center justify-around shadow-lg transition-colors"
             >
-              <Home className="w-5 h-5 mb-0.5" />
-              <span>Home</span>
-            </button>
-
-            {/* 2. Subjects */}
-            <button
-              type="button"
-              id="mobile-bottom-nav-subjects"
-              onClick={() => {
-                setActiveTab('subjects');
-                setSelectedSubjectId(null);
-              }}
-              className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                activeTab === 'subjects' || selectedSubjectId
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <BookOpen className="w-5 h-5 mb-0.5" />
-              <span>Subjects</span>
-            </button>
-
-            {/* 3. Coding */}
-            <button
-              type="button"
-              id="mobile-bottom-nav-coding"
-              onClick={() => {
-                setActiveTab('coding');
-                setSelectedSubjectId(null);
-              }}
-              className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                activeTab === 'coding' && !selectedSubjectId
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <Code className="w-5 h-5 mb-0.5" />
-              <span>Coding</span>
-            </button>
-
-            {/* 5. Calendar */}
-            <button
-              type="button"
-              id="mobile-bottom-nav-calendar"
-              onClick={() => {
-                setActiveTab('calendar');
-                setSelectedSubjectId(null);
-              }}
-              className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                activeTab === 'calendar' && !selectedSubjectId
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <Calendar className="w-5 h-5 mb-0.5" />
-              <span>Calendar</span>
-            </button>
-
-            {/* 6. Profile Circle */}
-            <button
-              type="button"
-              id="mobile-bottom-nav-profile"
-              onClick={() => {
-                setActiveTab('profile');
-                setSelectedSubjectId(null);
-              }}
-              className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
-                activeTab === 'profile' && !selectedSubjectId
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              <div
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold mb-0.5 select-none ${
-                  activeTab === 'profile' && !selectedSubjectId
-                    ? 'bg-blue-600 text-white ring-2 ring-blue-600/30'
-                    : 'bg-slate-800 text-white'
+              <button
+                type="button"
+                id="mobile-admin-bottom-overview"
+                onClick={() => setActiveAdminSection('overview')}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeAdminSection === 'overview'
+                    ? 'text-purple-600 dark:text-purple-400 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <span>Profile</span>
-            </button>
-          </nav>
+                <LayoutDashboard className="w-4 h-4 mb-0.5" />
+                <span>Overview</span>
+              </button>
+
+              <button
+                type="button"
+                id="mobile-admin-bottom-users"
+                onClick={() => setActiveAdminSection('users')}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeAdminSection === 'users'
+                    ? 'text-purple-600 dark:text-purple-400 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Users className="w-4 h-4 mb-0.5" />
+                <span>Users</span>
+              </button>
+
+              <button
+                type="button"
+                id="mobile-admin-bottom-content"
+                onClick={() => setActiveAdminSection('content')}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeAdminSection === 'content'
+                    ? 'text-purple-600 dark:text-purple-400 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Layers className="w-4 h-4 mb-0.5" />
+                <span>Content</span>
+              </button>
+
+              <button
+                type="button"
+                id="mobile-admin-bottom-import"
+                onClick={() => setActiveAdminSection('import')}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeAdminSection === 'import'
+                    ? 'text-purple-600 dark:text-purple-400 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <UploadCloud className="w-4 h-4 mb-0.5" />
+                <span>Import</span>
+              </button>
+
+              <button
+                type="button"
+                id="mobile-admin-bottom-activity"
+                onClick={() => setActiveAdminSection('activity')}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeAdminSection === 'activity'
+                    ? 'text-purple-600 dark:text-purple-400 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Clock className="w-4 h-4 mb-0.5" />
+                <span>Activity</span>
+              </button>
+
+              {/* Exit to User View quick button */}
+              <button
+                type="button"
+                id="mobile-admin-bottom-exit-user"
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  setSelectedSubjectId(null);
+                }}
+                className="flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors cursor-pointer"
+                title="Return to User View"
+              >
+                <GraduationCap className="w-4 h-4 mb-0.5" />
+                <span>User View</span>
+              </button>
+            </nav>
+          ) : (
+            <nav
+              id="mobile-bottom-app-nav"
+              aria-label="Mobile Bottom Navigation"
+              className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-black/95 backdrop-blur-md border-t border-slate-200 dark:border-zinc-800 px-1 py-1.5 flex items-center justify-around shadow-lg transition-colors"
+            >
+              {/* 1. Home */}
+              <button
+                type="button"
+                id="mobile-bottom-nav-home"
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  setSelectedSubjectId(null);
+                }}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'dashboard' && !selectedSubjectId
+                    ? 'text-blue-600 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Home className="w-5 h-5 mb-0.5" />
+                <span>Home</span>
+              </button>
+
+              {/* 2. Subjects */}
+              <button
+                type="button"
+                id="mobile-bottom-nav-subjects"
+                onClick={() => {
+                  setActiveTab('subjects');
+                  setSelectedSubjectId(null);
+                }}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'subjects' || selectedSubjectId
+                    ? 'text-blue-600 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <BookOpen className="w-5 h-5 mb-0.5" />
+                <span>Subjects</span>
+              </button>
+
+              {/* 3. Coding */}
+              <button
+                type="button"
+                id="mobile-bottom-nav-coding"
+                onClick={() => {
+                  setActiveTab('coding');
+                  setSelectedSubjectId(null);
+                }}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'coding' && !selectedSubjectId
+                    ? 'text-blue-600 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Code className="w-5 h-5 mb-0.5" />
+                <span>Coding</span>
+              </button>
+
+              {/* 5. Calendar */}
+              <button
+                type="button"
+                id="mobile-bottom-nav-calendar"
+                onClick={() => {
+                  setActiveTab('calendar');
+                  setSelectedSubjectId(null);
+                }}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'calendar' && !selectedSubjectId
+                    ? 'text-blue-600 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <Calendar className="w-5 h-5 mb-0.5" />
+                <span>Calendar</span>
+              </button>
+
+              {/* 6. Profile Circle */}
+              <button
+                type="button"
+                id="mobile-bottom-nav-profile"
+                onClick={() => {
+                  setActiveTab('profile');
+                  setSelectedSubjectId(null);
+                }}
+                className={`flex-1 flex flex-col items-center justify-center py-1 rounded-lg text-[10px] font-medium transition-colors cursor-pointer ${
+                  activeTab === 'profile' && !selectedSubjectId
+                    ? 'text-blue-600 font-bold'
+                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold mb-0.5 select-none ${
+                    activeTab === 'profile' && !selectedSubjectId
+                      ? 'bg-blue-600 text-white ring-2 ring-blue-600/30'
+                      : 'bg-slate-800 text-white'
+                  }`}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span>Profile</span>
+              </button>
+            </nav>
+          )}
         </>
       ) : currentView === 'landing' ? (
         <LandingPage

@@ -119,6 +119,19 @@ export function CodingRepository() {
   // Delete problem confirmation state
   const [problemToDelete, setProblemToDelete] = useState<ProblemItem | null>(null);
 
+  // Close open dialogs/modals on system back button
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isAdding) {
+        setIsAdding(false);
+      } else if (problemToDelete) {
+        setProblemToDelete(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isAdding, problemToDelete]);
+
   // Toggling status indicator
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 

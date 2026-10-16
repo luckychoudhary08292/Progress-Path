@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Loader2,
   RefreshCw,
-  ChevronRight,
   ArrowLeft,
   GraduationCap,
   UploadCloud,
@@ -37,11 +36,27 @@ import { AdminFeedbackSection } from './admin/AdminFeedbackSection.tsx';
 interface AdminMonitorProps {
   currentUser?: User | null;
   onNavigateToDashboard?: () => void;
+  activeSection?: AdminSection;
+  onSectionChange?: (section: AdminSection) => void;
 }
 
-export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonitorProps) {
-  // Active Section Tab (Default is 'overview')
-  const [activeSection, setActiveSection] = useState<AdminSection>('overview');
+export function AdminMonitor({
+  currentUser,
+  onNavigateToDashboard,
+  activeSection: propActiveSection,
+  onSectionChange: propOnSectionChange,
+}: AdminMonitorProps) {
+  // Active Section Tab (synced with parent when provided, or internal fallback)
+  const [internalActiveSection, setInternalActiveSection] = useState<AdminSection>(propActiveSection || 'overview');
+
+  const activeSection = propActiveSection ?? internalActiveSection;
+
+  const setActiveSection = (section: AdminSection) => {
+    setInternalActiveSection(section);
+    if (propOnSectionChange) {
+      propOnSectionChange(section);
+    }
+  };
 
   // Error & Access Guard
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
@@ -511,147 +526,7 @@ export function AdminMonitor({ currentUser, onNavigateToDashboard }: AdminMonito
   }
 
   return (
-    <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 pb-12 space-y-6">
-      {/* Admin Panel Header & Sub-Nav */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-400 mb-1">
-              {onNavigateToDashboard && (
-                <>
-                  <button
-                    type="button"
-                    onClick={onNavigateToDashboard}
-                    className="hover:text-slate-700 cursor-pointer"
-                  >
-                    Portal
-                  </button>
-                  <ChevronRight className="w-3 h-3" />
-                </>
-              )}
-              <span className="text-slate-600 font-semibold">Administration</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
-                <Shield className="w-4 h-4" />
-              </div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">Admin Control Panel</h1>
-            </div>
-          </div>
-
-          {/* Sub-Nav Tabs matching main app style */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto">
-            {/* 1. Overview Tab */}
-            <button
-              id="admin-tab-overview"
-              type="button"
-              onClick={() => setActiveSection('overview')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeSection === 'overview'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Overview</span>
-            </button>
-
-            {/* 2. Users Tab */}
-            <button
-              id="admin-tab-users"
-              type="button"
-              onClick={() => setActiveSection('users')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeSection === 'users'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Users</span>
-              {userTotals && (
-                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-                  {userTotals.usersCount}
-                </span>
-              )}
-            </button>
-
-            {/* 3. Content Tab */}
-            <button
-              id="admin-tab-content"
-              type="button"
-              onClick={() => setActiveSection('content')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeSection === 'content'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-blue-600" />
-              <span>Content</span>
-              {overviewMetrics && (
-                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-                  {overviewMetrics.totalContentItems}
-                </span>
-              )}
-            </button>
-
-            {/* 4. Global Importer Tab */}
-            <button
-              id="admin-tab-import"
-              type="button"
-              onClick={() => setActiveSection('import')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeSection === 'import'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-              }`}
-            >
-              <UploadCloud className="w-3.5 h-3.5 text-red-600" />
-              <span>Global Importer</span>
-              <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-extrabold bg-red-100 text-red-700">
-                Launch
-              </span>
-            </button>
-
-            {/* 5. Activity Log Tab */}
-            <button
-              id="admin-tab-activity"
-              type="button"
-              onClick={() => setActiveSection('activity')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeSection === 'activity'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5 text-amber-600" />
-              <span>Activity Log</span>
-            </button>
-
-            {/* 6. User Feedbacks Tab */}
-            <button
-              id="admin-tab-feedback"
-              type="button"
-              onClick={() => setActiveSection('feedback')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                activeSection === 'feedback'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Feedbacks</span>
-              {feedbacks.length > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
-                  {feedbacks.length}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 pb-12">
       {/* SECTION VIEW CONTAINER (Lazy Loaded) */}
       <div>
         {activeSection === 'overview' && (

@@ -277,214 +277,240 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
         </div>
       )}
 
-      {/* Top Banner & "Create Admin" Trigger */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-indigo-600" />
-              User Directory & Role Permissions
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Inspect student progress benchmarks, manage access privileges, and provision new administrator accounts.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={isLoading}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer disabled:opacity-60"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
-              <span>{isLoading ? 'Updating...' : 'Refresh'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsFormOpen((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer shadow-xs"
-            >
-              <ShieldPlus className="w-3.5 h-3.5" />
-              <span>{isFormOpen ? 'Hide Form' : 'Create Admin Account'}</span>
-            </button>
-          </div>
+      {/* Simple, Calm & Professional Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1">
+        <div className="flex items-center gap-2.5">
+          <Users className="w-5 h-5 text-slate-500 dark:text-zinc-400 shrink-0" />
+          <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 dark:text-zinc-100">
+            User Directory &amp; Role Permissions
+          </h2>
         </div>
 
-        {/* Collapsible Create Admin Form */}
-        {isFormOpen && (
-          <div className="mt-5 pt-5 border-t border-slate-100">
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
-              <div className="flex items-center gap-2 mb-1">
-                <ShieldPlus className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-bold text-slate-900">Provision New Administrator Account</h3>
-              </div>
-              <p className="text-xs text-slate-500 mb-4">
-                The provisioned account will strictly require a password change on first login before accessing administrative features.
-              </p>
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+            title="Refresh users list"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-slate-600 dark:text-zinc-300' : 'text-slate-400 dark:text-zinc-500'}`} />
+            <span>{isLoading ? 'Updating...' : 'Refresh'}</span>
+          </button>
 
-              {createAdminErrors.general && (
-                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 font-medium">
-                  {createAdminErrors.general}
-                </div>
-              )}
+          <button
+            type="button"
+            onClick={() => setIsFormOpen((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 transition-colors cursor-pointer"
+          >
+            <ShieldPlus className="w-3.5 h-3.5" />
+            <span>{isFormOpen ? 'Hide Form' : 'Create Admin Account'}</span>
+          </button>
+        </div>
+      </div>
 
-              {createAdminSuccess && (
-                <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-800 font-bold">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Administrator account successfully created!
-                  </div>
-                  <div className="text-emerald-700">
-                    Share these initial credentials securely with <strong>{createAdminSuccess.name}</strong> ({createAdminSuccess.email}):
-                  </div>
-                  <div className="flex items-center gap-2 p-2.5 bg-white border border-emerald-200 rounded-lg font-mono text-xs text-slate-800 select-all">
-                    <span className="font-semibold text-slate-500">Temporary Password:</span>
-                    <span className="font-bold text-slate-900">{createAdminSuccess.temporaryPassword}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(createAdminSuccess.temporaryPassword);
-                        setCopiedTempPassword(true);
-                        setTimeout(() => setCopiedTempPassword(false), 2000);
-                      }}
-                      className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-sans text-[11px] cursor-pointer"
-                    >
-                      {copiedTempPassword ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedTempPassword ? 'Copied!' : 'Copy'}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <form onSubmit={handleCreateAdmin} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    value={newAdminName}
-                    onChange={(e) => setNewAdminName(e.target.value)}
-                    placeholder="e.g. Alex Morgan"
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900"
-                  />
-                  {createAdminErrors.name && (
-                    <p className="text-[11px] text-rose-600 mt-1">{createAdminErrors.name}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    value={newAdminEmail}
-                    onChange={(e) => setNewAdminEmail(e.target.value)}
-                    placeholder="e.g. alex@lms.local"
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900"
-                  />
-                  {createAdminErrors.email && (
-                    <p className="text-[11px] text-rose-600 mt-1">{createAdminErrors.email}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Temporary Password *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showNewAdminPassword ? 'text' : 'password'}
-                      value={newAdminTempPassword}
-                      onChange={(e) => setNewAdminTempPassword(e.target.value)}
-                      placeholder="Min 6 characters"
-                      className="w-full pl-3 pr-8 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewAdminPassword((p) => !p)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      {showNewAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                  {createAdminErrors.temporaryPassword && (
-                    <p className="text-[11px] text-rose-600 mt-1">
-                      {createAdminErrors.temporaryPassword}
-                    </p>
-                  )}
-                </div>
-
-                <div className="sm:col-span-3 flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsFormOpen(false);
-                      setCreateAdminErrors({});
-                    }}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isCreatingAdmin}
-                    className="px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-60 flex items-center gap-1.5 shadow-xs"
-                  >
-                    {isCreatingAdmin && <Loader2 className="w-3 h-3 animate-spin" />}
-                    <span>Create Administrator</span>
-                  </button>
-                </div>
-              </form>
-            </div>
+      {/* Collapsible Create Admin Form Card */}
+      {isFormOpen && (
+        <div className="bg-slate-50 dark:bg-zinc-900/90 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 sm:p-5 shadow-xs transition-colors animate-in fade-in duration-150">
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldPlus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Provision New Administrator Account</h3>
           </div>
-        )}
+          <p className="text-xs text-slate-500 dark:text-zinc-400 mb-4">
+            The provisioned account will strictly require a password change on first login before accessing administrative features.
+          </p>
 
-        {/* Filter bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-4 mt-4 border-t border-slate-100">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          {createAdminErrors.general && (
+            <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 rounded-lg text-xs text-rose-700 dark:text-rose-300 font-medium">
+              {createAdminErrors.general}
+            </div>
+          )}
+
+          {createAdminSuccess && (
+            <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs space-y-2">
+              <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                Administrator account successfully created!
+              </div>
+              <div className="text-emerald-700 dark:text-emerald-400">
+                Share these initial credentials securely with <strong>{createAdminSuccess.name}</strong> ({createAdminSuccess.email}):
+              </div>
+              <div className="flex items-center gap-2 p-2.5 bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800 rounded-lg font-mono text-xs text-slate-800 dark:text-zinc-200 select-all">
+                <span className="font-semibold text-slate-500 dark:text-zinc-400">Temporary Password:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{createAdminSuccess.temporaryPassword}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(createAdminSuccess.temporaryPassword);
+                    setCopiedTempPassword(true);
+                    setTimeout(() => setCopiedTempPassword(false), 2000);
+                  }}
+                  className="ml-auto inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 font-sans text-[11px] cursor-pointer"
+                >
+                  {copiedTempPassword ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedTempPassword ? 'Copied!' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <form onSubmit={handleCreateAdmin} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">Full Name *</label>
+              <input
+                type="text"
+                value={newAdminName}
+                onChange={(e) => setNewAdminName(e.target.value)}
+                placeholder="e.g. Alex Morgan"
+                className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+              />
+              {createAdminErrors.name && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1">{createAdminErrors.name}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">Email Address *</label>
+              <input
+                type="email"
+                value={newAdminEmail}
+                onChange={(e) => setNewAdminEmail(e.target.value)}
+                placeholder="e.g. alex@lms.local"
+                className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+              />
+              {createAdminErrors.email && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1">{createAdminErrors.email}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                Temporary Password *
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewAdminPassword ? 'text' : 'password'}
+                  value={newAdminTempPassword}
+                  onChange={(e) => setNewAdminTempPassword(e.target.value)}
+                  placeholder="Min 6 characters"
+                  className="w-full pl-3 pr-8 py-2 text-xs bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewAdminPassword((p) => !p)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 cursor-pointer"
+                >
+                  {showNewAdminPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              {createAdminErrors.temporaryPassword && (
+                <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1">
+                  {createAdminErrors.temporaryPassword}
+                </p>
+              )}
+            </div>
+
+            <div className="sm:col-span-3 flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFormOpen(false);
+                  setCreateAdminErrors({});
+                }}
+                className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-zinc-400 hover:bg-slate-200 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isCreatingAdmin}
+                className="px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-60 flex items-center gap-1.5 shadow-xs"
+              >
+                {isCreatingAdmin && <Loader2 className="w-3 h-3 animate-spin" />}
+                <span>Create Administrator</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Professional Search & Filter Card */}
+      <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 sm:p-4 shadow-xs transition-colors">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-500 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search users by name or email..."
-              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-800 placeholder:text-slate-400"
+              placeholder="Search users by name or email address..."
+              className="w-full pl-9 pr-9 py-2 text-xs bg-slate-50 dark:bg-zinc-800/80 rounded-lg border border-slate-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500 transition-all"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-500 dark:text-zinc-300 hover:bg-slate-300 dark:hover:bg-zinc-600 flex items-center justify-center text-[10px] cursor-pointer"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+          {/* Role Filter Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto text-xs shrink-0 p-1 bg-slate-100 dark:bg-zinc-800/80 rounded-lg">
             <button
               type="button"
               onClick={() => setRoleFilter('all')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all whitespace-nowrap cursor-pointer ${
                 roleFilter === 'all'
-                  ? 'bg-slate-900 text-white font-semibold'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-white dark:bg-zinc-700 text-slate-900 dark:text-white font-semibold shadow-2xs'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              All Users ({users.length})
+              <span>All Users</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                roleFilter === 'all' ? 'bg-slate-100 dark:bg-zinc-600 text-slate-900 dark:text-white' : 'bg-slate-200/60 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+              }`}>
+                {users.length}
+              </span>
             </button>
+
             <button
               type="button"
               onClick={() => setRoleFilter('admin')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all whitespace-nowrap cursor-pointer ${
                 roleFilter === 'admin'
-                  ? 'bg-indigo-600 text-white font-semibold'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-white dark:bg-zinc-700 text-purple-700 dark:text-purple-300 font-semibold shadow-2xs'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Admins Only ({users.filter((u) => u.role === 'admin').length})
+              <Shield className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+              <span>Admins</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                roleFilter === 'admin' ? 'bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300' : 'bg-slate-200/60 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+              }`}>
+                {users.filter((u) => u.role === 'admin').length}
+              </span>
             </button>
+
             <button
               type="button"
               onClick={() => setRoleFilter('user')}
-              className={`px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-all whitespace-nowrap cursor-pointer ${
                 roleFilter === 'user'
-                  ? 'bg-slate-700 text-white font-semibold'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-white dark:bg-zinc-700 text-blue-700 dark:text-blue-300 font-semibold shadow-2xs'
+                  : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Students Only ({users.filter((u) => u.role !== 'admin').length})
+              <span>Students</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                roleFilter === 'user' ? 'bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300' : 'bg-slate-200/60 dark:bg-zinc-700 text-slate-600 dark:text-zinc-300'
+              }`}>
+                {users.filter((u) => u.role !== 'admin').length}
+              </span>
             </button>
           </div>
         </div>

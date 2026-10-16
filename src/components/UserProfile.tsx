@@ -88,6 +88,21 @@ export function UserProfile({
     setInternalSettingsModalOpen(open);
   };
 
+  // Handle system back button for mobile subpage and settings drawer
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isSettingsModalOpen) {
+        setIsSettingsModalOpen(false);
+      } else if (mobileSubPage !== 'overview') {
+        setMobileSubPage('overview');
+        setActiveTab(null);
+        onProfileTabChange?.(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isSettingsModalOpen, mobileSubPage, onProfileTabChange]);
+
   // Floating Toast State
   const [toast, setToast] = useState<{
     title: string;
