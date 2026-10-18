@@ -35,10 +35,18 @@ import {
   UploadCloud,
   MessageSquare,
   Send,
+  Bell,
 } from 'lucide-react';
 import { User, UserProfileStats, FeedbackItem } from '../types.ts';
 import { ThemeToggle } from './ThemeToggle.tsx';
 import { ImportConsole } from './ImportConsole.tsx';
+import { TaskReminderModal } from './TaskReminderModal.tsx';
+import { 
+  getTaskReminderSettings, 
+  formatInterval, 
+  subscribeToReminderSettings, 
+  TaskReminderSettings 
+} from '../utils/taskNotificationManager.ts';
 
 interface UserProfileProps {
   user: User;
@@ -87,6 +95,16 @@ export function UserProfile({
     if (onOpenSettings && open) onOpenSettings();
     setInternalSettingsModalOpen(open);
   };
+
+  // Task Reminder settings & modal state
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [reminderSettings, setReminderSettings] = useState<TaskReminderSettings>(getTaskReminderSettings);
+
+  useEffect(() => {
+    return subscribeToReminderSettings((updated) => {
+      setReminderSettings(updated);
+    });
+  }, []);
 
   // Handle system back button for mobile subpage and settings drawer
   useEffect(() => {
@@ -1802,6 +1820,38 @@ export function UserProfile({
                 <ThemeToggle variant="cards" showDescription={false} />
               </div>
 
+              {/* Task Reminders & Hourly Alert Settings Button */}
+              <button
+                type="button"
+                id="settings-service-task-reminders"
+                onClick={() => setIsReminderModalOpen(true)}
+                className="w-full flex items-center justify-between p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/40 text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                    <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        Task Reminders & Routine
+                      </h4>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
+                        reminderSettings.enabled
+                          ? 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700'
+                          : 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500'
+                      }`}>
+                        {reminderSettings.enabled ? formatInterval(reminderSettings.intervalMinutes) : 'Off'}
+                      </span>
+                    </div>
+                    <p className="text-[9.5px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      Hourly &amp; custom alerts for pending tasks (Default: 1 hr)
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 group-hover:translate-x-0.5 transition-all shrink-0" />
+              </button>
+
               {/* Share Feedback & Suggestions Service Card */}
               <button
                 type="button"
@@ -2016,6 +2066,12 @@ export function UserProfile({
           </div>
         </div>
       )}
+
+      {/* Task Reminder Settings Modal */}
+      <TaskReminderModal
+        isOpen={isReminderModalOpen}
+        onClose={() => setIsReminderModalOpen(false)}
+      />
     </div>
   );
 }

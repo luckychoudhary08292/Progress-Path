@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Loader2, LayoutDashboard, BookOpen, Code, Calendar, Shield, LogOut, 
   FileCode, User as UserIcon, Users, ShieldCheck, Home, UploadCloud, Settings, 
-  MessageSquare, ChevronDown, Check, GraduationCap, Layers, Clock, ArrowRight
+  MessageSquare, ChevronDown, Check, GraduationCap, Layers, Clock, ArrowRight,
+  Bell
 } from 'lucide-react';
 import { User, AdminSection } from './types.ts';
 import { SignupForm } from './components/SignupForm.tsx';
@@ -17,11 +18,17 @@ import { ImportConsole } from './components/ImportConsole.tsx';
 import { UserProfile } from './components/UserProfile.tsx';
 import { SystemSecurityModal } from './components/SystemSecurityModal.tsx';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal.tsx';
+import { NotificationsDrawer } from './components/NotificationsDrawer.tsx';
 import { LandingPage } from './components/LandingPage.tsx';
 import { SystemLogo } from './components/SystemLogo.tsx';
 import { TermsOfService } from './components/TermsOfService.tsx';
 import { PrivacyPolicy } from './components/PrivacyPolicy.tsx';
 import { useDesktopNativeInstallPrompt } from './hooks/useDesktopNativeInstallPrompt.ts';
+import { useTaskReminderScheduler } from './hooks/useTaskReminderScheduler.ts';
+import {
+  getNotificationHistory,
+  subscribeToNotificationHistory,
+} from './utils/taskNotificationManager.ts';
 import { ThemeToggle } from './components/ThemeToggle.tsx';
 
 type AuthView = 'landing' | 'login' | 'signup' | 'terms' | 'privacy';
@@ -30,6 +37,9 @@ type AppView = 'dashboard' | 'subjects' | 'coding' | 'calendar' | 'admin' | 'imp
 export default function App() {
   // Triggers native browser install pop up dialog on desktop (not mobile, no custom HTML popup)
   useDesktopNativeInstallPrompt();
+
+  // Hourly and custom task reminder scheduler for pending daily tasks (PWA & Web)
+  useTaskReminderScheduler();
 
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<AuthView>('landing');
@@ -61,6 +71,21 @@ export default function App() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Real-time Notification Drawer state
+  const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState<number>(0);
+
+  // Sync unread notification count
+  useEffect(() => {
+    const updateCount = () => {
+      const history = getNotificationHistory();
+      const unread = history.filter((h) => !h.read).length;
+      setUnreadNotificationCount(unread);
+    };
+    updateCount();
+    return subscribeToNotificationHistory(updateCount);
+  }, []);
 
   // Close interface switcher dropdown on outside click or Escape key
   useEffect(() => {
@@ -688,6 +713,23 @@ export default function App() {
                     <span className="capitalize">{formattedTodayShort}</span>
                   </button>
 
+                  {/* Real-time Notifications Bell Button (Next to Profile Circle - Slides Drawer from Right) */}
+                  <button
+                    id="nav-notifications-btn"
+                    type="button"
+                    onClick={() => setIsNotificationDrawerOpen(true)}
+                    className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all cursor-pointer select-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-95"
+                    title="Notifications & Routine Tasks (Slide to open)"
+                    aria-label="Open notifications"
+                  >
+                    <Bell className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                    {unreadNotificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white ring-2 ring-white dark:ring-black shadow-xs">
+                        {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
+                      </span>
+                    )}
+                  </button>
+
                   <div className="relative shrink-0" ref={profileMenuRef}>
                   {activeTab === 'profile' && !selectedSubjectId ? (
                     <button
@@ -876,6 +918,32 @@ export default function App() {
                           {activeTab === 'profile' && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold">
                               Active
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Notifications & Tasks Drawer link */}
+                        <button
+                          id="dropdown-nav-notifications-link"
+                          type="button"
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            setIsNotificationDrawerOpen(true);
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                              <Bell className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="text-left">
+                              <span className="block text-xs font-semibold leading-tight">Notifications</span>
+                              <span className="block text-[10px] text-slate-400 dark:text-slate-500">Hourly alerts &amp; pending tasks</span>
+                            </div>
+                          </div>
+                          {unreadNotificationCount > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-bold">
+                              {unreadNotificationCount}
                             </span>
                           )}
                         </button>
@@ -1311,6 +1379,24 @@ export default function App() {
             setUser(updatedUser);
           }}
           onLogout={handleLogout}
+        />
+      )}
+
+      {/* Real-time Notifications Slide-over Drawer (Slides in from Right) */}
+      {user && (
+        <NotificationsDrawer
+          isOpen={isNotificationDrawerOpen}
+          onClose={() => setIsNotificationDrawerOpen(false)}
+          onOpenSettings={() => {
+            setActiveTab('profile');
+            setActiveProfileTab('profile');
+            setSelectedSubjectId(null);
+            setIsProfileSettingsOpen(true);
+          }}
+          onNavigateToCalendar={() => {
+            setActiveTab('calendar');
+            setSelectedSubjectId(null);
+          }}
         />
       )}
     </div>

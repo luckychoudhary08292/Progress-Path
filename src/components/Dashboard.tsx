@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { LogOut, CheckCircle2, Circle, Calendar, BookOpen, Code, Award, Loader2, Sparkles, User as UserIcon, Plus, X } from 'lucide-react';
 import { User, DashboardStats, TodayEvent } from '../types.ts';
 import { apiCache } from '../services/apiCache.ts';
+import { useTaskReminderScheduler } from '../hooks/useTaskReminderScheduler.ts';
 
 interface DashboardProps {
   user: User;
@@ -44,6 +45,11 @@ export function Dashboard({
   const [taskType, setTaskType] = useState<'task' | 'academic'>('task');
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [taskError, setTaskError] = useState('');
+
+  const todayEvents = stats?.todayEvents || [];
+
+  // Hourly and custom task reminder scheduler
+  useTaskReminderScheduler(todayEvents);
 
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('auth_token');
@@ -197,7 +203,6 @@ export function Dashboard({
   const lectures = stats?.lectures ?? { done: 0, total: 0 };
   const problems = stats?.problems ?? { solved: 0, total: 0 };
   const todayTasks = stats?.todayTasks ?? { done: 0, total: 0 };
-  const todayEvents = stats?.todayEvents ?? [];
   const hasZeroData = stats?.hasZeroData ?? true;
 
   return (
@@ -393,20 +398,23 @@ export function Dashboard({
             <Calendar className="w-4 h-4 text-slate-500 shrink-0" />
             <h2 className="text-sm sm:text-base font-semibold text-slate-900">Today's Schedule & Tasks</h2>
           </div>
-          {/* Mobile + Add Task Button */}
-          <button
-            id="mobile-add-task-btn"
-            type="button"
-            onClick={() => {
-              setTaskError('');
-              setIsAddTaskModalOpen(true);
-            }}
-            className="sm:hidden inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs transition-all focus:outline-none"
-            aria-label="Add task"
-            title="Add task for today"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* Mobile + Add Task Button */}
+            <button
+              id="mobile-add-task-btn"
+              type="button"
+              onClick={() => {
+                setTaskError('');
+                setIsAddTaskModalOpen(true);
+              }}
+              className="sm:hidden inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-xs transition-all focus:outline-none"
+              aria-label="Add task"
+              title="Add task for today"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+            </button>
+          </div>
         </div>
 
         {todayEvents.length > 0 ? (

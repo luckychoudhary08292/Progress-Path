@@ -8,25 +8,14 @@ let dbErrorMessage: string | null = null;
 let currentDbName = 'LMS';
 
 export async function initDatabase(): Promise<boolean> {
-  // Prioritize .env and .env.example over default process.env
-  let uri = '';
+  // Only load MONGODB_URI from secure environment variables or private .env file (NEVER from .env.example)
+  let uri = process.env.MONGODB_URI || '';
 
-  if (fs.existsSync(path.resolve(process.cwd(), '.env'))) {
+  if (!uri && fs.existsSync(path.resolve(process.cwd(), '.env'))) {
     const parsed = dotenv.parse(fs.readFileSync(path.resolve(process.cwd(), '.env')));
     if (parsed.MONGODB_URI) {
       uri = parsed.MONGODB_URI;
     }
-  }
-
-  if (!uri && fs.existsSync(path.resolve(process.cwd(), '.env.example'))) {
-    const parsed = dotenv.parse(fs.readFileSync(path.resolve(process.cwd(), '.env.example')));
-    if (parsed.MONGODB_URI) {
-      uri = parsed.MONGODB_URI;
-    }
-  }
-
-  if (!uri) {
-    uri = process.env.MONGODB_URI || '';
   }
 
   if (!uri) {
