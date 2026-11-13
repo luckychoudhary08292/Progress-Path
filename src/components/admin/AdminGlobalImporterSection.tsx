@@ -25,6 +25,7 @@ import {
 } from '../../types.ts';
 import { VideoPlayerModal, VideoPlayerLecture } from '../VideoPlayerModal.tsx';
 import { apiCache } from '../../services/apiCache.ts';
+import { getSafeExternalHref } from '../../utils/videoUtils.ts';
 
 export interface AdminGlobalImporterSectionProps {
   globalSubjects: GlobalSubjectItem[];
@@ -1019,19 +1020,22 @@ export function AdminGlobalImporterSection({
                           {prob.category}
                         </td>
                         <td className="py-2.5 px-3 text-slate-400 truncate max-w-xs">
-                          {prob.link ? (
-                            <a
-                              href={prob.link}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-600 hover:underline inline-flex items-center gap-1"
-                            >
-                              <span>Open Link</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          ) : (
-                            'None'
-                          )}
+                          {(() => {
+                            const safeHref = getSafeExternalHref(prob.link);
+                            return safeHref ? (
+                              <a
+                                href={safeHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                              >
+                                <span>Open Link</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              'None'
+                            );
+                          })()}
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <button

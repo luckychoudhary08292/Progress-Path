@@ -82,6 +82,7 @@ export function AdminMonitor({
   const [users, setUsers] = useState<AdminUserComparison[]>([]);
   const [userTotals, setUserTotals] = useState<{
     usersCount: number;
+    maxUsers?: number;
     lecturesCount: number;
     problemsCount: number;
   } | null>(null);

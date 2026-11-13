@@ -5,6 +5,7 @@ import { ConfirmModal } from './ConfirmModal.tsx';
 import { apiCache } from '../services/apiCache.ts';
 import { exportSubjectNotesToPdf } from '../services/pdfExporter.ts';
 import { PdfNoticeModal } from './PdfNoticeModal.tsx';
+import { SubjectsHubSkeleton } from './Skeleton.tsx';
 
 interface SubjectsHubProps {
   onSelectSubject: (subjectId: string) => void;
@@ -249,12 +250,7 @@ export function SubjectsHub({ onSelectSubject }: SubjectsHubProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-sm font-medium text-slate-500">Loading subjects...</p>
-      </div>
-    );
+    return <SubjectsHubSkeleton />;
   }
 
   return (

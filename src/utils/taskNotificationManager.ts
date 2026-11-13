@@ -1,5 +1,6 @@
 // Task Reminder Notification Manager for PWA & Web Mobile
-// Supports custom user intervals, 1-hour default, Web Audio chimes, and PWA Service Worker notifications.
+// Supports custom user intervals, 1-hour default, Web Audio chimes, PWA Service Worker notifications,
+// and database persistence for user profile notifications.
 
 export interface TaskReminderSettings {
   enabled: boolean;
@@ -94,7 +95,13 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 }
 
 // Play a pleasant, lightweight notification chime using Web Audio API (zero external assets needed)
+let lastChimePlayedAt = 0;
 export function playChimeSound(): void {
+  const nowMs = Date.now();
+  // Prevent chime spam: minimum 5s between audible sounds
+  if (nowMs - lastChimePlayedAt < 5000) return;
+  lastChimePlayedAt = nowMs;
+
   try {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
@@ -141,7 +148,10 @@ export function triggerVibration(): void {
   }
 }
 
-// Notification History Storage & Events
+// -----------------------------------------------------------------------------
+// Notification History Storage & DB Integration
+// -----------------------------------------------------------------------------
+
 export interface NotificationHistoryItem {
   id: string;
   title: string;
@@ -170,13 +180,47 @@ export function getNotificationHistory(): NotificationHistoryItem[] {
 export function saveNotificationHistory(items: NotificationHistoryItem[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(items.slice(0, 50))); // Keep last 50
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(items.slice(0, 100))); // Keep last 100
     window.dispatchEvent(new CustomEvent(HISTORY_CHANGE_EVENT, { detail: items }));
   } catch {
     // ignore
   }
 }
 
+// Fetch user notifications from database API
+export async function syncNotificationsFromDb(): Promise<NotificationHistoryItem[]> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  if (!token) return getNotificationHistory();
+
+  try {
+    const res = await fetch('/api/notifications', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const dbItems: NotificationHistoryItem[] = (data.notifications || []).map((n: any) => ({
+        id: n.id || n._id,
+        title: n.title,
+        body: n.body,
+        timestamp: n.timestamp || (n.createdAt ? new Date(n.createdAt).getTime() : Date.now()),
+        type: n.type || 'task-reminder',
+        read: !!n.read,
+      }));
+
+      saveNotificationHistory(dbItems);
+      return dbItems;
+    }
+  } catch (err) {
+    console.warn('[taskNotificationManager] Failed to sync notifications from DB:', err);
+  }
+
+  return getNotificationHistory();
+}
+
+// Add notification item: updates local UI instantly and saves to database
 export function addNotificationHistoryItem(
   item: Omit<NotificationHistoryItem, 'id' | 'timestamp' | 'read'>
 ): NotificationHistoryItem {
@@ -187,7 +231,38 @@ export function addNotificationHistoryItem(
     read: false,
     ...item,
   };
+
   saveNotificationHistory([newItem, ...current]);
+
+  // Persist to Database asynchronously for this user profile
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  if (token) {
+    fetch('/api/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        title: newItem.title,
+        body: newItem.body,
+        type: newItem.type,
+      }),
+    }).then(async (res) => {
+      if (res.ok) {
+        const saved = await res.json();
+        // Replace temp id with saved DB id
+        if (saved && saved.id) {
+          const fresh = getNotificationHistory();
+          const mapped = fresh.map((f) => (f.id === newItem.id ? { ...f, id: saved.id } : f));
+          saveNotificationHistory(mapped);
+        }
+      }
+    }).catch((err) => {
+      console.warn('[taskNotificationManager] DB notification save notice:', err);
+    });
+  }
+
   return newItem;
 }
 
@@ -195,16 +270,51 @@ export function markNotificationAsRead(id: string): void {
   const current = getNotificationHistory();
   const updated = current.map((item) => (item.id === id ? { ...item, read: true } : item));
   saveNotificationHistory(updated);
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  if (token) {
+    fetch(`/api/notifications/${id}/read`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
 }
 
 export function markAllNotificationsAsRead(): void {
   const current = getNotificationHistory();
   const updated = current.map((item) => ({ ...item, read: true }));
   saveNotificationHistory(updated);
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  if (token) {
+    fetch('/api/notifications/read-all', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
 }
 
-export function clearNotificationHistory(): void {
+// CRITICAL USER REQUIREMENT:
+// Clears ONLY the notification messages of this user profile from the database.
+// Strictly DOES NOT modify, reset, or touch any task marking, events, or completion status!
+export async function clearNotificationHistory(): Promise<void> {
+  // Wipe local notification history state
   saveNotificationHistory([]);
+
+  // Wipe all notification messages of this user profile from DB
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  if (token) {
+    try {
+      await fetch('/api/notifications/clear', {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (err) {
+      console.warn('[taskNotificationManager] Error clearing notifications from DB:', err);
+    }
+  }
 }
 
 export function subscribeToNotificationHistory(
@@ -227,13 +337,24 @@ export function subscribeToNotificationHistory(
   };
 }
 
+// -----------------------------------------------------------------------------
 // Deliver native device / PWA notification for pending daily tasks
+// -----------------------------------------------------------------------------
+
+let inMemoryLastDeliveredAt = 0;
+let isDeliveringLock = false;
+
 export async function deliverTaskReminderNotification(options: {
   pendingCount: number;
   taskTitles: string[];
   isTest?: boolean;
 }): Promise<boolean> {
   const { pendingCount, taskTitles, isTest = false } = options;
+
+  // Anti-loop mutex lock: prevent concurrent or re-entrant executions
+  if (isDeliveringLock) return false;
+
+  const nowMs = Date.now();
   const settings = getTaskReminderSettings();
 
   // If not a test and notifications are disabled, bail out
@@ -241,58 +362,74 @@ export async function deliverTaskReminderNotification(options: {
     return false;
   }
 
-  // Play audio chime if enabled
-  if (settings.soundEnabled) {
-    playChimeSound();
-  }
-
-  // Trigger vibration pattern if enabled
-  if (settings.vibrateEnabled) {
-    triggerVibration();
-  }
-
-  const title = isTest
-    ? '🔔 Task Reminder Test: ProgressPath'
-    : `⏰ ${pendingCount} Pending Task${pendingCount > 1 ? 's' : ''} Today`;
-
-  const primaryTask = taskTitles[0] || 'Scheduled task';
-  const remainingText = taskTitles.length > 1 ? ` and ${taskTitles.length - 1} more` : '';
-
-  const body = isTest
-    ? `Notifications are working! You'll receive routine alerts every ${formatInterval(settings.intervalMinutes)} for pending tasks.`
-    : `"${primaryTask}"${remainingText} is still pending. Tap to mark complete!`;
-
-  // Always record in Notification History for in-app drawer visibility
-  addNotificationHistoryItem({
-    title,
-    body,
-    type: isTest ? 'system' : 'task-reminder',
-  });
-
-  const permission = getNotificationPermissionStatus();
-  if (permission !== 'granted') {
+  // HARD COOLDOWN: Never fire twice within 60 seconds under any circumstance
+  if (!isTest && nowMs - inMemoryLastDeliveredAt < 60000) {
     return false;
   }
 
-  const notificationOptions = {
-    body,
-    icon: '/pwa-192x192.png',
-    badge: '/system_logo.svg',
-    tag: 'progresspath-task-reminder',
-    renotify: true,
-    data: {
-      url: '/',
-      type: 'task-reminder',
-    },
-  } as NotificationOptions;
+  // Interval verification
+  const intervalMs = settings.intervalMinutes * 60 * 1000;
+  if (!isTest && settings.lastNotifiedAt && nowMs - settings.lastNotifiedAt < intervalMs) {
+    return false;
+  }
+
+  isDeliveringLock = true;
+  inMemoryLastDeliveredAt = nowMs;
+
+  // CRITICAL: Update last notified timestamp immediately to prevent re-triggering loops!
+  updateLastNotifiedTimestamp();
 
   try {
+    // Play audio chime if enabled
+    if (settings.soundEnabled) {
+      playChimeSound();
+    }
+
+    // Trigger vibration pattern if enabled
+    if (settings.vibrateEnabled) {
+      triggerVibration();
+    }
+
+    const title = isTest
+      ? '🔔 Task Reminder Test: ProgressPath'
+      : `⏰ ${pendingCount} Pending Task${pendingCount > 1 ? 's' : ''} Today`;
+
+    const primaryTask = taskTitles[0] || 'Scheduled task';
+    const remainingText = taskTitles.length > 1 ? ` and ${taskTitles.length - 1} more` : '';
+
+    const body = isTest
+      ? `Notifications are working! You'll receive routine alerts every ${formatInterval(settings.intervalMinutes)} for pending tasks.`
+      : `"${primaryTask}"${remainingText} is still pending. Tap to mark complete!`;
+
+    // Store in Notification History and Database for in-app drawer visibility
+    addNotificationHistoryItem({
+      title,
+      body,
+      type: isTest ? 'system' : 'task-reminder',
+    });
+
+    const permission = getNotificationPermissionStatus();
+    if (permission !== 'granted') {
+      return true; // Notification delivered to in-app drawer and sound/vibe played
+    }
+
+    const notificationOptions = {
+      body,
+      icon: '/pwa-192x192.png',
+      badge: '/system_logo.svg',
+      tag: 'progresspath-task-reminder',
+      renotify: true,
+      data: {
+        url: '/',
+        type: 'task-reminder',
+      },
+    } as NotificationOptions;
+
     // Try service worker registration first (optimal for PWA mobile background alerts)
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg && 'showNotification' in reg) {
         await reg.showNotification(title, notificationOptions);
-        updateLastNotifiedTimestamp();
         return true;
       }
     }
@@ -304,14 +441,16 @@ export async function deliverTaskReminderNotification(options: {
         window.focus();
         n.close();
       };
-      updateLastNotifiedTimestamp();
       return true;
     }
-  } catch (err) {
-    console.warn('[TaskReminders] Failed to show notification:', err);
-  }
 
-  return false;
+    return true;
+  } catch (err) {
+    console.warn('[TaskReminders] Error delivering notification:', err);
+    return false;
+  } finally {
+    isDeliveringLock = false;
+  }
 }
 
 // Update last notification timestamp

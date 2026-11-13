@@ -9,6 +9,7 @@ import {
   Lock,
   Zap,
 } from 'lucide-react';
+import { SystemSecuritySkeleton } from './Skeleton.tsx';
 
 interface SystemStatusData {
   database: {
@@ -49,7 +50,13 @@ export function SystemSecurityModal({ isOpen, onClose }: SystemSecurityModalProp
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/system/status');
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/system/status', {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Administrator session required to view live diagnostics');
+      }
       if (!res.ok) {
         throw new Error('Failed to fetch system security status');
       }
@@ -124,6 +131,10 @@ export function SystemSecurityModal({ isOpen, onClose }: SystemSecurityModalProp
             </div>
           )}
 
+          {isLoading && !data ? (
+            <SystemSecuritySkeleton />
+          ) : (
+            <>
           {/* 1. Database Status */}
           <div className="rounded-xl border border-slate-200 p-4 bg-slate-50/50 space-y-3">
             <div className="flex items-center justify-between">
@@ -154,19 +165,13 @@ export function SystemSecurityModal({ isOpen, onClose }: SystemSecurityModalProp
             {!data?.database.connected && (
               <div className="mt-2 text-xs bg-white p-3 rounded-lg border border-amber-200 text-slate-700 space-y-1">
                 <p className="font-semibold text-amber-900">
-                  Atlas Authentication Diagnosis:
+                  Cloud Database Configuration:
                 </p>
                 <p className="text-slate-600 text-[11px] leading-normal">
-                  The credentials in <code className="bg-slate-100 px-1 py-0.5 rounded">MONGODB_URI</code> failed with Atlas error code 8000 (<span className="text-rose-600 font-medium">bad auth : authentication failed</span>). To enable Atlas cloud persistence:
+                  Configure a valid <code className="bg-slate-100 px-1 py-0.5 rounded">MONGODB_URI</code> environment variable with <code className="bg-slate-100 px-1 py-0.5 rounded">readWrite</code> permissions on your target cluster to enable persistent MongoDB storage.
                 </p>
-                <ol className="list-decimal list-inside text-[11px] text-slate-600 space-y-0.5 pl-1 pt-1">
-                  <li>Open your <strong>MongoDB Atlas Console</strong></li>
-                  <li>Navigate to <strong>Security &gt; Database Access</strong></li>
-                  <li>Ensure user <code className="bg-slate-100 px-1 py-0.5 rounded">xyzcoding02_db_user</code> has role <code className="bg-slate-100 px-1 py-0.5 rounded">readWriteAnyDatabase</code> or grant readWrite to <code className="bg-slate-100 px-1 py-0.5 rounded">LMS</code></li>
-                  <li>Reset or confirm password, then update the MONGODB_URI in Settings</li>
-                </ol>
                 <p className="text-emerald-700 text-[11px] font-medium pt-1">
-                  ✓ The website remains 100% operational with its built-in fallback store.
+                  The platform remains operational with its built-in fallback store.
                 </p>
               </div>
             )}
@@ -183,14 +188,14 @@ export function SystemSecurityModal({ isOpen, onClose }: SystemSecurityModalProp
               <div className="p-2.5 bg-white rounded-lg border border-slate-200">
                 <p className="font-medium text-slate-800">Brute-Force Shield</p>
                 <p className="text-emerald-600 text-[11px] mt-0.5">
-                  {data?.security.antiBruteForce || '25 attempts / 15m rate limiter'}
+                  {data?.security.antiBruteForce || '20 attempts / 15m + account lockout'}
                 </p>
               </div>
 
               <div className="p-2.5 bg-white rounded-lg border border-slate-200">
-                <p className="font-medium text-slate-800">DDoS Protection</p>
+                <p className="font-medium text-slate-800">DDoS & Quota Shield</p>
                 <p className="text-emerald-600 text-[11px] mt-0.5">
-                  {data?.security.antiDDoS || '350 req / min IP throttling'}
+                  {data?.security.antiDDoS || '600 req/min IP + 240 req/min per-user'}
                 </p>
               </div>
 
@@ -252,6 +257,8 @@ export function SystemSecurityModal({ isOpen, onClose }: SystemSecurityModalProp
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}

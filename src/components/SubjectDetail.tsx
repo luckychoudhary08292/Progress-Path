@@ -23,6 +23,7 @@ import { LazyVideoPlayer } from './LazyVideoPlayer.tsx';
 import { apiCache } from '../services/apiCache.ts';
 import { exportSubjectNotesToPdf } from '../services/pdfExporter.ts';
 import { PdfNoticeModal } from './PdfNoticeModal.tsx';
+import { SubjectDetailSkeleton } from './Skeleton.tsx';
 
 interface SubjectDetailProps {
   subjectId: string;
@@ -422,12 +423,7 @@ export function SubjectDetail({ subjectId, onBack }: SubjectDetailProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-sm font-medium text-slate-500">Loading topic checklist...</p>
-      </div>
-    );
+    return <SubjectDetailSkeleton />;
   }
 
   if (!data) {

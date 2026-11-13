@@ -32,8 +32,8 @@ export const ForcePasswordChangeModal: React.FC<ForcePasswordChangeModalProps> =
     }
     if (!newPassword) {
       errors.newPassword = 'New password is required';
-    } else if (newPassword.length < 6) {
-      errors.newPassword = 'New password must be at least 6 characters';
+    } else if (newPassword.length < 8) {
+      errors.newPassword = 'New password must be at least 8 characters';
     } else if (newPassword === currentPassword) {
       errors.newPassword = 'New password cannot be identical to the temporary password';
     }
@@ -177,7 +177,7 @@ export const ForcePasswordChangeModal: React.FC<ForcePasswordChangeModalProps> =
                 type={showPasswords ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 className={`w-full px-3.5 py-2 text-xs bg-slate-50 border rounded-lg focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-colors ${
                   fieldErrors.newPassword ? 'border-red-400 bg-red-50/30' : 'border-slate-300'
                 }`}

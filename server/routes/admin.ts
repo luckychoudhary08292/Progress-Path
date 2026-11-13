@@ -13,6 +13,8 @@ import {
   ProgressRepository,
   EventRepository,
 } from '../repositories.ts';
+import { sanitizeSafeUrl } from '../middleware/security.ts';
+import { SYSTEM_LIMITS } from '../config/limits.ts';
 
 const router = Router();
 
@@ -43,6 +45,7 @@ router.get(['/overview', '/system-stats'], authenticateToken, authenticateAdmin,
     res.json({
       metrics: {
         totalUsers: allUsers.length,
+        maxUsers: SYSTEM_LIMITS.MAX_USERS,
         totalAdmins,
         totalStandardUsers,
         totalContentItems,
@@ -100,6 +103,10 @@ router.post('/content/subjects', authenticateToken, authenticateAdmin, async (re
       res.status(400).json({ message: 'Subject name is required' });
       return;
     }
+    if (name.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({ message: `Subject name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters` });
+      return;
+    }
 
     const created = await SubjectRepository.createGlobal(name.trim());
 
@@ -125,6 +132,10 @@ router.put('/content/subjects/:id', authenticateToken, authenticateAdmin, async 
     const { name } = req.body || {};
     if (!name || typeof name !== 'string' || !name.trim()) {
       res.status(400).json({ message: 'Subject name is required' });
+      return;
+    }
+    if (name.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({ message: `Subject name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters` });
       return;
     }
 
@@ -185,12 +196,22 @@ router.post('/content/lectures', authenticateToken, authenticateAdmin, async (re
       res.status(400).json({ message: 'Subject and lecture title are required' });
       return;
     }
+    if (title.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({ message: `Lecture title must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters` });
+      return;
+    }
+
+    const urlCheck = sanitizeSafeUrl(videoUrl);
+    if (!urlCheck.valid) {
+      res.status(400).json({ message: 'Invalid video URL. Only http:// or https:// links are allowed.' });
+      return;
+    }
 
     const created = await LectureRepository.createGlobal({
       subjectId,
       title: title.trim(),
       session: typeof session === 'number' ? session : undefined,
-      videoUrl: typeof videoUrl === 'string' ? videoUrl.trim() : '',
+      videoUrl: urlCheck.value,
     });
 
     await AuditLogRepository.log({
@@ -214,10 +235,25 @@ router.put('/content/lectures/:id', authenticateToken, authenticateAdmin, async 
     const { id } = req.params;
     const { title, session, videoUrl } = req.body || {};
 
+    if (typeof title === 'string' && title.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({ message: `Lecture title must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters` });
+      return;
+    }
+
+    let safeUrl: string | undefined = undefined;
+    if (videoUrl !== undefined) {
+      const urlCheck = sanitizeSafeUrl(videoUrl);
+      if (!urlCheck.valid) {
+        res.status(400).json({ message: 'Invalid video URL. Only http:// or https:// links are allowed.' });
+        return;
+      }
+      safeUrl = urlCheck.value;
+    }
+
     const updated = await LectureRepository.updateGlobal(id, {
-      title,
+      title: typeof title === 'string' ? title.trim() : undefined,
       session: typeof session === 'number' ? session : undefined,
-      videoUrl,
+      videoUrl: safeUrl,
     });
 
     if (!updated) {
@@ -281,10 +317,19 @@ router.post('/content/import/playlist', authenticateToken, authenticateAdmin, as
       return;
     }
 
+    if (items.length > SYSTEM_LIMITS.MAX_BULK_ITEMS) {
+      res.status(400).json({ message: `Import is capped at ${SYSTEM_LIMITS.MAX_BULK_ITEMS} items per request` });
+      return;
+    }
+
     let targetSubjectId = subjectId;
     let targetSubjectName = '';
 
     if (newSubjectName && typeof newSubjectName === 'string' && newSubjectName.trim()) {
+      if (newSubjectName.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+        res.status(400).json({ message: `Subject name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters` });
+        return;
+      }
       const createdSub = await SubjectRepository.createGlobal(newSubjectName.trim());
       targetSubjectId = createdSub.id;
       targetSubjectName = createdSub.name;
@@ -301,14 +346,23 @@ router.post('/content/import/playlist', authenticateToken, authenticateAdmin, as
       return;
     }
 
-    const inserted = await LectureRepository.createBulkGlobal(
-      targetSubjectId,
-      items.map((it: any) => ({
-        title: it.title,
-        videoUrl: it.videoUrl,
-        session: it.session,
-      }))
-    );
+    const sanitizedItems = items
+      .filter((it: any) => it && typeof it.title === 'string' && it.title.trim())
+      .map((it: any) => {
+        const urlCheck = sanitizeSafeUrl(it.videoUrl);
+        return {
+          title: it.title.trim().slice(0, SYSTEM_LIMITS.MAX_TITLE_LENGTH),
+          videoUrl: urlCheck.valid ? urlCheck.value : '',
+          session: it.session,
+        };
+      });
+
+    if (sanitizedItems.length === 0) {
+      res.status(400).json({ message: 'No valid lecture items found to import' });
+      return;
+    }
+
+    const inserted = await LectureRepository.createBulkGlobal(targetSubjectId, sanitizedItems);
 
     await AuditLogRepository.log({
       actorId: currentAdmin.id,
@@ -343,14 +397,25 @@ router.post('/content/import/problems', authenticateToken, authenticateAdmin, as
       return;
     }
 
+    if (problems.length > SYSTEM_LIMITS.MAX_BULK_ITEMS) {
+      res.status(400).json({ message: `Import is capped at ${SYSTEM_LIMITS.MAX_BULK_ITEMS} problems per request` });
+      return;
+    }
+
     const validProblems = problems
       .filter((p: any) => p && typeof p.name === 'string' && p.name.trim())
-      .map((p: any) => ({
-        name: p.name.trim(),
-        difficulty: (['Easy', 'Medium', 'Hard'].includes(p.difficulty) ? p.difficulty : 'Medium') as any,
-        category: typeof p.category === 'string' && p.category.trim() ? p.category.trim() : 'General',
-        link: typeof p.link === 'string' ? p.link.trim() : '',
-      }));
+      .map((p: any) => {
+        const urlCheck = sanitizeSafeUrl(p.link);
+        return {
+          name: p.name.trim().slice(0, SYSTEM_LIMITS.MAX_TITLE_LENGTH),
+          difficulty: (['Easy', 'Medium', 'Hard'].includes(p.difficulty) ? p.difficulty : 'Medium') as any,
+          category:
+            typeof p.category === 'string' && p.category.trim()
+              ? p.category.trim().slice(0, SYSTEM_LIMITS.MAX_CATEGORY_LENGTH)
+              : 'General',
+          link: urlCheck.valid ? urlCheck.value : '',
+        };
+      });
 
     if (validProblems.length === 0) {
       res.status(400).json({ message: 'No valid problems found with required names' });
@@ -389,16 +454,31 @@ router.post('/content/problems', authenticateToken, authenticateAdmin, async (re
       res.status(400).json({ message: 'Problem name is required' });
       return;
     }
+    if (name.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({ message: `Problem name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters` });
+      return;
+    }
     if (!difficulty || !['Easy', 'Medium', 'Hard'].includes(difficulty)) {
       res.status(400).json({ message: 'Difficulty must be Easy, Medium, or Hard' });
       return;
     }
 
+    const urlCheck = sanitizeSafeUrl(link);
+    if (!urlCheck.valid) {
+      res.status(400).json({ message: 'Invalid problem URL. Only http:// or https:// links are allowed.' });
+      return;
+    }
+
+    const cleanCategory =
+      typeof category === 'string' && category.trim()
+        ? category.trim().slice(0, SYSTEM_LIMITS.MAX_CATEGORY_LENGTH)
+        : 'General';
+
     const created = await ProblemRepository.createGlobal({
       name: name.trim(),
       difficulty,
-      category: (category || 'General').trim(),
-      link: typeof link === 'string' ? link.trim() : '',
+      category: cleanCategory,
+      link: urlCheck.value,
     });
 
     await AuditLogRepository.log({
@@ -422,11 +502,26 @@ router.put('/content/problems/:id', authenticateToken, authenticateAdmin, async 
     const { id } = req.params;
     const { name, difficulty, category, link } = req.body || {};
 
+    if (typeof name === 'string' && name.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({ message: `Problem name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters` });
+      return;
+    }
+
+    let safeLink: string | undefined = undefined;
+    if (link !== undefined) {
+      const urlCheck = sanitizeSafeUrl(link);
+      if (!urlCheck.valid) {
+        res.status(400).json({ message: 'Invalid problem URL. Only http:// or https:// links are allowed.' });
+        return;
+      }
+      safeLink = urlCheck.value;
+    }
+
     const updated = await ProblemRepository.updateGlobal(id, {
-      name,
+      name: typeof name === 'string' ? name.trim() : undefined,
       difficulty,
-      category,
-      link,
+      category: typeof category === 'string' ? category.trim().slice(0, SYSTEM_LIMITS.MAX_CATEGORY_LENGTH) : undefined,
+      link: safeLink,
     });
 
     if (!updated) {
@@ -576,6 +671,7 @@ router.get('/users', authenticateToken, authenticateAdmin, async (_req: Request,
       users: userComparison,
       totals: {
         usersCount: users.length,
+        maxUsers: SYSTEM_LIMITS.MAX_USERS,
         lecturesCount: totalLecturesInSystem,
         problemsCount: totalProblemsInSystem,
       },
@@ -594,18 +690,25 @@ router.post('/create-admin', authenticateToken, authenticateAdmin, async (req: R
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       fieldErrors.name = 'Full name is required';
+    } else if (name.trim().length > SYSTEM_LIMITS.MAX_NAME_LENGTH) {
+      fieldErrors.name = `Name must not exceed ${SYSTEM_LIMITS.MAX_NAME_LENGTH} characters`;
     }
 
     if (!email || typeof email !== 'string' || !email.trim()) {
       fieldErrors.email = 'Email address is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    } else if (
+      email.trim().length > SYSTEM_LIMITS.MAX_EMAIL_LENGTH ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
       fieldErrors.email = 'Please provide a valid email address';
     }
 
     if (!temporaryPassword || typeof temporaryPassword !== 'string') {
       fieldErrors.temporaryPassword = 'A temporary password is required';
-    } else if (temporaryPassword.length < 6) {
-      fieldErrors.temporaryPassword = 'Temporary password must be at least 6 characters long';
+    } else if (temporaryPassword.length < SYSTEM_LIMITS.MIN_PASSWORD_LENGTH) {
+      fieldErrors.temporaryPassword = `Temporary password must be at least ${SYSTEM_LIMITS.MIN_PASSWORD_LENGTH} characters long`;
+    } else if (temporaryPassword.length > SYSTEM_LIMITS.MAX_PASSWORD_LENGTH) {
+      fieldErrors.temporaryPassword = `Temporary password must not exceed ${SYSTEM_LIMITS.MAX_PASSWORD_LENGTH} characters`;
     }
 
     if (Object.keys(fieldErrors).length > 0) {

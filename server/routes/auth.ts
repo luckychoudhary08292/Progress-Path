@@ -1,13 +1,21 @@
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 const { Router } = express;
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
 import { UserRepository } from '../models/User.ts';
 import { AuditLogRepository } from '../models/AuditLog.ts';
+import { FeedbackRepository } from '../models/Feedback.ts';
 import { isDbConnected, getConnectedDbName } from '../db.ts';
-import { authRateLimiter } from '../middleware/security.ts';
+import { SYSTEM_LIMITS } from '../config/limits.ts';
+import {
+  authRateLimiter,
+  userRateLimiter,
+  checkAccountLockout,
+  recordFailedLogin,
+  clearFailedLogin,
+} from '../middleware/security.ts';
 import {
   SubjectRepository,
   LectureRepository,
@@ -19,9 +27,17 @@ import {
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-jwt-key-2026';
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.warn('[Security Warning]: JWT_SECRET is not defined in environment variables! Please set JWT_SECRET in your Render dashboard.');
+const ENV_JWT_SECRET = process.env.JWT_SECRET?.trim();
+const JWT_SECRET = ENV_JWT_SECRET && ENV_JWT_SECRET.length >= 16
+  ? ENV_JWT_SECRET
+  : crypto.randomBytes(64).toString('hex');
+
+if (!ENV_JWT_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    console.warn(
+      '[Security Warning]: JWT_SECRET is not set! Using an ephemeral 512-bit runtime secret; active sessions will reset on restart. Configure JWT_SECRET in your deployment environment.'
+    );
+  }
 }
 
 interface JwtPayload {
@@ -29,18 +45,34 @@ interface JwtPayload {
   email: string;
 }
 
+function buildLimitsSummary() {
+  return {
+    maxUsers: SYSTEM_LIMITS.MAX_USERS,
+    maxSubjectsPerUser: SYSTEM_LIMITS.MAX_SUBJECTS_PER_USER,
+    maxLecturesPerSubject: SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT,
+    maxProblemsPerUser: SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER,
+    maxEventsPerUser: SYSTEM_LIMITS.MAX_EVENTS_PER_USER,
+    maxEventsPerDay: SYSTEM_LIMITS.MAX_EVENTS_PER_DAY,
+    maxNotificationsPerUser: SYSTEM_LIMITS.MAX_NOTIFICATIONS_PER_USER,
+    maxFeedbackPerUser: SYSTEM_LIMITS.MAX_FEEDBACK_PER_USER,
+    userApiRateLimitPerMin: SYSTEM_LIMITS.USER_API_RATE_LIMIT_PER_MIN,
+  };
+}
+
 // Middleware to authenticate JWT token
 export function authenticateToken(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : undefined;
 
   if (!token) {
     res.status(401).json({ message: 'Authentication required' });
     return;
   }
 
-  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
-    if (err || !decoded) {
+  jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }, async (err, decoded) => {
+    if (err || !decoded || typeof decoded !== 'object' || typeof (decoded as JwtPayload).userId !== 'string') {
       res.status(401).json({ message: 'Invalid or expired session token' });
       return;
     }
@@ -53,7 +85,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
         return;
       }
       (req as any).user = user;
-      next();
+      userRateLimiter(req, res, next);
     } catch {
       res.status(500).json({ message: 'Internal server error validating user' });
     }
@@ -87,21 +119,25 @@ router.post('/signup', authRateLimiter, async (req: Request, res: Response) => {
       fieldErrors.name = 'Full name is required';
     } else if (name.trim().length < 2) {
       fieldErrors.name = 'Name must be at least 2 characters';
+    } else if (name.trim().length > SYSTEM_LIMITS.MAX_NAME_LENGTH) {
+      fieldErrors.name = `Name must not exceed ${SYSTEM_LIMITS.MAX_NAME_LENGTH} characters`;
     }
 
     // Validate Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || typeof email !== 'string' || !email.trim()) {
       fieldErrors.email = 'Email address is required';
-    } else if (!emailRegex.test(email.trim())) {
+    } else if (email.trim().length > SYSTEM_LIMITS.MAX_EMAIL_LENGTH || !emailRegex.test(email.trim())) {
       fieldErrors.email = 'Please enter a valid email address';
     }
 
     // Validate Password
     if (!password || typeof password !== 'string') {
       fieldErrors.password = 'Password is required';
-    } else if (password.length < 8) {
-      fieldErrors.password = 'Password must be at least 8 characters long';
+    } else if (password.length < SYSTEM_LIMITS.MIN_PASSWORD_LENGTH) {
+      fieldErrors.password = `Password must be at least ${SYSTEM_LIMITS.MIN_PASSWORD_LENGTH} characters long`;
+    } else if (password.length > SYSTEM_LIMITS.MAX_PASSWORD_LENGTH) {
+      fieldErrors.password = `Password must not exceed ${SYSTEM_LIMITS.MAX_PASSWORD_LENGTH} characters`;
     }
 
     if (Object.keys(fieldErrors).length > 0) {
@@ -120,6 +156,19 @@ router.post('/signup', authRateLimiter, async (req: Request, res: Response) => {
       return;
     }
 
+    // Enforce global MAX_USERS registration limit
+    if (SYSTEM_LIMITS.MAX_USERS > 0) {
+      const totalUsers = await UserRepository.countTotalUsers();
+      if (totalUsers >= SYSTEM_LIMITS.MAX_USERS) {
+        res.status(403).json({
+          message: `Registration limit reached (${SYSTEM_LIMITS.MAX_USERS} users max). Please contact the administrator.`,
+          limitReached: true,
+          maxUsers: SYSTEM_LIMITS.MAX_USERS,
+        });
+        return;
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -132,11 +181,11 @@ router.post('/signup', authRateLimiter, async (req: Request, res: Response) => {
       mustChangePassword: false,
     });
 
-    // Sign JWT
+    // Sign JWT (HS256 explicitly pinned)
     const token = jwt.sign(
       { userId: newUser.id, email: newUser.email },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { algorithm: 'HS256', expiresIn: '7d' }
     );
 
     res.status(201).json({
@@ -165,10 +214,14 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
     // Validate fields
     if (!email || typeof email !== 'string' || !email.trim()) {
       fieldErrors.email = 'Email address is required';
+    } else if (email.trim().length > SYSTEM_LIMITS.MAX_EMAIL_LENGTH) {
+      fieldErrors.email = 'Please enter a valid email address';
     }
 
     if (!password || typeof password !== 'string') {
       fieldErrors.password = 'Password is required';
+    } else if (password.length > SYSTEM_LIMITS.MAX_PASSWORD_LENGTH) {
+      fieldErrors.password = 'Invalid password length';
     }
 
     if (Object.keys(fieldErrors).length > 0) {
@@ -176,9 +229,26 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
       return;
     }
 
+    const cleanEmail = email.trim();
+
+    // Check per-account brute-force lockout
+    const lockout = checkAccountLockout(cleanEmail);
+    if (lockout.locked) {
+      res.setHeader('Retry-After', String(lockout.retryAfterSeconds));
+      res.status(429).json({
+        message: `Too many failed login attempts. Try again in ${Math.ceil(lockout.retryAfterSeconds / 60)} minute(s).`,
+        fieldErrors: {
+          password: `Account temporarily locked. Please wait ${lockout.retryAfterSeconds}s before trying again.`,
+        },
+        retryAfterSeconds: lockout.retryAfterSeconds,
+      });
+      return;
+    }
+
     // Check user existence
-    const user = await UserRepository.findByEmail(email.trim());
+    const user = await UserRepository.findByEmail(cleanEmail);
     if (!user) {
+      recordFailedLogin(cleanEmail);
       res.status(400).json({
         fieldErrors: {
           email: 'No account found with this email address',
@@ -190,19 +260,32 @@ router.post('/login', authRateLimiter, async (req: Request, res: Response) => {
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      const attemptState = recordFailedLogin(cleanEmail);
+      if (attemptState.lockedNow) {
+        res.status(429).json({
+          message: 'Too many failed login attempts. Account temporarily locked for 15 minutes.',
+          fieldErrors: {
+            password: 'Too many incorrect attempts. Account locked for 15 minutes.',
+          },
+          retryAfterSeconds: Math.ceil(SYSTEM_LIMITS.AUTH_LOCKOUT_DURATION_MS / 1000),
+        });
+        return;
+      }
       res.status(400).json({
         fieldErrors: {
-          password: 'Incorrect password. Please try again.',
+          password: `Incorrect password. ${attemptState.remainingAttempts} attempt(s) remaining before temporary lockout.`,
         },
       });
       return;
     }
 
-    // Sign JWT
+    clearFailedLogin(cleanEmail);
+
+    // Sign JWT (HS256 explicitly pinned)
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { algorithm: 'HS256', expiresIn: '7d' }
     );
 
     res.status(200).json({
@@ -273,8 +356,12 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
         ? await ProgressRepository.countCompleted(userId, 'problem', problemIds)
         : 0;
 
-    // 4. Academic Calendar events
-    const eventsCount = await EventRepository.countForUser(userId);
+    // 4. Academic Calendar events & user resource usage
+    const [eventsCount, problemsCreated, feedbackCount] = await Promise.all([
+      EventRepository.countForUser(userId),
+      ProblemRepository.countCreatedByUser(userId),
+      FeedbackRepository.countByUserId(userId),
+    ]);
 
     // 5. Individual readiness score based on user's feed items
     const totalAcademicItems = totalLectures + totalProblems;
@@ -307,10 +394,45 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
         eventsCount,
         overallReadinessPercent,
       },
+      usage: {
+        subjectsCreated: userSubjectsCreated,
+        problemsCreated,
+        eventsCount,
+        feedbackCount,
+      },
+      limits: buildLimitsSummary(),
     });
   } catch (error) {
     console.error('[Profile fetch error]:', error);
     res.status(500).json({ message: 'Server error retrieving user profile' });
+  }
+});
+
+// GET /api/auth/limits (Protected Route)
+router.get('/limits', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const userId = user.id;
+
+    const [subjectsCreated, problemsCreated, eventsCount, feedbackCount] = await Promise.all([
+      SubjectRepository.countCreatedByUser(userId),
+      ProblemRepository.countCreatedByUser(userId),
+      EventRepository.countForUser(userId),
+      FeedbackRepository.countByUserId(userId),
+    ]);
+
+    res.status(200).json({
+      usage: {
+        subjectsCreated,
+        problemsCreated,
+        eventsCount,
+        feedbackCount,
+      },
+      limits: buildLimitsSummary(),
+    });
+  } catch (error) {
+    console.error('[Limits fetch error]:', error);
+    res.status(500).json({ message: 'Server error retrieving quota limits' });
   }
 });
 
@@ -330,6 +452,8 @@ router.put(['/profile', '/me'], authenticateToken, async (req: Request, res: Res
         fieldErrors.name = 'Full name cannot be empty';
       } else if (name.trim().length < 2) {
         fieldErrors.name = 'Full name must be at least 2 characters';
+      } else if (name.trim().length > SYSTEM_LIMITS.MAX_NAME_LENGTH) {
+        fieldErrors.name = `Full name must not exceed ${SYSTEM_LIMITS.MAX_NAME_LENGTH} characters`;
       } else {
         updatedName = name.trim();
       }
@@ -337,7 +461,7 @@ router.put(['/profile', '/me'], authenticateToken, async (req: Request, res: Res
 
     // Validate Password update if requested
     if (newPassword || currentPassword || confirmPassword) {
-      if (!currentPassword) {
+      if (!currentPassword || typeof currentPassword !== 'string') {
         fieldErrors.currentPassword = 'Current password is required to set a new password';
       } else {
         const isMatch = await bcrypt.compare(currentPassword, user.password);
@@ -348,8 +472,10 @@ router.put(['/profile', '/me'], authenticateToken, async (req: Request, res: Res
 
       if (!newPassword || typeof newPassword !== 'string') {
         fieldErrors.newPassword = 'New password is required';
-      } else if (newPassword.length < 6) {
-        fieldErrors.newPassword = 'New password must be at least 6 characters';
+      } else if (newPassword.length < SYSTEM_LIMITS.MIN_PASSWORD_LENGTH) {
+        fieldErrors.newPassword = `New password must be at least ${SYSTEM_LIMITS.MIN_PASSWORD_LENGTH} characters`;
+      } else if (newPassword.length > SYSTEM_LIMITS.MAX_PASSWORD_LENGTH) {
+        fieldErrors.newPassword = `New password must not exceed ${SYSTEM_LIMITS.MAX_PASSWORD_LENGTH} characters`;
       }
 
       if (!confirmPassword || typeof confirmPassword !== 'string') {
@@ -472,8 +598,10 @@ router.post('/change-first-password', authenticateToken, async (req: Request, re
 
     if (!newPassword || typeof newPassword !== 'string') {
       fieldErrors.newPassword = 'New password is required';
-    } else if (newPassword.length < 6) {
-      fieldErrors.newPassword = 'New password must be at least 6 characters';
+    } else if (newPassword.length < SYSTEM_LIMITS.MIN_PASSWORD_LENGTH) {
+      fieldErrors.newPassword = `New password must be at least ${SYSTEM_LIMITS.MIN_PASSWORD_LENGTH} characters`;
+    } else if (newPassword.length > SYSTEM_LIMITS.MAX_PASSWORD_LENGTH) {
+      fieldErrors.newPassword = `New password must not exceed ${SYSTEM_LIMITS.MAX_PASSWORD_LENGTH} characters`;
     } else if (currentPassword && newPassword === currentPassword) {
       fieldErrors.newPassword = 'New password cannot be identical to the temporary password';
     }
@@ -504,11 +632,11 @@ router.post('/change-first-password', authenticateToken, async (req: Request, re
       details: `User ${user.name} (${user.email}) changed their initial temporary password.`,
     });
 
-    // Sign a fresh token with updated claims
+    // Sign a fresh token with updated claims (HS256 explicitly pinned)
     const token = jwt.sign(
       { userId: updated.id, email: updated.email },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { algorithm: 'HS256', expiresIn: '7d' }
     );
 
     res.status(200).json({

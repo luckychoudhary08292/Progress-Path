@@ -7,7 +7,8 @@ import {
   ProgressRepository,
 } from '../repositories.ts';
 import type { ProblemDifficulty } from '../models/index.ts';
-import { sanitizeHtml } from '../middleware/security.ts';
+import { sanitizeHtml, sanitizeSafeUrl } from '../middleware/security.ts';
+import { SYSTEM_LIMITS } from '../config/limits.ts';
 
 const router = Router();
 
@@ -76,22 +77,52 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       return;
     }
 
+    if (rawName.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({
+        message: `Problem name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters`,
+      });
+      return;
+    }
+
+    const rawCategory = (category || (Array.isArray(tags) && tags[0]) || 'General').toString();
+    if (rawCategory.trim().length > SYSTEM_LIMITS.MAX_CATEGORY_LENGTH) {
+      res.status(400).json({
+        message: `Category must not exceed ${SYSTEM_LIMITS.MAX_CATEGORY_LENGTH} characters`,
+      });
+      return;
+    }
+
+    const urlCheck = sanitizeSafeUrl(link);
+    if (!urlCheck.valid) {
+      res.status(400).json({
+        message: 'Invalid problem URL. Only http:// and https:// links are allowed.',
+      });
+      return;
+    }
+
+    const currentCount = await ProblemRepository.countCreatedByUser(userId);
+    if (currentCount >= SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER) {
+      res.status(403).json({
+        message: `Problem limit reached (${SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER} custom problems max per user)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER,
+      });
+      return;
+    }
+
     const validDifficulties: ProblemDifficulty[] = ['Easy', 'Medium', 'Hard'];
     const resolvedDifficulty: ProblemDifficulty = validDifficulties.includes(difficulty)
       ? difficulty
       : 'Medium';
 
-    const rawCategory = (category || (Array.isArray(tags) && tags[0]) || 'General').toString();
-
     const cleanName = sanitizeHtml(rawName.trim());
     const cleanCategory = sanitizeHtml(rawCategory.trim() || 'General');
-    const cleanLink = typeof link === 'string' ? link.trim() : '';
 
     const newProblem = await ProblemRepository.create({
       name: cleanName,
       difficulty: resolvedDifficulty,
       category: cleanCategory,
-      link: cleanLink,
+      link: urlCheck.value,
       createdBy: userId,
     });
 
@@ -124,8 +155,22 @@ router.post('/bulk', authenticateToken, async (req: Request, res: Response) => {
       return;
     }
 
-    if (items.length > 500) {
-      res.status(400).json({ message: 'Bulk import is capped at 500 items per batch' });
+    if (items.length > SYSTEM_LIMITS.MAX_BULK_ITEMS) {
+      res.status(400).json({
+        message: `Bulk import is capped at ${SYSTEM_LIMITS.MAX_BULK_ITEMS} items per batch`,
+      });
+      return;
+    }
+
+    const currentCount = await ProblemRepository.countCreatedByUser(userId);
+    if (currentCount + items.length > SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER) {
+      const remaining = Math.max(0, SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER - currentCount);
+      res.status(403).json({
+        message: `Custom problem quota exceeded (${SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER} max; ${remaining} slot(s) remaining)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_PROBLEMS_PER_USER,
+        remaining,
+      });
       return;
     }
 
@@ -147,6 +192,15 @@ router.post('/bulk', authenticateToken, async (req: Request, res: Response) => {
         continue;
       }
 
+      if (name.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+        failedItems.push({
+          index: itemNumber,
+          name: name.trim().slice(0, 60),
+          error: `Name exceeds ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters`,
+        });
+        continue;
+      }
+
       if (!difficulty || !validDifficulties.includes(difficulty)) {
         failedItems.push({
           index: itemNumber,
@@ -156,17 +210,35 @@ router.post('/bulk', authenticateToken, async (req: Request, res: Response) => {
         continue;
       }
 
+      const urlCheck = sanitizeSafeUrl(link);
+      if (!urlCheck.valid) {
+        failedItems.push({
+          index: itemNumber,
+          name: name.trim(),
+          error: 'Invalid URL protocol (only http/https allowed)',
+        });
+        continue;
+      }
+
       const cat = typeof category === 'string' && category.trim() ? category.trim() : 'General';
+      if (cat.length > SYSTEM_LIMITS.MAX_CATEGORY_LENGTH) {
+        failedItems.push({
+          index: itemNumber,
+          name: name.trim(),
+          error: `Category exceeds ${SYSTEM_LIMITS.MAX_CATEGORY_LENGTH} characters`,
+        });
+        continue;
+      }
+
       const cleanName = sanitizeHtml(name.trim());
       const cleanCat = sanitizeHtml(cat);
-      const cleanLink = typeof link === 'string' ? link.trim() : '';
 
       try {
         const newProb = await ProblemRepository.create({
           name: cleanName,
           difficulty,
           category: cleanCat,
-          link: cleanLink,
+          link: urlCheck.value,
           createdBy: userId,
         });
 
@@ -186,7 +258,7 @@ router.post('/bulk', authenticateToken, async (req: Request, res: Response) => {
     }
 
     const success = failedItems.length === 0;
-    const statusCode = success ? 201 : insertedItems.length > 0 ? 207 : 500;
+    const statusCode = success ? 201 : insertedItems.length > 0 ? 207 : 400;
 
     res.status(statusCode).json({
       success,
@@ -214,6 +286,12 @@ router.patch('/:id/status', authenticateToken, async (req: Request, res: Respons
 
     if (!problemId) {
       res.status(400).json({ message: 'Problem ID is required' });
+      return;
+    }
+
+    const problem = await ProblemRepository.findByIdForUser(problemId, userId);
+    if (!problem) {
+      res.status(404).json({ message: 'Problem not found or inaccessible' });
       return;
     }
 

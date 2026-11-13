@@ -37,7 +37,7 @@ import {
   Send,
   Bell,
 } from 'lucide-react';
-import { User, UserProfileStats, FeedbackItem } from '../types.ts';
+import { User, UserProfileStats, UserUsage, UserQuotas, FeedbackItem } from '../types.ts';
 import { ThemeToggle } from './ThemeToggle.tsx';
 import { ImportConsole } from './ImportConsole.tsx';
 import { TaskReminderModal } from './TaskReminderModal.tsx';
@@ -47,6 +47,7 @@ import {
   subscribeToReminderSettings, 
   TaskReminderSettings 
 } from '../utils/taskNotificationManager.ts';
+import { Skeleton } from './Skeleton.tsx';
 
 interface UserProfileProps {
   user: User;
@@ -78,6 +79,8 @@ export function UserProfile({
   onProfileTabChange,
 }: UserProfileProps) {
   const [stats, setStats] = useState<UserProfileStats | null>(null);
+  const [usage, setUsage] = useState<UserUsage | null>(null);
+  const [limits, setLimits] = useState<UserQuotas | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   // Active Navigation Tab (Defaults to null - do not show anything here by default on desktop until clicked)
@@ -292,6 +295,12 @@ export function UserProfile({
           if (data.stats) {
             setStats(data.stats);
           }
+          if (data.usage) {
+            setUsage(data.usage);
+          }
+          if (data.limits) {
+            setLimits(data.limits);
+          }
           if (data.user) {
             onUpdateUser(data.user);
             setNameInput(data.user.name);
@@ -373,8 +382,8 @@ export function UserProfile({
       setPasswordError('Please enter your new password');
       return;
     }
-    if (newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters long');
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -646,17 +655,26 @@ export function UserProfile({
             </div>
           </div>
           <div className="mt-2 sm:mt-3">
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-xl sm:text-2xl font-bold text-slate-900">
-                {isLoadingStats ? '--' : `${stats?.overallReadinessPercent ?? 0}%`}
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
-              <div
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, stats?.overallReadinessPercent ?? 0)}%` }}
-              />
-            </div>
+            {isLoadingStats ? (
+              <div className="space-y-2.5">
+                <Skeleton className="h-7 w-16 rounded-lg" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xl sm:text-2xl font-bold text-slate-900">
+                    {`${stats?.overallReadinessPercent ?? 0}%`}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, stats?.overallReadinessPercent ?? 0)}%` }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -671,26 +689,35 @@ export function UserProfile({
             </div>
           </div>
           <div className="mt-2 sm:mt-3">
-            <div className="flex items-baseline gap-1 flex-wrap">
-              <span className="text-xl sm:text-2xl font-bold text-slate-900">
-                {isLoadingStats ? '--' : stats?.lecturesCompleted ?? 0}
-              </span>
-              <span className="text-[10px] sm:text-xs text-slate-500">
-                of {stats?.totalLectures ?? 0}
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
-              <div
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
-                style={{
-                  width: `${
-                    stats && stats.totalLectures > 0
-                      ? Math.min(100, Math.round((stats.lecturesCompleted / stats.totalLectures) * 100))
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
+            {isLoadingStats ? (
+              <div className="space-y-2.5">
+                <Skeleton className="h-7 w-20 rounded-lg" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1 flex-wrap">
+                  <span className="text-xl sm:text-2xl font-bold text-slate-900">
+                    {stats?.lecturesCompleted ?? 0}
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-slate-500">
+                    of {stats?.totalLectures ?? 0}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${
+                        stats && stats.totalLectures > 0
+                          ? Math.min(100, Math.round((stats.lecturesCompleted / stats.totalLectures) * 100))
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -705,26 +732,35 @@ export function UserProfile({
             </div>
           </div>
           <div className="mt-2 sm:mt-3">
-            <div className="flex items-baseline gap-1 flex-wrap">
-              <span className="text-xl sm:text-2xl font-bold text-slate-900">
-                {isLoadingStats ? '--' : stats?.problemsSolved ?? 0}
-              </span>
-              <span className="text-[10px] sm:text-xs text-slate-500">
-                of {stats?.totalProblems ?? 0}
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
-              <div
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
-                style={{
-                  width: `${
-                    stats && stats.totalProblems > 0
-                      ? Math.min(100, Math.round((stats.problemsSolved / stats.totalProblems) * 100))
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
+            {isLoadingStats ? (
+              <div className="space-y-2.5">
+                <Skeleton className="h-7 w-20 rounded-lg" />
+                <Skeleton className="h-1.5 w-full rounded-full" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1 flex-wrap">
+                  <span className="text-xl sm:text-2xl font-bold text-slate-900">
+                    {stats?.problemsSolved ?? 0}
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-slate-500">
+                    of {stats?.totalProblems ?? 0}
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${
+                        stats && stats.totalProblems > 0
+                          ? Math.min(100, Math.round((stats.problemsSolved / stats.totalProblems) * 100))
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -739,17 +775,26 @@ export function UserProfile({
             </div>
           </div>
           <div className="mt-2 sm:mt-3">
-            <div className="flex items-baseline gap-1 flex-wrap">
-              <span className="text-xl sm:text-2xl font-bold text-slate-900">
-                {isLoadingStats ? '--' : stats?.subjectsCount ?? 0}
-              </span>
-              <span className="text-[10px] sm:text-xs text-slate-500">
-                Subjects
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 mt-1.5 truncate">
-              {stats?.eventsCount ?? 0} scheduled tasks
-            </p>
+            {isLoadingStats ? (
+              <div className="space-y-2.5">
+                <Skeleton className="h-7 w-24 rounded-lg" />
+                <Skeleton className="h-3 w-28" />
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1 flex-wrap">
+                  <span className="text-xl sm:text-2xl font-bold text-slate-900">
+                    {stats?.subjectsCount ?? 0}
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-slate-500">
+                    Subjects
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1.5 truncate">
+                  {stats?.eventsCount ?? 0} scheduled tasks
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -1231,7 +1276,19 @@ export function UserProfile({
               )}
             </div>
 
-            {myFeedbacks.length === 0 ? (
+            {isLoadingMyFeedbacks && myFeedbacks.length === 0 ? (
+              <div className="space-y-2">
+                {Array.from({ length: 2 }).map((_, idx) => (
+                  <div key={idx} className="p-3 rounded-lg border border-slate-200/90 dark:border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <Skeleton className="h-3.5 w-36" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                    <Skeleton className="h-3 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : myFeedbacks.length === 0 ? (
               <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">
                 No previous feedback submitted yet.
               </p>
@@ -1377,7 +1434,7 @@ export function UserProfile({
                   }}
                   disabled={isChangingPassword}
                   className="w-full pl-3 pr-10 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-colors text-slate-900"
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                   autoComplete="new-password"
                 />
                 <button
@@ -1393,10 +1450,10 @@ export function UserProfile({
               <div className="mt-1 flex items-center gap-1.5 text-[11px] text-slate-500">
                 <span
                   className={`inline-block w-1.5 h-1.5 rounded-full ${
-                    newPassword.length >= 6 ? 'bg-emerald-500' : 'bg-slate-300'
+                    newPassword.length >= 8 ? 'bg-emerald-500' : 'bg-slate-300'
                   }`}
                 />
-                <span>Minimum 6 characters</span>
+                <span>Minimum 8 characters</span>
               </div>
             </div>
 
@@ -1456,7 +1513,7 @@ export function UserProfile({
                   isChangingPassword ||
                   !currentPassword ||
                   !newPassword ||
-                  newPassword.length < 6 ||
+                  newPassword.length < 8 ||
                   newPassword !== confirmPassword
                 }
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
@@ -1715,6 +1772,62 @@ export function UserProfile({
               </div>
             )}
           </div>
+
+          {/* Account Quotas & Rate Limits */}
+          {limits && (
+            <div id="profile-quotas-section" className="pt-4 border-t border-slate-100 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-xs font-semibold text-slate-900">
+                  Account Quotas &amp; Fair-Use Limits
+                </h3>
+                <span className="text-[11px] text-slate-500">
+                  API limit: {limits.userApiRateLimitPerMin} req/min
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <p className="text-[11px] text-slate-500">Custom Subjects</p>
+                  <p className="font-semibold text-slate-900 mt-0.5 tabular-nums">
+                    {usage?.subjectsCreated ?? 0} / {limits.maxSubjectsPerUser}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Up to {limits.maxLecturesPerSubject} topics/subject
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <p className="text-[11px] text-slate-500">Custom Problems</p>
+                  <p className="font-semibold text-slate-900 mt-0.5 tabular-nums">
+                    {usage?.problemsCreated ?? 0} / {limits.maxProblemsPerUser}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Personal coding bank
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <p className="text-[11px] text-slate-500">Calendar Events</p>
+                  <p className="font-semibold text-slate-900 mt-0.5 tabular-nums">
+                    {usage?.eventsCount ?? 0} / {limits.maxEventsPerUser}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Max {limits.maxEventsPerDay} events/day
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <p className="text-[11px] text-slate-500">Feedback Sent</p>
+                  <p className="font-semibold text-slate-900 mt-0.5 tabular-nums">
+                    {usage?.feedbackCount ?? 0} / {limits.maxFeedbackPerUser}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    Retains {limits.maxNotificationsPerUser} alerts
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

@@ -7,6 +7,7 @@ export interface IFeedback extends Document {
   userEmail: string;
   title: string;
   description: string;
+  status: 'unseen' | 'seen' | 'complete';
   createdAt: Date;
 }
 
@@ -17,6 +18,7 @@ export interface InMemoryFeedback {
   userEmail: string;
   title: string;
   description: string;
+  status: 'unseen' | 'seen' | 'complete';
   createdAt: Date;
 }
 
@@ -27,6 +29,7 @@ const FeedbackSchema = new Schema<IFeedback>(
     userEmail: { type: String, required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
+    status: { type: String, enum: ['unseen', 'seen', 'complete'], default: 'unseen', index: true },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
@@ -53,6 +56,7 @@ export class FeedbackRepository {
           userEmail: data.userEmail,
           title: data.title,
           description: data.description,
+          status: 'unseen',
           createdAt: new Date(),
         });
         return {
@@ -62,6 +66,7 @@ export class FeedbackRepository {
           userEmail: doc.userEmail,
           title: doc.title,
           description: doc.description,
+          status: doc.status || 'unseen',
           createdAt: doc.createdAt,
         };
       } catch (err) {
@@ -76,6 +81,7 @@ export class FeedbackRepository {
       userEmail: data.userEmail,
       title: data.title,
       description: data.description,
+      status: 'unseen',
       createdAt: new Date(),
     };
     inMemoryFeedbacks.unshift(newFeedback);
@@ -94,6 +100,7 @@ export class FeedbackRepository {
             userEmail: d.userEmail,
             title: d.title,
             description: d.description,
+            status: d.status || 'unseen',
             createdAt: d.createdAt ? new Date(d.createdAt) : new Date(),
           }));
         }
@@ -116,6 +123,7 @@ export class FeedbackRepository {
           userEmail: d.userEmail,
           title: d.title,
           description: d.description,
+          status: d.status || 'unseen',
           createdAt: d.createdAt ? new Date(d.createdAt) : new Date(),
         }));
       } catch (err) {
@@ -128,16 +136,47 @@ export class FeedbackRepository {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  static async delete(id: string): Promise<boolean> {
-    if (isDbConnected()) {
+  static async updateStatus(
+    id: string,
+    status: 'unseen' | 'seen' | 'complete'
+  ): Promise<InMemoryFeedback | null> {
+    if (isDbConnected() && mongoose.isValidObjectId(id)) {
       try {
-        if (mongoose.isValidObjectId(id)) {
-          const res = await FeedbackModel.findByIdAndDelete(id);
-          if (res) return true;
-        } else {
-          const res = await FeedbackModel.deleteOne({ _id: id });
-          if (res.deletedCount && res.deletedCount > 0) return true;
+        const doc = await FeedbackModel.findByIdAndUpdate(
+          id,
+          { status },
+          { new: true }
+        ).lean();
+        if (doc) {
+          return {
+            id: (doc as any)._id.toString(),
+            userId: (doc as any).userId,
+            userName: (doc as any).userName,
+            userEmail: (doc as any).userEmail,
+            title: (doc as any).title,
+            description: (doc as any).description,
+            status: (doc as any).status || status,
+            createdAt: (doc as any).createdAt ? new Date((doc as any).createdAt) : new Date(),
+          };
         }
+      } catch (err) {
+        console.warn('[FeedbackRepository] Mongoose updateStatus failed, using memory fallback:', err);
+      }
+    }
+
+    const item = inMemoryFeedbacks.find((fb) => fb.id === id);
+    if (item) {
+      item.status = status;
+      return item;
+    }
+    return null;
+  }
+
+  static async delete(id: string): Promise<boolean> {
+    if (isDbConnected() && mongoose.isValidObjectId(id)) {
+      try {
+        const res = await FeedbackModel.findByIdAndDelete(id);
+        if (res) return true;
       } catch (err) {
         console.warn('[FeedbackRepository] Mongoose delete failed:', err);
       }
@@ -157,5 +196,16 @@ export class FeedbackRepository {
       }
     }
     return inMemoryFeedbacks.length;
+  }
+
+  static async countByUserId(userId: string): Promise<number> {
+    if (isDbConnected()) {
+      try {
+        return await FeedbackModel.countDocuments({ userId });
+      } catch {
+        // fallback
+      }
+    }
+    return inMemoryFeedbacks.filter((fb) => fb.userId === userId).length;
   }
 }

@@ -25,10 +25,6 @@ export interface UserRecord {
 export function getEffectiveRole(email: string, explicitRole?: string): UserRole {
   if (explicitRole === 'admin') return 'admin';
   const norm = email ? email.trim().toLowerCase() : '';
-  // Dev admin seed or designated admin email from environment
-  if (norm === 'luckypc08292@gmail.com') {
-    return 'admin';
-  }
   if (process.env.ADMIN_EMAIL && norm === process.env.ADMIN_EMAIL.trim().toLowerCase()) {
     return 'admin';
   }
@@ -263,6 +259,17 @@ export const UserRepository = {
       ...u,
       role: getEffectiveRole(u.email, u.role),
     }));
+  },
+
+  async countTotalUsers(): Promise<number> {
+    if (isDbConnected()) {
+      try {
+        return await UserModel.countDocuments();
+      } catch (err) {
+        console.log('[DB Info in countTotalUsers]:', err instanceof Error ? err.message : err);
+      }
+    }
+    return inMemoryUsers.length;
   },
 
   async deleteUser(id: string): Promise<boolean> {

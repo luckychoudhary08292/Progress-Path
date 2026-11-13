@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { AdminOverviewMetrics, MostActiveUser, AuditLogEntry, AdminSection } from '../../types.ts';
+import { AdminOverviewSkeleton } from '../Skeleton.tsx';
 
 interface AdminOverviewSectionProps {
   metrics: AdminOverviewMetrics | null;
@@ -33,12 +34,7 @@ export const AdminOverviewSection: React.FC<AdminOverviewSectionProps> = ({
   onNavigateToSection,
 }) => {
   if (isLoading && !metrics) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-200 shadow-xs">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-3" />
-        <p className="text-sm font-medium text-slate-600">Loading system overview and statistics...</p>
-      </div>
-    );
+    return <AdminOverviewSkeleton />;
   }
 
   return (

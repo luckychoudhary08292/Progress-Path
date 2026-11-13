@@ -15,6 +15,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { AuditLogEntry } from '../../types.ts';
+import { AdminTableRowsSkeleton } from '../Skeleton.tsx';
 
 interface AdminActivityLogSectionProps {
   logs: AuditLogEntry[];
@@ -271,10 +272,7 @@ export const AdminActivityLogSection: React.FC<AdminActivityLogSectionProps> = (
         </div>
 
         {isLoading && logs.length === 0 ? (
-          <div className="py-20 flex flex-col items-center justify-center text-slate-500">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-3" />
-            <p className="text-xs font-medium">Fetching secure audit trail from server...</p>
-          </div>
+          <AdminTableRowsSkeleton columns={5} rows={7} />
         ) : filteredLogs.length === 0 ? (
           <div className="py-16 text-center text-slate-500 text-xs">
             <p className="font-semibold text-slate-700">No activity logs matching your filter</p>

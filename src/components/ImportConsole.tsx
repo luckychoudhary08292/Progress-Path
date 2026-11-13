@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { SubjectSummary } from '../types.ts';
 import { VideoPlayerModal, VideoPlayerLecture } from './VideoPlayerModal.tsx';
+import { Skeleton } from './Skeleton.tsx';
 
 export interface ImportConsoleProps {
   onNavigateToSubject?: (subjectId: string) => void;
@@ -465,10 +466,7 @@ export function ImportConsole({ onNavigateToSubject, hideHeader = false }: Impor
 
               {/* Subject Dropdown */}
               {isLoadingSubjects ? (
-                <div className="flex items-center gap-2 text-xs text-slate-400 py-1.5">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Loading subjects...</span>
-                </div>
+                <Skeleton className="h-9 w-full rounded-lg" />
               ) : subjectFetchError ? (
                 <p className="text-xs text-rose-600 dark:text-rose-400">{subjectFetchError}</p>
               ) : subjects.length === 0 ? (

@@ -58,7 +58,7 @@ export function LoginForm({ onSuccess, onNavigateToSignup, onNavigateToHome }: L
       } else {
         const text = await response.text();
         console.error('[Login non-JSON response]:', response.status, text.slice(0, 300));
-        data = { message: `Backend service returned status ${response.status}. Please check Vercel deployment logs.` };
+        data = { message: `Backend service returned status ${response.status}. Please check server status or try again shortly.` };
       }
 
       if (!response.ok) {

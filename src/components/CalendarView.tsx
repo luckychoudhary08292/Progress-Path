@@ -15,6 +15,7 @@ import {
 import { CalendarEvent, EventType } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
 import { apiCache } from '../services/apiCache.ts';
+import { CalendarGridSkeleton, CalendarSidePanelSkeleton } from './Skeleton.tsx';
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -455,10 +456,7 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
 
           {/* Month Days Grid */}
           {isLoadingMonth ? (
-            <div className="h-64 flex flex-col items-center justify-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
-              <p className="text-xs text-slate-400">Loading calendar days...</p>
-            </div>
+            <CalendarGridSkeleton />
           ) : (
             <div id="calendar-days-grid" className="grid grid-cols-7 gap-1 sm:gap-1.5">
               {calendarCells.map((cell) => {
@@ -654,7 +652,9 @@ export function CalendarView({ onBack }: CalendarViewProps = {}) {
               Scheduled Items
             </h3>
 
-            {selectedDateEvents.length === 0 ? (
+            {isLoadingMonth && monthEvents.length === 0 ? (
+              <CalendarSidePanelSkeleton />
+            ) : selectedDateEvents.length === 0 ? (
               <div
                 id="calendar-no-events-placeholder"
                 className="py-7 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 px-4"

@@ -18,9 +18,30 @@ export interface UserProfileStats {
   overallReadinessPercent: number;
 }
 
+export interface UserUsage {
+  subjectsCreated: number;
+  problemsCreated: number;
+  eventsCount: number;
+  feedbackCount: number;
+}
+
+export interface UserQuotas {
+  maxUsers: number;
+  maxSubjectsPerUser: number;
+  maxLecturesPerSubject: number;
+  maxProblemsPerUser: number;
+  maxEventsPerUser: number;
+  maxEventsPerDay: number;
+  maxNotificationsPerUser: number;
+  maxFeedbackPerUser: number;
+  userApiRateLimitPerMin: number;
+}
+
 export interface UserProfileResponse {
   user: User;
   stats: UserProfileStats;
+  usage?: UserUsage;
+  limits?: UserQuotas;
 }
 
 export interface AuthResponse {
@@ -171,11 +192,13 @@ export interface FeedbackItem {
   userEmail: string;
   title: string;
   description: string;
+  status?: 'unseen' | 'seen' | 'complete';
   createdAt: string;
 }
 
 export interface AdminOverviewMetrics {
   totalUsers: number;
+  maxUsers?: number;
   totalAdmins: number;
   totalStandardUsers: number;
   totalContentItems: number;

@@ -6,9 +6,11 @@ import {
   ProblemModel,
   EventModel,
   ProgressModel,
+  NotificationModel,
 } from './models/index.ts';
 import { UserModel, UserRepository } from './models/User.ts';
 import type { ProblemDifficulty } from './models/index.ts';
+import { SYSTEM_LIMITS } from './config/limits.ts';
 
 // Helper to convert ID to ObjectId if valid, else keep as string
 export function toMongoId(id: string | unknown): any {
@@ -71,6 +73,18 @@ export interface InMemoryProgress {
   completedAt: Date | null;
   updatedAt: Date;
 }
+
+export interface InMemoryNotification {
+  id: string;
+  userId: string;
+  title: string;
+  body: string;
+  type: 'task-reminder' | 'task-completed' | 'system';
+  read: boolean;
+  createdAt: Date;
+}
+
+const inMemoryNotifications: InMemoryNotification[] = [];
 
 // Seed Initial Data for in-memory fallback so user immediately sees rich, functional data
 const inMemorySubjects: InMemorySubject[] = [
@@ -767,6 +781,53 @@ export const LectureRepository = {
     return newLec;
   },
 
+  async findByIdForUser(lectureId: string, subjectId: string, userId: string) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(lectureId) || !mongoose.isValidObjectId(subjectId)) return null;
+      const uId = toMongoId(userId);
+      const lec = await LectureModel.findOne({
+        _id: toMongoId(lectureId),
+        subjectId: toMongoId(subjectId),
+        $or: [
+          { createdBy: null },
+          { createdBy: { $exists: false } },
+          { createdBy: uId },
+          { createdBy: userId },
+        ],
+      }).lean();
+      if (!lec) return null;
+      return {
+        id: lec._id ? lec._id.toString() : '',
+        subjectId: lec.subjectId ? lec.subjectId.toString() : '',
+        session: lec.session,
+        title: lec.title,
+        videoUrl: lec.videoUrl || '',
+        createdBy: lec.createdBy ? lec.createdBy.toString() : null,
+        createdAt: lec.createdAt,
+      };
+    }
+
+    const lec = inMemoryLectures.find(
+      (l) =>
+        l.id === lectureId &&
+        l.subjectId === subjectId &&
+        (!l.createdBy || l.createdBy === 'admin' || l.createdBy === 'system' || l.createdBy === userId)
+    );
+    return lec || null;
+  },
+
+  async countForSubjectByUser(subjectId: string, userId: string): Promise<number> {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(subjectId)) return 0;
+      const uId = toMongoId(userId);
+      return await LectureModel.countDocuments({
+        subjectId: toMongoId(subjectId),
+        $or: [{ createdBy: uId }, { createdBy: userId }],
+      });
+    }
+    return inMemoryLectures.filter((l) => l.subjectId === subjectId && l.createdBy === userId).length;
+  },
+
   async delete(lectureId: string, userId: string) {
     if (isDbConnected()) {
       if (!mongoose.isValidObjectId(lectureId)) return false;
@@ -1089,6 +1150,54 @@ export const ProblemRepository = {
     };
   },
 
+  async findByIdForUser(problemId: string, userId: string) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(problemId)) return null;
+      const uId = toMongoId(userId);
+      const p = await ProblemModel.findOne({
+        _id: toMongoId(problemId),
+        $or: [{ createdBy: uId }, { createdBy: userId }, { isGlobal: true }],
+      }).lean();
+      if (!p) return null;
+      return {
+        id: p._id ? p._id.toString() : '',
+        name: p.name,
+        difficulty: p.difficulty,
+        category: p.category,
+        link: p.link || '',
+        isGlobal: !!p.isGlobal,
+        isOwner: !p.isGlobal && Boolean(userId) && (p.createdBy ? p.createdBy.toString() === String(userId) : false),
+        createdAt: p.createdAt,
+      };
+    }
+
+    const p = inMemoryProblems.find(
+      (prob) => prob.id === problemId && (prob.isGlobal || prob.createdBy === userId)
+    );
+    if (!p) return null;
+    return {
+      id: p.id,
+      name: p.name,
+      difficulty: p.difficulty,
+      category: p.category,
+      link: p.link,
+      isGlobal: p.isGlobal,
+      isOwner: !p.isGlobal && p.createdBy === userId,
+      createdAt: p.createdAt,
+    };
+  },
+
+  async countCreatedByUser(userId: string): Promise<number> {
+    if (isDbConnected()) {
+      const uId = toMongoId(userId);
+      return await ProblemModel.countDocuments({
+        isGlobal: false,
+        $or: [{ createdBy: uId }, { createdBy: userId }],
+      });
+    }
+    return inMemoryProblems.filter((p) => !p.isGlobal && p.createdBy === userId).length;
+  },
+
   async delete(problemId: string, userId: string) {
     if (isDbConnected()) {
       if (!mongoose.isValidObjectId(problemId)) return false;
@@ -1325,8 +1434,7 @@ export const EventRepository = {
 
     return inMemoryEvents
       .filter((e) => {
-        const isForUser = e.userId === userId || e.userId === 'global';
-        if (!isForUser) return false;
+        if (e.userId !== userId) return false;
         if (date && e.date !== date) return false;
         if (month && !e.date.startsWith(month)) return false;
         return true;
@@ -1388,6 +1496,7 @@ export const EventRepository = {
 
   async toggle(eventId: string, userId: string) {
     if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(eventId)) return null;
       const uId = toMongoId(userId);
       const userFilters: any[] = [{ userId: uId }];
       if (mongoose.isValidObjectId(userId)) {
@@ -1411,9 +1520,7 @@ export const EventRepository = {
       };
     }
 
-    const evt = inMemoryEvents.find(
-      (e) => e.id === eventId && (e.userId === userId || e.userId === 'global')
-    );
+    const evt = inMemoryEvents.find((e) => e.id === eventId && e.userId === userId);
     if (!evt) return null;
     evt.completed = !evt.completed;
     return {
@@ -1429,6 +1536,7 @@ export const EventRepository = {
 
   async delete(eventId: string, userId: string) {
     if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(eventId)) return false;
       const uId = toMongoId(userId);
       const userFilters: any[] = [{ userId: uId }];
       if (mongoose.isValidObjectId(userId)) {
@@ -1441,9 +1549,7 @@ export const EventRepository = {
       return !!deleted;
     }
 
-    const idx = inMemoryEvents.findIndex(
-      (e) => e.id === eventId && (e.userId === userId || e.userId === 'global')
-    );
+    const idx = inMemoryEvents.findIndex((e) => e.id === eventId && e.userId === userId);
     if (idx === -1) return false;
     inMemoryEvents.splice(idx, 1);
     return true;
@@ -1460,7 +1566,22 @@ export const EventRepository = {
         $or: userFilters,
       });
     }
-    return inMemoryEvents.filter((e) => e.userId === userId || e.userId === 'global').length;
+    return inMemoryEvents.filter((e) => e.userId === userId).length;
+  },
+
+  async countForUserDate(userId: string, date: string) {
+    if (isDbConnected()) {
+      const uId = toMongoId(userId);
+      const userFilters: any[] = [{ userId: uId }];
+      if (mongoose.isValidObjectId(userId)) {
+        userFilters.push({ userId });
+      }
+      return await EventModel.countDocuments({
+        date,
+        $or: userFilters,
+      });
+    }
+    return inMemoryEvents.filter((e) => e.userId === userId && e.date === date).length;
   },
 };
 
@@ -1471,10 +1592,13 @@ export const EventRepository = {
 export const ProgressRepository = {
   async getStatusMap(userId: string, itemType: 'lecture' | 'problem', itemIds: string[]) {
     const map = new Map<string, { status: string; notes: string; completedAt: Date | null }>();
+    if (!itemIds || itemIds.length === 0) return map;
 
     if (isDbConnected()) {
+      const validIds = itemIds.filter((id) => mongoose.isValidObjectId(id));
+      if (validIds.length === 0) return map;
       const uId = toMongoId(userId);
-      const mIds = itemIds.map(toMongoId);
+      const mIds = validIds.map(toMongoId);
       const records = await ProgressModel.find({
         $or: [{ userId: uId }, { userId }],
         itemType,
@@ -1512,6 +1636,9 @@ export const ProgressRepository = {
     update: { status?: 'todo' | 'in_progress' | 'completed' | 'revision'; notes?: string; completed?: boolean }
   ) {
     if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(itemId)) {
+        throw new Error('Invalid item ID');
+      }
       const uId = toMongoId(userId);
       const itId = toMongoId(itemId);
 
@@ -2028,4 +2155,229 @@ export const PublicStatsRepository = {
     };
   },
 };
+
+// ----------------------------------------------------------------------
+// NOTIFICATION REPOSITORY (Stores per-user notifications in DB)
+// ----------------------------------------------------------------------
+
+export const NotificationRepository = {
+  async listForUser(userId: string) {
+    if (isDbConnected()) {
+      const uId = toMongoId(userId);
+      const userFilters: any[] = [{ userId: uId }];
+      if (mongoose.isValidObjectId(userId)) {
+        userFilters.push({ userId });
+      }
+      const docs = await NotificationModel.find({ $or: userFilters })
+        .sort({ createdAt: -1 })
+        .limit(SYSTEM_LIMITS.MAX_NOTIFICATIONS_PER_USER)
+        .lean();
+
+      return docs.map((n) => ({
+        id: n._id ? n._id.toString() : '',
+        userId: n.userId ? n.userId.toString() : '',
+        title: n.title,
+        body: n.body,
+        type: (n.type as 'task-reminder' | 'task-completed' | 'system') || 'task-reminder',
+        read: !!n.read,
+        timestamp: n.createdAt ? new Date(n.createdAt).getTime() : Date.now(),
+        createdAt: n.createdAt ? new Date(n.createdAt).toISOString() : new Date().toISOString(),
+      }));
+    }
+
+    return inMemoryNotifications
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, SYSTEM_LIMITS.MAX_NOTIFICATIONS_PER_USER)
+      .map((n) => ({
+        id: n.id,
+        userId: n.userId,
+        title: n.title,
+        body: n.body,
+        type: n.type,
+        read: n.read,
+        timestamp: n.createdAt.getTime(),
+        createdAt: n.createdAt.toISOString(),
+      }));
+  },
+
+  async create(data: {
+    userId: string;
+    title: string;
+    body: string;
+    type?: 'task-reminder' | 'task-completed' | 'system';
+  }) {
+    const notifType = data.type || 'task-reminder';
+    const maxPerUser = SYSTEM_LIMITS.MAX_NOTIFICATIONS_PER_USER;
+
+    if (isDbConnected()) {
+      const uId = toMongoId(data.userId);
+      const doc = await NotificationModel.create({
+        userId: uId,
+        title: data.title.trim(),
+        body: data.body.trim(),
+        type: notifType,
+        read: false,
+        createdAt: new Date(),
+      });
+
+      // Enforce per-user stored notification cap by pruning oldest excess notifications
+      try {
+        const userFilters: any[] = [{ userId: uId }];
+        if (mongoose.isValidObjectId(data.userId)) {
+          userFilters.push({ userId: data.userId });
+        }
+        const totalForUser = await NotificationModel.countDocuments({ $or: userFilters });
+        if (totalForUser > maxPerUser) {
+          const oldestExcess = await NotificationModel.find({ $or: userFilters })
+            .sort({ createdAt: -1 })
+            .skip(maxPerUser)
+            .select('_id')
+            .lean();
+          if (oldestExcess.length > 0) {
+            await NotificationModel.deleteMany({ _id: { $in: oldestExcess.map((x) => x._id) } });
+          }
+        }
+      } catch {
+        // non-fatal pruning failure
+      }
+
+      return {
+        id: doc._id ? doc._id.toString() : '',
+        userId: data.userId,
+        title: doc.title,
+        body: doc.body,
+        type: doc.type as 'task-reminder' | 'task-completed' | 'system',
+        read: doc.read,
+        timestamp: doc.createdAt.getTime(),
+        createdAt: doc.createdAt.toISOString(),
+      };
+    }
+
+    const newNotif: InMemoryNotification = {
+      id: 'notif_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      userId: data.userId,
+      title: data.title.trim(),
+      body: data.body.trim(),
+      type: notifType,
+      read: false,
+      createdAt: new Date(),
+    };
+    inMemoryNotifications.unshift(newNotif);
+
+    // Prune oldest excess notifications specifically for this user
+    let countForThisUser = 0;
+    for (let i = 0; i < inMemoryNotifications.length; i++) {
+      if (inMemoryNotifications[i].userId === data.userId) {
+        countForThisUser++;
+        if (countForThisUser > maxPerUser) {
+          inMemoryNotifications.splice(i, 1);
+          i--;
+        }
+      }
+    }
+
+    return {
+      id: newNotif.id,
+      userId: newNotif.userId,
+      title: newNotif.title,
+      body: newNotif.body,
+      type: newNotif.type,
+      read: newNotif.read,
+      timestamp: newNotif.createdAt.getTime(),
+      createdAt: newNotif.createdAt.toISOString(),
+    };
+  },
+
+  async markAsRead(notificationId: string, userId: string) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(notificationId)) return false;
+      const uId = toMongoId(userId);
+      const userFilters: any[] = [{ userId: uId }];
+      if (mongoose.isValidObjectId(userId)) {
+        userFilters.push({ userId });
+      }
+      const res = await NotificationModel.updateOne(
+        {
+          _id: toMongoId(notificationId),
+          $or: userFilters,
+        },
+        { $set: { read: true } }
+      );
+      return (res.matchedCount ?? 0) > 0;
+    }
+
+    const item = inMemoryNotifications.find((n) => n.id === notificationId && n.userId === userId);
+    if (item) {
+      item.read = true;
+      return true;
+    }
+    return false;
+  },
+
+  async markAllAsRead(userId: string) {
+    if (isDbConnected()) {
+      const uId = toMongoId(userId);
+      const userFilters: any[] = [{ userId: uId }];
+      if (mongoose.isValidObjectId(userId)) {
+        userFilters.push({ userId });
+      }
+      await NotificationModel.updateMany({ $or: userFilters }, { $set: { read: true } });
+      return true;
+    }
+
+    inMemoryNotifications.forEach((n) => {
+      if (n.userId === userId) {
+        n.read = true;
+      }
+    });
+    return true;
+  },
+
+  async delete(notificationId: string, userId: string) {
+    if (isDbConnected()) {
+      if (!mongoose.isValidObjectId(notificationId)) return false;
+      const uId = toMongoId(userId);
+      const userFilters: any[] = [{ userId: uId }];
+      if (mongoose.isValidObjectId(userId)) {
+        userFilters.push({ userId });
+      }
+      const res = await NotificationModel.deleteOne({
+        _id: toMongoId(notificationId),
+        $or: userFilters,
+      });
+      return res.deletedCount > 0;
+    }
+
+    const idx = inMemoryNotifications.findIndex((n) => n.id === notificationId && n.userId === userId);
+    if (idx !== -1) {
+      inMemoryNotifications.splice(idx, 1);
+      return true;
+    }
+    return false;
+  },
+
+  // CRITICAL USER REQUIREMENT: Clears ONLY the notification messages of this user profile from DB.
+  // Never touches EventModel, progress, or task completion status!
+  async clearAllForUser(userId: string) {
+    if (isDbConnected()) {
+      const uId = toMongoId(userId);
+      const userFilters: any[] = [{ userId: uId }];
+      if (mongoose.isValidObjectId(userId)) {
+        userFilters.push({ userId });
+      }
+      const result = await NotificationModel.deleteMany({ $or: userFilters });
+      return result.deletedCount || 0;
+    }
+
+    const initialLen = inMemoryNotifications.length;
+    for (let i = inMemoryNotifications.length - 1; i >= 0; i--) {
+      if (inMemoryNotifications[i].userId === userId) {
+        inMemoryNotifications.splice(i, 1);
+      }
+    }
+    return initialLen - inMemoryNotifications.length;
+  },
+};
+
 

@@ -22,11 +22,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { AdminUserComparison, AdminSortColumn, SortDirection, User } from '../../types.ts';
+import { AdminTableRowsSkeleton } from '../Skeleton.tsx';
 
 interface AdminUsersSectionProps {
   users: AdminUserComparison[];
   totals: {
     usersCount: number;
+    maxUsers?: number;
     lecturesCount: number;
     problemsCount: number;
   } | null;
@@ -140,8 +142,8 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
     }
     if (!newAdminTempPassword) {
       errors.temporaryPassword = 'A temporary password is required';
-    } else if (newAdminTempPassword.length < 6) {
-      errors.temporaryPassword = 'Password must be at least 6 characters';
+    } else if (newAdminTempPassword.length < 8) {
+      errors.temporaryPassword = 'Password must be at least 8 characters';
     }
 
     if (Object.keys(errors).length > 0) {
@@ -392,7 +394,7 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
                   type={showNewAdminPassword ? 'text' : 'password'}
                   value={newAdminTempPassword}
                   onChange={(e) => setNewAdminTempPassword(e.target.value)}
-                  placeholder="Min 6 characters"
+                  placeholder="Min 8 characters"
                   className="w-full pl-3 pr-8 py-2 text-xs bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-500"
                 />
                 <button
@@ -518,11 +520,18 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
 
       {/* Users Comparison Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Showing <strong className="text-slate-900 font-semibold">{filteredAndSortedUsers.length}</strong>{' '}
-            of <strong className="text-slate-900 font-semibold">{users.length}</strong> registered users
-          </span>
+        <div className="p-4 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap text-xs text-slate-500">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span>
+              Showing <strong className="text-slate-900 font-semibold">{filteredAndSortedUsers.length}</strong>{' '}
+              of <strong className="text-slate-900 font-semibold">{users.length}</strong> registered users
+            </span>
+            {totals?.maxUsers && totals.maxUsers > 0 ? (
+              <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700">
+                Capacity: {users.length} / {totals.maxUsers}
+              </span>
+            ) : null}
+          </div>
           {searchQuery && (
             <button
               type="button"
@@ -534,7 +543,9 @@ export const AdminUsersSection: React.FC<AdminUsersSectionProps> = ({
           )}
         </div>
 
-        {filteredAndSortedUsers.length === 0 ? (
+        {isLoading && users.length === 0 ? (
+          <AdminTableRowsSkeleton columns={6} rows={6} />
+        ) : filteredAndSortedUsers.length === 0 ? (
           <div className="py-16 text-center text-slate-500 text-xs">
             <p className="font-semibold text-slate-700">No users match your current filter criteria</p>
             <p className="text-slate-400 mt-1">Try broadening your search term or selecting "All Users".</p>

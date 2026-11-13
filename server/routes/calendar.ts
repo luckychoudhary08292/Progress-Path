@@ -3,7 +3,12 @@ import type { Request, Response } from 'express';
 const { Router } = express;
 import { authenticateToken } from './auth.ts';
 import { EventRepository } from '../repositories.ts';
-import { sanitizeHtml } from '../middleware/security.ts';
+import {
+  sanitizeHtml,
+  isValidDateString,
+  isValidMonthString,
+} from '../middleware/security.ts';
+import { SYSTEM_LIMITS } from '../config/limits.ts';
 
 const router = Router();
 
@@ -14,8 +19,18 @@ router.get(['/', '/events'], authenticateToken, async (req: Request, res: Respon
     const userId = user.id;
     const { month, date } = req.query || {};
 
-    const monthStr = typeof month === 'string' && /^\d{4}-\d{2}$/.test(month) ? month : undefined;
-    const dateStr = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined;
+    if (typeof month === 'string' && month.trim() !== '' && !isValidMonthString(month)) {
+      res.status(400).json({ message: 'Invalid month parameter (expected YYYY-MM)' });
+      return;
+    }
+
+    if (typeof date === 'string' && date.trim() !== '' && !isValidDateString(date)) {
+      res.status(400).json({ message: 'Invalid date parameter (expected valid YYYY-MM-DD)' });
+      return;
+    }
+
+    const monthStr = typeof month === 'string' && isValidMonthString(month) ? month.trim() : undefined;
+    const dateStr = typeof date === 'string' && isValidDateString(date) ? date.trim() : undefined;
 
     const events = await EventRepository.listForUser(userId, dateStr, monthStr);
 
@@ -44,13 +59,43 @@ router.post(['/events', '/'], authenticateToken, async (req: Request, res: Respo
       cleanDate = cleanDate.split('T')[0];
     }
 
-    if (!cleanDate || !/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
-      res.status(400).json({ message: 'Valid date (YYYY-MM-DD) is required' });
+    if (!isValidDateString(cleanDate)) {
+      res.status(400).json({ message: 'Valid calendar date (YYYY-MM-DD) is required' });
       return;
     }
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       res.status(400).json({ message: 'Event title is required' });
+      return;
+    }
+
+    if (title.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({
+        message: `Event title must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters`,
+      });
+      return;
+    }
+
+    const [totalUserEvents, dayEvents] = await Promise.all([
+      EventRepository.countForUser(userId),
+      EventRepository.countForUserDate(userId, cleanDate),
+    ]);
+
+    if (totalUserEvents >= SYSTEM_LIMITS.MAX_EVENTS_PER_USER) {
+      res.status(403).json({
+        message: `Calendar event limit reached (${SYSTEM_LIMITS.MAX_EVENTS_PER_USER} events max per user)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_EVENTS_PER_USER,
+      });
+      return;
+    }
+
+    if (dayEvents >= SYSTEM_LIMITS.MAX_EVENTS_PER_DAY) {
+      res.status(403).json({
+        message: `Daily event limit reached (${SYSTEM_LIMITS.MAX_EVENTS_PER_DAY} events max per date)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_EVENTS_PER_DAY,
+      });
       return;
     }
 

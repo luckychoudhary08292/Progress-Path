@@ -12,6 +12,38 @@ export interface ParsedVideo {
 }
 
 /**
+ * Validates that a URL is strictly http:// or https:// (rejects javascript:, data:, vbscript:, file:, control chars).
+ */
+export function isSafeHttpUrl(rawUrl?: string | null): boolean {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed || trimmed.length > 2048) return false;
+  if (/[\x00-\x1F\x7F]/.test(trimmed)) return false;
+
+  // Reject any explicit non-http(s) protocol scheme
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed) && !/^https?:/i.test(trimmed)) {
+    return false;
+  }
+
+  try {
+    const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    const parsed = new URL(candidate);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Normalizes and validates an external href, returning null for unsafe or malformed URLs.
+ */
+export function getSafeExternalHref(rawUrl?: string | null): string | null {
+  if (!isSafeHttpUrl(rawUrl)) return null;
+  const trimmed = rawUrl!.trim();
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+/**
  * Parses time formats such as '120', '90s', '2m30s', '1h2m3s' into total seconds.
  */
 export function parseTimeString(timeStr?: string | null): number | undefined {
@@ -54,21 +86,23 @@ export function parseTimeString(timeStr?: string | null): number | undefined {
 export function parseVideoUrl(rawUrl: string): ParsedVideo {
   const url = (rawUrl || '').trim();
 
-  if (!url) {
+  if (!url || !isSafeHttpUrl(url)) {
     return {
       type: 'iframe',
       embedUrl: '',
-      originalUrl: url,
+      originalUrl: '',
     };
   }
 
+  const safeNormalizedUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+
   // Check for direct video files (.mp4, .webm, .ogg, .mov)
-  const isDirectVideo = /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
+  const isDirectVideo = /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(safeNormalizedUrl);
   if (isDirectVideo) {
     return {
       type: 'direct',
-      embedUrl: url,
-      originalUrl: url,
+      embedUrl: safeNormalizedUrl,
+      originalUrl: safeNormalizedUrl,
     };
   }
 
@@ -162,16 +196,11 @@ export function parseVideoUrl(rawUrl: string): ParsedVideo {
     };
   }
 
-  // Fallback: If URL already has embed or http, use as iframe
-  let fallbackEmbedUrl = url;
-  if (!fallbackEmbedUrl.startsWith('http://') && !fallbackEmbedUrl.startsWith('https://')) {
-    fallbackEmbedUrl = `https://${fallbackEmbedUrl}`;
-  }
-
+  // Fallback: Use strictly validated http/https URL as iframe
   return {
     type: 'iframe',
-    embedUrl: fallbackEmbedUrl,
-    originalUrl: url,
+    embedUrl: safeNormalizedUrl,
+    originalUrl: safeNormalizedUrl,
   };
 }
 

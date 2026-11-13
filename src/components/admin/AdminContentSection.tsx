@@ -25,6 +25,8 @@ import {
   ProblemDifficulty,
 } from '../../types.ts';
 import { VideoPlayerModal } from '../VideoPlayerModal.tsx';
+import { AdminTableRowsSkeleton } from '../Skeleton.tsx';
+import { getSafeExternalHref } from '../../utils/videoUtils.ts';
 
 interface AdminContentSectionProps {
   subjects: GlobalSubjectItem[];
@@ -102,6 +104,7 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Video player modal state
   const [videoLectureToPlay, setVideoLectureToPlay] = useState<{
@@ -270,6 +273,7 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
     setIsSubmitting(true);
+    setDeleteError(null);
     try {
       if (deleteConfirm.type === 'subject') {
         await onDeleteSubject(deleteConfirm.id);
@@ -280,7 +284,7 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
       }
       setDeleteConfirm(null);
     } catch (err: any) {
-      alert(err.message || 'Deletion failed');
+      setDeleteError(err?.message || 'Deletion failed');
     } finally {
       setIsSubmitting(false);
     }
@@ -515,7 +519,9 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
               </span>
             </div>
 
-            {filteredSubjects.length === 0 ? (
+            {isLoading && subjects.length === 0 ? (
+              <AdminTableRowsSkeleton columns={4} rows={5} />
+            ) : filteredSubjects.length === 0 ? (
               <div className="py-16 text-center text-slate-500 text-xs">
                 <BookOpen className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                 <p className="font-semibold text-slate-700">No global subjects found</p>
@@ -601,7 +607,9 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
               </span>
             </div>
 
-            {filteredLectures.length === 0 ? (
+            {isLoading && lectures.length === 0 ? (
+              <AdminTableRowsSkeleton columns={5} rows={6} />
+            ) : filteredLectures.length === 0 ? (
               <div className="py-16 text-center text-slate-500 text-xs">
                 <Video className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                 <p className="font-semibold text-slate-700">No global lectures found</p>
@@ -707,7 +715,9 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
               </span>
             </div>
 
-            {filteredProblems.length === 0 ? (
+            {isLoading && problems.length === 0 ? (
+              <AdminTableRowsSkeleton columns={5} rows={6} />
+            ) : filteredProblems.length === 0 ? (
               <div className="py-16 text-center text-slate-500 text-xs">
                 <Code2 className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                 <p className="font-semibold text-slate-700">No global problems found</p>
@@ -748,19 +758,22 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            {prob.link ? (
-                              <a
-                                href={prob.link}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 underline font-medium"
-                              >
-                                <span>Practice Link</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="text-slate-400 italic text-[11px]">No URL</span>
-                            )}
+                            {(() => {
+                              const safeHref = getSafeExternalHref(prob.link);
+                              return safeHref ? (
+                                <a
+                                  href={safeHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800 underline font-medium"
+                                >
+                                  <span>Practice Link</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              ) : (
+                                <span className="text-slate-400 italic text-[11px]">No URL</span>
+                              );
+                            })()}
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="inline-flex items-center gap-1.5">
@@ -1016,11 +1029,19 @@ export const AdminContentSection: React.FC<AdminContentSectionProps> = ({
             <p className="text-xs text-slate-500 mt-2">
               This action cannot be undone. Are you sure you wish to proceed?
             </p>
+            {deleteError && (
+              <p className="text-xs text-rose-600 mt-2 bg-rose-50 p-2 rounded-lg border border-rose-200">
+                {deleteError}
+              </p>
+            )}
 
             <div className="flex items-center justify-end gap-2 mt-5">
               <button
                 type="button"
-                onClick={() => setDeleteConfirm(null)}
+                onClick={() => {
+                  setDeleteConfirm(null);
+                  setDeleteError(null);
+                }}
                 className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               >
                 Cancel

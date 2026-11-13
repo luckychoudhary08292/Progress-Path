@@ -18,6 +18,8 @@ import {
 import { ProblemItem, ProblemDifficulty, ProblemStatus } from '../types.ts';
 import { ConfirmModal } from './ConfirmModal.tsx';
 import { apiCache } from '../services/apiCache.ts';
+import { CodingRepositorySkeleton } from './Skeleton.tsx';
+import { getSafeExternalHref } from '../utils/videoUtils.ts';
 
 const STATUS_CYCLE_NEXT: Record<ProblemStatus, ProblemStatus> = {
   todo: 'in_progress',
@@ -379,12 +381,7 @@ export function CodingRepository() {
   };
 
   if (isLoading) {
-    return (
-      <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-sm font-medium text-slate-500">Loading Coding Repository...</p>
-      </div>
-    );
+    return <CodingRepositorySkeleton />;
   }
 
   return (
@@ -809,19 +806,22 @@ export function CodingRepository() {
                     </span>
 
                     {/* External Link Button */}
-                    {prob.link && (
-                      <a
-                        id={`problem-external-link-${prob.id}`}
-                        href={prob.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1 sm:p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors shrink-0"
-                        title="Open problem in new tab"
-                        aria-label={`Solve ${prob.name} on external site`}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    )}
+                    {(() => {
+                      const safeHref = getSafeExternalHref(prob.link);
+                      return safeHref ? (
+                        <a
+                          id={`problem-external-link-${prob.id}`}
+                          href={safeHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1 sm:p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors shrink-0"
+                          title="Open problem in new tab"
+                          aria-label={`Solve ${prob.name} on external site`}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      ) : null;
+                    })()}
 
                     {/* Delete button */}
                     {prob.isOwner && (

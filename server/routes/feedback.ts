@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { authenticateToken, authenticateAdmin } from './auth.ts';
 import { FeedbackRepository } from '../models/Feedback.ts';
 import { AuditLogRepository } from '../models/AuditLog.ts';
+import { SYSTEM_LIMITS } from '../config/limits.ts';
 
 const router = express.Router();
 
@@ -65,8 +66,19 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
       return;
     }
 
+    const userId = user.id || user._id?.toString() || 'anonymous';
+    const existingFeedbackCount = await FeedbackRepository.countByUserId(userId);
+    if (existingFeedbackCount >= SYSTEM_LIMITS.MAX_FEEDBACK_PER_USER) {
+      res.status(403).json({
+        message: `Feedback submission limit reached (${SYSTEM_LIMITS.MAX_FEEDBACK_PER_USER} submissions max per user)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_FEEDBACK_PER_USER,
+      });
+      return;
+    }
+
     const feedback = await FeedbackRepository.create({
-      userId: user.id || user._id?.toString() || 'anonymous',
+      userId,
       userName: user.name || 'Anonymous User',
       userEmail: user.email || '',
       title: title.trim(),
@@ -128,6 +140,7 @@ router.get('/', authenticateToken, authenticateAdmin, async (_req: Request, res:
         userEmail: fb.userEmail,
         title: fb.title,
         description: fb.description,
+        status: fb.status || 'unseen',
         createdAt: fb.createdAt.toISOString(),
       })),
       total: feedbacks.length,
@@ -135,6 +148,48 @@ router.get('/', authenticateToken, authenticateAdmin, async (_req: Request, res:
   } catch (error) {
     console.error('[Admin Feedback List Error]:', error);
     res.status(500).json({ message: 'Failed to retrieve user feedbacks' });
+  }
+});
+
+// PATCH /api/feedback/:id/status - Admin updates feedback status (unseen, seen, complete)
+router.patch('/:id/status', authenticateToken, authenticateAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body || {};
+
+    if (!id) {
+      res.status(400).json({ message: 'Feedback ID is required' });
+      return;
+    }
+
+    if (!status || !['unseen', 'seen', 'complete'].includes(status)) {
+      res.status(400).json({ message: 'Valid status ("unseen", "seen", or "complete") is required' });
+      return;
+    }
+
+    const updated = await FeedbackRepository.updateStatus(id, status);
+    if (!updated) {
+      res.status(404).json({ message: 'Feedback not found' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: `Feedback status updated to ${status}`,
+      feedback: {
+        id: updated.id,
+        userId: updated.userId,
+        userName: updated.userName,
+        userEmail: updated.userEmail,
+        title: updated.title,
+        description: updated.description,
+        status: updated.status || status,
+        createdAt: updated.createdAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('[Admin Feedback Update Status Error]:', error);
+    res.status(500).json({ message: 'Failed to update feedback status' });
   }
 });
 

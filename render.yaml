@@ -23,3 +23,25 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
+      - key: MAX_USERS
+        value: "500"
+      - key: MAX_SUBJECTS_PER_USER
+        value: "50"
+      - key: MAX_LECTURES_PER_SUBJECT
+        value: "500"
+      - key: MAX_PROBLEMS_PER_USER
+        value: "1000"
+      - key: MAX_EVENTS_PER_USER
+        value: "1000"
+      - key: MAX_EVENTS_PER_DAY
+        value: "50"
+      - key: MAX_NOTIFICATIONS_PER_USER
+        value: "100"
+      - key: MAX_FEEDBACK_PER_USER
+        value: "50"
+      - key: AUTH_RATE_LIMIT_MAX
+        value: "20"
+      - key: AUTH_LOCKOUT_THRESHOLD
+        value: "5"
+      - key: USER_API_RATE_LIMIT_PER_MIN
+        value: "240"

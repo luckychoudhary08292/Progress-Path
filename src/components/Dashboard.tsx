@@ -3,6 +3,7 @@ import { LogOut, CheckCircle2, Circle, Calendar, BookOpen, Code, Award, Loader2,
 import { User, DashboardStats, TodayEvent } from '../types.ts';
 import { apiCache } from '../services/apiCache.ts';
 import { useTaskReminderScheduler } from '../hooks/useTaskReminderScheduler.ts';
+import { DashboardSkeleton } from './Skeleton.tsx';
 
 interface DashboardProps {
   user: User;
@@ -48,9 +49,6 @@ export function Dashboard({
 
   const todayEvents = stats?.todayEvents || [];
 
-  // Hourly and custom task reminder scheduler
-  useTaskReminderScheduler(todayEvents);
-
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
@@ -84,7 +82,7 @@ export function Dashboard({
 
     setTogglingIds((prev) => new Set(prev).add(event.id));
 
-    // Optimistic UI update
+    // Optimistic UI update and cache synchronization
     const newCompleted = !event.completed;
     setStats((prev) => {
       if (!prev) return prev;
@@ -92,7 +90,7 @@ export function Dashboard({
         e.id === event.id ? { ...e, completed: newCompleted } : e
       );
       const doneCount = updatedEvents.filter((e) => e.completed).length;
-      return {
+      const nextStats = {
         ...prev,
         todayTasks: {
           ...prev.todayTasks,
@@ -100,7 +98,10 @@ export function Dashboard({
         },
         todayEvents: updatedEvents,
       };
+      apiCache.set(`dashboard_${dateStr}`, nextStats);
+      return nextStats;
     });
+    apiCache.invalidate('calendar');
 
     try {
       const res = await fetch(`/api/dashboard/events/${event.id}/toggle`, {
@@ -112,9 +113,11 @@ export function Dashboard({
 
       if (!res.ok) {
         // Revert on failure
+        apiCache.invalidate('dashboard');
         fetchDashboardData();
       }
     } catch {
+      apiCache.invalidate('dashboard');
       fetchDashboardData();
     } finally {
       setTogglingIds((prev) => {
@@ -191,12 +194,7 @@ export function Dashboard({
   };
 
   if (isLoading) {
-    return (
-      <div className="w-full py-16 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-sm font-medium text-slate-500">Loading your progress...</p>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const readiness = stats?.readinessPercent ?? 0;

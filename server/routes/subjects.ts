@@ -7,7 +7,8 @@ import {
   LectureRepository,
   ProgressRepository,
 } from '../repositories.ts';
-import { sanitizeHtml } from '../middleware/security.ts';
+import { sanitizeHtml, sanitizeSafeUrl } from '../middleware/security.ts';
+import { SYSTEM_LIMITS } from '../config/limits.ts';
 
 const router = Router();
 
@@ -78,6 +79,23 @@ router.post('/', authenticateToken, async (req: Request, res: Response) => {
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       res.status(400).json({ message: 'Subject name is required' });
+      return;
+    }
+
+    if (name.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({
+        message: `Subject name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters`,
+      });
+      return;
+    }
+
+    const currentCount = await SubjectRepository.countCreatedByUser(userId);
+    if (currentCount >= SYSTEM_LIMITS.MAX_SUBJECTS_PER_USER) {
+      res.status(403).json({
+        message: `Subject limit reached (${SYSTEM_LIMITS.MAX_SUBJECTS_PER_USER} custom subjects max per user)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_SUBJECTS_PER_USER,
+      });
       return;
     }
 
@@ -170,19 +188,43 @@ router.post('/:id/lectures', authenticateToken, async (req: Request, res: Respon
       return;
     }
 
+    if (title.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({
+        message: `Topic title must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters`,
+      });
+      return;
+    }
+
+    const urlCheck = sanitizeSafeUrl(videoUrl);
+    if (!urlCheck.valid) {
+      res.status(400).json({
+        message: 'Invalid video URL. Only http:// and https:// links are allowed.',
+      });
+      return;
+    }
+
     const subject = await SubjectRepository.findById(subjectId, userId);
     if (!subject) {
       res.status(404).json({ message: 'Subject not found' });
       return;
     }
 
+    const lectureCount = await LectureRepository.countForSubjectByUser(subject.id, userId);
+    if (lectureCount >= SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT) {
+      res.status(403).json({
+        message: `Topic limit reached for this subject (${SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT} custom topics max)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT,
+      });
+      return;
+    }
+
     const cleanTitle = sanitizeHtml(title.trim());
-    const cleanUrl = typeof videoUrl === 'string' ? videoUrl.trim() : '';
 
     const newLecture = await LectureRepository.createSequential({
       subjectId: subject.id,
       title: cleanTitle,
-      videoUrl: cleanUrl,
+      videoUrl: urlCheck.value,
       createdBy: userId,
     });
 
@@ -216,14 +258,28 @@ router.post('/:id/lectures/bulk', authenticateToken, async (req: Request, res: R
       return;
     }
 
-    if (items.length > 500) {
-      res.status(400).json({ message: 'Bulk import is capped at 500 items per batch' });
+    if (items.length > SYSTEM_LIMITS.MAX_BULK_ITEMS) {
+      res.status(400).json({
+        message: `Bulk import is capped at ${SYSTEM_LIMITS.MAX_BULK_ITEMS} items per batch`,
+      });
       return;
     }
 
     const subject = await SubjectRepository.findById(subjectId, userId);
     if (!subject) {
       res.status(404).json({ message: 'Subject not found or you do not have permission' });
+      return;
+    }
+
+    const currentCount = await LectureRepository.countForSubjectByUser(subject.id, userId);
+    if (currentCount + items.length > SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT) {
+      const remaining = Math.max(0, SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT - currentCount);
+      res.status(403).json({
+        message: `Subject topic limit exceeded (${SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT} max; ${remaining} slot(s) remaining)`,
+        limitReached: true,
+        limit: SYSTEM_LIMITS.MAX_LECTURES_PER_SUBJECT,
+        remaining,
+      });
       return;
     }
 
@@ -245,14 +301,32 @@ router.post('/:id/lectures/bulk', authenticateToken, async (req: Request, res: R
         continue;
       }
 
+      if (title.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+        failedItems.push({
+          index: itemNumber,
+          title: title.trim().slice(0, 60),
+          error: `Title exceeds ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters`,
+        });
+        continue;
+      }
+
+      const urlCheck = sanitizeSafeUrl(videoUrl);
+      if (!urlCheck.valid) {
+        failedItems.push({
+          index: itemNumber,
+          title: title.trim(),
+          error: 'Invalid URL protocol (only http/https allowed)',
+        });
+        continue;
+      }
+
       try {
         const cleanTitle = sanitizeHtml(title.trim());
-        const cleanUrl = typeof videoUrl === 'string' ? videoUrl.trim() : '';
 
         const newLecture = await LectureRepository.createSequential({
           subjectId: subject.id,
           title: cleanTitle,
-          videoUrl: cleanUrl,
+          videoUrl: urlCheck.value,
           createdBy: userId,
         });
 
@@ -271,7 +345,7 @@ router.post('/:id/lectures/bulk', authenticateToken, async (req: Request, res: R
     }
 
     const success = failedItems.length === 0;
-    const statusCode = success ? 201 : insertedItems.length > 0 ? 207 : 500;
+    const statusCode = success ? 201 : insertedItems.length > 0 ? 207 : 400;
 
     res.status(statusCode).json({
       success,
@@ -324,6 +398,7 @@ router.post('/extract-youtube-playlist', authenticateToken, async (req: Request,
 
     const targetUrl = `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
     const ytRes = await fetch(targetUrl, {
+      signal: AbortSignal.timeout(8000),
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -427,7 +502,8 @@ router.post('/extract-youtube-playlist', authenticateToken, async (req: Request,
         const vid = videoMatch[1];
         try {
           const oembed = await fetch(
-            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${vid}&format=json`
+            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${vid}&format=json`,
+            { signal: AbortSignal.timeout(8000) }
           );
           if (oembed.ok) {
             const odata = await oembed.json();
@@ -450,7 +526,8 @@ router.post('/extract-youtube-playlist', authenticateToken, async (req: Request,
       if (extractedVideos.length === 0) {
         try {
           const rssRes = await fetch(
-            `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`
+            `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`,
+            { signal: AbortSignal.timeout(8000) }
           );
           if (rssRes.ok) {
             const xml = await rssRes.text();
@@ -504,13 +581,15 @@ router.post('/extract-youtube-playlist', authenticateToken, async (req: Request,
       }
     }
 
-    const numberedVideos = extractedVideos.map((item, idx) => ({
-      session: idx + 1,
-      title: item.title,
-      videoUrl: item.videoUrl,
-      videoId: item.videoId,
-      thumbnail: item.thumbnail,
-    }));
+    const numberedVideos = extractedVideos
+      .slice(0, SYSTEM_LIMITS.MAX_BULK_ITEMS)
+      .map((item, idx) => ({
+        session: idx + 1,
+        title: item.title,
+        videoUrl: item.videoUrl,
+        videoId: item.videoId,
+        thumbnail: item.thumbnail,
+      }));
 
     res.json({
       success: true,
@@ -533,11 +612,24 @@ router.patch(
     try {
       const user = (req as any).user;
       const userId = user.id;
-      const { lectureId } = req.params;
+      const { id: subjectId, lectureId } = req.params;
       const { completed, notes } = req.body || {};
 
       if (!lectureId) {
         res.status(400).json({ message: 'Lecture ID is required' });
+        return;
+      }
+
+      if (typeof notes === 'string' && notes.length > SYSTEM_LIMITS.MAX_NOTES_LENGTH) {
+        res.status(400).json({
+          message: `Notes must not exceed ${SYSTEM_LIMITS.MAX_NOTES_LENGTH} characters`,
+        });
+        return;
+      }
+
+      const lecture = await LectureRepository.findByIdForUser(lectureId, subjectId, userId);
+      if (!lecture) {
+        res.status(404).json({ message: 'Lecture not found or inaccessible' });
         return;
       }
 
@@ -597,6 +689,13 @@ router.patch('/:id', authenticateToken, async (req: Request, res: Response) => {
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       res.status(400).json({ message: 'Subject name is required' });
+      return;
+    }
+
+    if (name.trim().length > SYSTEM_LIMITS.MAX_TITLE_LENGTH) {
+      res.status(400).json({
+        message: `Subject name must not exceed ${SYSTEM_LIMITS.MAX_TITLE_LENGTH} characters`,
+      });
       return;
     }
 

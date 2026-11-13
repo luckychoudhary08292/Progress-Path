@@ -242,3 +242,56 @@ body::-webkit-scrollbar {
 .animate-shimmer {
   animation: shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+/* =========================================================================
+   SKELETON LOADING SHIMMER SYSTEM (Light & Pure Black Theme)
+   ========================================================================= */
+
+.skeleton-block {
+  position: relative;
+  overflow: hidden;
+  background-color: #e2e8f0;
+}
+
+html.dark .skeleton-block {
+  background-color: #18181b;
+}
+
+.skeleton-block::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.65) 50%,
+    transparent 100%
+  );
+  animation: skeletonSweep 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+html.dark .skeleton-block::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+}
+
+@keyframes skeletonSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block::after {
+    animation: none !important;
+    display: none;
+  }
+}

@@ -9,6 +9,7 @@ import {
   EventRepository,
   ProgressRepository,
 } from '../repositories.ts';
+import { isValidDateString } from '../middleware/security.ts';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 
     // Use requested client date or fallback to YYYY-MM-DD
     const dateParam = typeof req.query.date === 'string' ? req.query.date.trim() : '';
-    const todayStr = /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+    const todayStr = isValidDateString(dateParam)
       ? dateParam
       : new Date().toISOString().split('T')[0];
 

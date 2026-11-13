@@ -3,50 +3,47 @@ import { UserRepository } from './models/User.ts';
 import { AuditLogRepository } from './models/AuditLog.ts';
 
 /**
- * Ensures the system has at least one properly provisioned administrator account.
- * Follows the strict rule: "The very first admin account must be created through a one-time setup step
- * (e.g. a seed/env-based bootstrap script), never through the public signup form — signup should always create role 'user'."
+ * Ensures the system has a properly provisioned administrator account.
+ * Security hardening:
+ * - In production, only uses explicitly configured ADMIN_EMAIL & ADMIN_PASSWORD env vars.
+ *   Never seeds default hardcoded backdoor credentials ('admin@lms.local' / 'Admin@Secure2026!') in production.
+ * - In non-production (local/dev preview), falls back to a local dev admin when no admin exists yet.
  */
 export async function bootstrapInitialAdmin(): Promise<void> {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
     const allUsers = await UserRepository.listAllUsers();
     const existingAdmin = allUsers.find((u) => u.role === 'admin');
 
-    const bootstrapEmail = (
-      process.env.ADMIN_EMAIL ||
-      process.env.INITIAL_ADMIN_EMAIL ||
-      'admin@lms.local'
-    ).trim().toLowerCase();
+    const envEmail = (process.env.ADMIN_EMAIL || process.env.INITIAL_ADMIN_EMAIL || '').trim().toLowerCase();
+    const envName = (process.env.ADMIN_NAME || 'Super Administrator').trim();
+    const envPassword = process.env.ADMIN_PASSWORD || '';
 
-    const bootstrapName = (process.env.ADMIN_NAME || 'Super Administrator').trim();
-    const bootstrapPassword = process.env.ADMIN_PASSWORD || 'Admin@Secure2026!';
+    // 1. If explicit ADMIN_EMAIL is configured, ensure it exists or is promoted
+    if (envEmail) {
+      const targetUser = await UserRepository.findByEmail(envEmail);
+      if (targetUser) {
+        if (targetUser.role !== 'admin') {
+          await UserRepository.updateRole(targetUser.id, 'admin');
+          await AuditLogRepository.log({
+            actorId: 'system_bootstrap',
+            actorName: 'System Bootstrap',
+            actorEmail: 'system@lms.internal',
+            action: 'bootstrap_initial_admin',
+            targetUserId: targetUser.id,
+            targetEmail: targetUser.email,
+            details: `Promoted designated ADMIN_EMAIL (${targetUser.email}) to administrator via system bootstrap.`,
+          });
+          console.log(`[Bootstrap] Promoted configured ADMIN_EMAIL "${targetUser.email}" to administrator.`);
+        }
+        return;
+      }
 
-    // If no admin exists anywhere in the database or store
-    if (!existingAdmin) {
-      console.log(`[Bootstrap] No administrator found. Provisioning initial admin: ${bootstrapEmail}`);
-
-      const existingUser = await UserRepository.findByEmail(bootstrapEmail);
-      if (existingUser) {
-        // Upgrade existing user to admin
-        await UserRepository.updateRole(existingUser.id, 'admin');
-        await UserRepository.update(existingUser.id, { mustChangePassword: false });
-
-        await AuditLogRepository.log({
-          actorId: 'system_bootstrap',
-          actorName: 'System Bootstrap',
-          actorEmail: 'system@lms.internal',
-          action: 'bootstrap_initial_admin',
-          targetUserId: existingUser.id,
-          targetEmail: existingUser.email,
-          details: `Promoted existing user ${existingUser.email} to initial primary administrator via system bootstrap.`,
-        });
-
-        console.log(`[Bootstrap] Promoted existing account "${existingUser.email}" to primary administrator.`);
-      } else {
-        const hashedPassword = await bcrypt.hash(bootstrapPassword, 10);
+      if (envPassword && envPassword.length >= 8) {
+        const hashedPassword = await bcrypt.hash(envPassword, 10);
         const newAdmin = await UserRepository.create({
-          name: bootstrapName,
-          email: bootstrapEmail,
+          name: envName,
+          email: envEmail,
           password: hashedPassword,
           role: 'admin',
           mustChangePassword: false,
@@ -59,35 +56,58 @@ export async function bootstrapInitialAdmin(): Promise<void> {
           action: 'bootstrap_initial_admin',
           targetUserId: newAdmin.id,
           targetEmail: newAdmin.email,
-          details: `Created initial primary administrator account (${newAdmin.email}) via one-time secure system bootstrap.`,
+          details: `Created initial primary administrator account (${newAdmin.email}) via secure environment bootstrap.`,
         });
-
         console.log(`[Bootstrap] Initial administrator account created: "${newAdmin.email}".`);
+        return;
       }
+
+      if (!existingAdmin && isProduction) {
+        console.warn(
+          '[Bootstrap Security Notice] ADMIN_EMAIL is set but ADMIN_PASSWORD (< 8 chars or empty) is missing; admin cannot be auto-created until user registers with ADMIN_EMAIL or ADMIN_PASSWORD (>= 8 chars) is provided.'
+        );
+      }
+      return;
     }
 
-    // Also verify developer admin account if registered
-    const devUser = await UserRepository.findByEmail('luckypc08292@gmail.com');
-    if (devUser && devUser.role !== 'admin') {
-      await UserRepository.updateRole(devUser.id, 'admin');
-      console.log('[Bootstrap] Verified admin role for registered developer account luckypc08292@gmail.com');
+    // 2. If an admin already exists in DB, nothing further needed
+    if (existingAdmin) {
+      return;
     }
 
-    // Ensure system test admin account (admin@lms.local) exists for easy administrator sign-in
-    const localAdmin = await UserRepository.findByEmail('admin@lms.local');
-    if (!localAdmin) {
-      const hashedLocalPass = await bcrypt.hash('Admin@Secure2026!', 10);
-      await UserRepository.create({
-        name: 'System Administrator',
-        email: 'admin@lms.local',
+    // 3. In production without ADMIN_EMAIL/ADMIN_PASSWORD, refuse to create insecure default passwords
+    if (isProduction) {
+      console.warn(
+        '[Bootstrap Security Notice] No admin account exists in production. Set ADMIN_EMAIL and ADMIN_PASSWORD (min 8 chars) environment variables to provision the initial administrator securely.'
+      );
+      return;
+    }
+
+    // 4. Local development preview only: seed local dev admin
+    const devEmail = 'admin@lms.local';
+    const devPass = 'Admin@Secure2026!';
+    const existingLocal = await UserRepository.findByEmail(devEmail);
+    if (!existingLocal) {
+      const hashedLocalPass = await bcrypt.hash(devPass, 10);
+      const created = await UserRepository.create({
+        name: 'Development Administrator',
+        email: devEmail,
         password: hashedLocalPass,
         role: 'admin',
         mustChangePassword: false,
       });
-      console.log('[Bootstrap] Created secondary system admin: admin@lms.local');
-    } else if (localAdmin.role !== 'admin') {
-      await UserRepository.updateRole(localAdmin.id, 'admin');
-      console.log('[Bootstrap] Verified admin role for admin@lms.local');
+      await AuditLogRepository.log({
+        actorId: 'system_bootstrap',
+        actorName: 'System Bootstrap',
+        actorEmail: 'system@lms.internal',
+        action: 'bootstrap_initial_admin',
+        targetUserId: created.id,
+        targetEmail: created.email,
+        details: `Created local development administrator (${created.email}) for non-production environment.`,
+      });
+      console.log(`[Bootstrap] Development administrator provisioned: ${devEmail}`);
+    } else if (existingLocal.role !== 'admin') {
+      await UserRepository.updateRole(existingLocal.id, 'admin');
     }
   } catch (err) {
     console.error('[Bootstrap Error] Failed to complete initial admin bootstrap:', err);
